@@ -19,7 +19,14 @@
       none: 'No annotation on this page yet. Select a sentence to add one.', noneOpen: 'Nothing waiting.', noneAct: 'No activity yet.',
       detached: 'Detached: the sentence changed', proposed: 'Proposed', current: 'Current', resolved: 'resolved',
       search: 'Search the book', searchPh: 'Search… (Ctrl+K)', noResult: 'No result.', signOut: 'Sign out',
-      actions: { created: 'annotated', replied: 'replied on', resolved: 'resolved', reopened: 'reopened', edited: 'edited', deleted: 'deleted' },
+      actions: { created: 'annotated', replied: 'replied on', resolved: 'resolved', reopened: 'reopened', edited: 'edited', deleted: 'deleted',
+        'action-created': 'created an action', 'action-edited': 'edited an action', 'action-todo': 'reopened an action', 'action-doing': 'started an action',
+        'action-done': 'completed an action', 'action-dropped': 'dropped an action', 'action-deleted': 'deleted an action' },
+      mine: 'For me', myActions: 'My actions', mentions: 'Mentioning me', repliesMine: 'Replies to my notes', news: 'New since your last visit',
+      nothingMine: 'Nothing for you right now.', makeAction: 'Create an action', actTitle: 'What to do', owner: 'Owner', nobody: 'nobody',
+      due: 'Due', serves: 'Serves (D-41, A-03…)', created: 'Action created.', board: 'See the board', newAction: 'New action',
+      status: { todo: 'To do', doing: 'In progress', done: 'Done', dropped: 'Dropped' }, fromSite: 'site', asMarkdown: 'Copy as Markdown',
+      copiedMd: 'Copied: paste it in a page and give it a number.', noHandle: 'Your account has no handle yet (owner, partner…): actions cannot be assigned to you.',
       error: 'Could not save. Try again.', thisPageOnly: 'This page only', history: 'Page history', lastChange: 'Text last changed on'
     },
     fr: {
@@ -31,7 +38,14 @@
       none: 'Aucune annotation sur cette page. Sélectionnez une phrase pour en ajouter une.', noneOpen: 'Rien en attente.', noneAct: 'Pas encore d’activité.',
       detached: 'Détachée : la phrase a changé', proposed: 'Proposé', current: 'Actuel', resolved: 'résolue',
       search: 'Rechercher dans le livre', searchPh: 'Rechercher… (Ctrl+K)', noResult: 'Aucun résultat.', signOut: 'Se déconnecter',
-      actions: { created: 'a annoté', replied: 'a répondu sur', resolved: 'a résolu', reopened: 'a rouvert', edited: 'a modifié', deleted: 'a supprimé' },
+      actions: { created: 'a annoté', replied: 'a répondu sur', resolved: 'a résolu', reopened: 'a rouvert', edited: 'a modifié', deleted: 'a supprimé',
+        'action-created': 'a créé une action', 'action-edited': 'a modifié une action', 'action-todo': 'a rouvert une action', 'action-doing': 'a commencé une action',
+        'action-done': 'a terminé une action', 'action-dropped': 'a abandonné une action', 'action-deleted': 'a supprimé une action' },
+      mine: 'Pour moi', myActions: 'Mes actions', mentions: 'Me mentionnent', repliesMine: 'Réponses à mes notes', news: 'Nouveau depuis votre dernière visite',
+      nothingMine: 'Rien pour vous pour l’instant.', makeAction: 'Créer une action', actTitle: 'Ce qu’il faut faire', owner: 'Responsable', nobody: 'personne',
+      due: 'Échéance', serves: 'Sert (D-41, A-03…)', created: 'Action créée.', board: 'Voir le tableau', newAction: 'Nouvelle action',
+      status: { todo: 'À faire', doing: 'En cours', done: 'Fait', dropped: 'Abandonnée' }, fromSite: 'site', asMarkdown: 'Copier en Markdown',
+      copiedMd: 'Copié : collez-le dans une page et donnez-lui un numéro.', noHandle: 'Votre compte n’a pas encore de rôle (owner, partner…) : on ne peut pas vous assigner d’action.',
       error: 'Enregistrement impossible. Réessayez.', thisPageOnly: 'Cette page seulement', history: 'Historique de la page', lastChange: 'Texte modifié le'
     }
   };
@@ -56,7 +70,8 @@
     });
   }
 
-  var me = null, items = [], marks = {}, showResolved = false, pageInfo = null;
+  var me = null, items = [], marks = {}, showResolved = false, pageInfo = null, people = {}, gitActions = [], mineData = null;
+  function rich(s) { return esc(s).replace(/\n/g, '<br>').replace(/(^|[^\w/])@([a-z][\w-]{1,30})/g, '$1<span class="sb-at">@$2</span>'); }
 
   /* ---------------------------------------------------------------- text and anchors */
   function container() {
@@ -251,15 +266,16 @@
       '<button type="button" class="sb-x" aria-label="' + esc(L.cancel) + '">×</button></div>' +
       '<p class="sb-quote">« ' + esc(a.quote.exact.length > 200 ? a.quote.exact.slice(0, 200) + '…' : a.quote.exact) + ' »</p>' +
       '<div class="sb-msgs"><div class="sb-m"><b>' + esc(a.author.name) + '</b> <small>' + esc(when(a.created)) + '</small>' +
-      (a.body ? '<p>' + esc(a.body).replace(/\n/g, '<br>') + '</p>' : '') +
+      (a.body ? '<p>' + rich(a.body) + '</p>' : '') +
       (a.url ? '<p><a href="' + esc(a.url) + '"' + (/^https?:/.test(a.url) ? ' target="_blank" rel="noopener"' : '') + '>' + esc(a.url) + '</a></p>' : '') +
       (a.replacement ? '<div class="sb-diff"><p><small>' + esc(L.current) + '</small><del>' + esc(a.quote.exact) + '</del></p><p><small>' + esc(L.proposed) + '</small><ins>' + esc(a.replacement) + '</ins></p></div>' : '') +
       '</div>' + a.replies.map(function (r) {
-        return '<div class="sb-m"><b>' + esc(r.author.name) + '</b> <small>' + esc(when(r.created)) + '</small><p>' + esc(r.body).replace(/\n/g, '<br>') + '</p></div>';
+        return '<div class="sb-m"><b>' + esc(r.author.name) + '</b> <small>' + esc(when(r.created)) + '</small><p>' + rich(r.body) + '</p></div>';
       }).join('') + '</div>' +
       '<textarea class="sb-body" rows="2" placeholder="' + esc(L.reply) + '"></textarea>' +
       '<div class="sb-row"><button type="button" class="sb-btn sb-primary sb-send">' + esc(L.send) + '</button>' +
       '<button type="button" class="sb-btn sb-status">' + esc(a.status === 'resolved' ? L.reopen : L.resolve) + '</button>' +
+      '<button type="button" class="sb-btn sb-mkact">' + esc(L.makeAction) + '</button>' +
       (mine ? '<button type="button" class="sb-btn sb-edit">' + esc(L.edit) + '</button><button type="button" class="sb-btn sb-del">' + esc(L.del) + '</button>' : '') +
       '<span class="sb-msg" role="status"></span></div>';
     pop.innerHTML = h;
@@ -274,6 +290,9 @@
     pop.querySelector('.sb-send').addEventListener('click', function () {
       var v = pop.querySelector('.sb-body').value.trim(); if (!v) return;
       call('POST', 'annotations/reply', { page: PAGE, id: a.id, body: v }).then(done).catch(err);
+    });
+    pop.querySelector('.sb-mkact').addEventListener('click', function () {
+      actionForm({ title: a.body || a.quote.exact, page: PAGE, annotation: { page: PAGE, id: a.id } }, rect);
     });
     pop.querySelector('.sb-status').addEventListener('click', function () {
       call('POST', 'annotations/status', { page: PAGE, id: a.id, status: a.status === 'resolved' ? 'open' : 'resolved' }).then(done).catch(err);
@@ -298,7 +317,8 @@
       if (a) { e.preventDefault(); openThread(a, m.getBoundingClientRect()); }
       return;
     }
-    if (!pop.hidden && !at(e, '.sb-ui')) closePop();
+    // A button the popover just replaced is no longer in the page: that click was inside.
+    if (!pop.hidden && doc.contains(e.target) && !at(e, '.sb-ui')) closePop();
     if (!at(e, '.sb-annotate')) setTimeout(function () { if (window.getSelection().isCollapsed) fab.hidden = true; }, 0);
   });
   doc.addEventListener('keydown', function (e) {
@@ -314,7 +334,9 @@
 
   function updateBadge() {
     var n = items.filter(function (a) { return a.status === 'open'; }).length;
-    panelBtn.innerHTML = '<span>' + esc(t().notes) + '</span>' + (n ? '<b>' + n + '</b>' : '');
+    var news = mineData ? mineData.news.length : 0;
+    panelBtn.innerHTML = '<span>' + esc(t().notes) + '</span>' + (n ? '<b>' + n + '</b>' : '') +
+      (news ? '<i class="sb-news" title="' + esc(t().news) + '">' + news + '</i>' : '');
   }
   panelBtn.addEventListener('click', function () {
     panel.hidden = !panel.hidden;
@@ -326,7 +348,7 @@
   function renderPanel() {
     if (panel.hidden) return;
     var L = t();
-    var h = '<div class="sb-tabs" role="tablist">' + [['page', L.page], ['open', L.open], ['activity', L.activity]].map(function (x) {
+    var h = '<div class="sb-tabs" role="tablist">' + [['page', L.page], ['mine', L.mine + (mineData && mineData.news.length ? ' •' : '')], ['open', L.open], ['activity', L.activity]].map(function (x) {
       return '<button type="button" role="tab" aria-selected="' + (tab === x[0]) + '" data-tab="' + x[0] + '">' + esc(x[1]) + '</button>';
     }).join('') + '<button type="button" class="sb-x" aria-label="' + esc(L.cancel) + '">×</button></div><div class="sb-list">';
     if (tab === 'page') {
@@ -340,6 +362,9 @@
           (a._detached ? '<span class="sb-warn">' + esc(L.detached) + '</span>' : '') +
           '<span>' + esc(excerpt(a.body || a.url || a.replacement, 140)) + '</span></button>';
       }).join('') : '<p class="sb-empty">' + esc(L.none) + '</p>';
+    } else if (tab === 'mine') {
+      if (!mineData) { h += '<p class="sb-empty">…</p>'; loadMine(); }
+      else h += mineHtml();
     } else if (tab === 'open') {
       if (!openItems) { h += '<p class="sb-empty">…</p>'; call('GET', 'open').then(function (r) { openItems = r.items; renderPanel(); }); }
       else {
@@ -373,6 +398,7 @@
         tab = b.getAttribute('data-tab');
         if (tab === 'open') openItems = null;
         if (tab === 'activity') activity = null;
+        if (tab === 'mine') { mineData = null; seenSent = false; }
         renderPanel();
       });
     });
@@ -393,6 +419,147 @@
     } else {
       openThread(a, { left: 40, top: 90, bottom: 90 });
     }
+  }
+
+  /* ---------------------------------------------------------------- for me */
+  var seenSent = false;
+  function loadMine() {
+    return call('GET', 'mine').then(function (r) {
+      mineData = r;
+      updateBadge();
+      renderPanel();
+      if (tab === 'mine' && !panel.hidden && !seenSent) { seenSent = true; call('POST', 'seen', {}).catch(function () {}); }
+    });
+  }
+  function actionLine(a, L) {
+    return '<a class="sb-item" href="' + esc(a.page ? pageHref(a.page, '') : BOARD) + '"><span><b>' + esc(a.id) + '</b> ' + esc(excerpt(a.title, 120)) + '</span>' +
+      '<small>' + esc(L.status[a.status] || a.status) + (a.due ? ' · ⏳ ' + esc(a.due) : '') + (a.refs && a.refs.length ? ' · → ' + esc(a.refs.join(', ')) : '') + '</small></a>';
+  }
+  function mineHtml() {
+    var L = t(), d = mineData, h = '';
+    if (!me.handle) h += '<p class="sb-warn">' + esc(L.noHandle) + '</p>';
+    var acts = d.actions.concat(gitActions.filter(function (a) {
+      return me.handle && a.owners.indexOf(me.handle) >= 0 && (a.status === 'todo' || a.status === 'doing');
+    }));
+    function section(title, list, fn) { return list.length ? '<p class="sb-sec">' + esc(title) + ' <b>' + list.length + '</b></p>' + list.map(fn).join('') : ''; }
+    function ann(a) {
+      return '<a class="sb-item" href="' + esc(pageHref(a.page, a.id)) + '"><span class="sb-kind sb-k-' + a.kind + '">' + esc(L.kinds[a.kind]) + '</span> <small>' +
+        esc(a.page) + ' · ' + esc(a.author.name) + '</small><span class="sb-q">« ' + esc(excerpt(a.quote.exact, 90)) + ' »</span><span>' + rich(excerpt(a.body, 140)) + '</span></a>';
+    }
+    h += section(L.news, d.news, function (x) {
+      return '<a class="sb-item" href="' + esc(x.page ? pageHref(x.page, x.action.indexOf('action') === 0 || x.action === 'deleted' ? '' : x.id) : BOARD) + '"><small>' + esc(when(x.at)) + '</small>' +
+        '<span><b>' + esc(x.author) + '</b> ' + esc(L.actions[x.action] || x.action) + (x.page ? ' <i>' + esc(x.page) + '</i>' : '') + '</span>' +
+        (x.quote ? '<span class="sb-q">« ' + esc(excerpt(x.quote, 80)) + ' »</span>' : '') + '</a>';
+    });
+    h += section(L.myActions, acts, function (a) { return actionLine(a, L); });
+    h += section(L.mentions, d.mentions, ann);
+    h += section(L.repliesMine, d.replies, ann);
+    return h || '<p class="sb-empty">' + esc(L.nothingMine) + '</p>';
+  }
+
+  /* ---------------------------------------------------------------- actions */
+  var BOARD = '/intent/actions.html';
+  function ownerOptions(selected) {
+    var L = t();
+    return '<option value="">' + esc(L.nobody) + '</option>' + Object.keys(people).map(function (k) {
+      return '<option value="' + esc(k) + '"' + (k === selected ? ' selected' : '') + '>@' + esc(k) + ' — ' + esc(people[k][lang()] || '') + '</option>';
+    }).join('');
+  }
+  function actionForm(seed, rect) {
+    var L = t();
+    pop.innerHTML = '<div class="sb-head"><b>' + esc(L.makeAction) + '</b><button type="button" class="sb-x" aria-label="' + esc(L.cancel) + '">×</button></div>' +
+      '<textarea class="sb-body sb-a-title" rows="2" placeholder="' + esc(L.actTitle) + '"></textarea>' +
+      '<div class="sb-grid"><label>' + esc(L.owner) + '<select class="sb-a-owner">' + ownerOptions(seed.owner || '') + '</select></label>' +
+      '<label>' + esc(L.due) + '<input type="date" class="sb-a-due"></label></div>' +
+      '<input type="text" class="sb-a-refs" placeholder="' + esc(L.serves) + '">' +
+      '<div class="sb-row"><button type="button" class="sb-btn sb-primary sb-a-save">' + esc(L.save) + '</button>' +
+      '<button type="button" class="sb-btn sb-cancel">' + esc(L.cancel) + '</button><span class="sb-msg" role="status"></span></div>';
+    pop.querySelector('.sb-a-title').value = (seed.title || '').slice(0, 300);
+    pop.querySelector('.sb-x').addEventListener('click', closePop);
+    pop.querySelector('.sb-cancel').addEventListener('click', closePop);
+    pop.querySelector('.sb-a-save').addEventListener('click', function () {
+      var btn = this; btn.disabled = true;
+      var owner = pop.querySelector('.sb-a-owner').value;
+      call('POST', 'actions', {
+        title: pop.querySelector('.sb-a-title').value, owners: owner ? [owner] : [], due: pop.querySelector('.sb-a-due').value,
+        refs: (pop.querySelector('.sb-a-refs').value.match(/[DQA]-\d{2,3}/g) || []), page: seed.page || '', annotation: seed.annotation || null
+      }).then(function (r) {
+        pop.querySelector('.sb-row').innerHTML = '<span class="sb-msg">' + esc(L.created) + '</span> <a href="' + BOARD + '?lang=' + lang() + '">' + esc(L.board) + '</a>';
+        boardAdd(r.item);
+        mineData = null;
+      }).catch(function (e) { btn.disabled = false; pop.querySelector('.sb-msg').textContent = e.message || L.error; });
+    });
+    pop.hidden = false;
+    placeNear(pop, rect || { left: 40, top: 90, bottom: 90 });
+    pop.querySelector('.sb-a-title').focus();
+  }
+  function markdownLine(a) {
+    var box = { todo: ' ', doing: '/', done: 'x', dropped: '-' }[a.status] || ' ';
+    return '- [' + box + '] **A-??** ' + a.title + a.owners.map(function (o) { return ' @' + o; }).join('') +
+      (a.due ? ' ⏳' + a.due : '') + (a.done && a.status === 'done' ? ' ✅' + a.done : '') + (a.refs.length ? ' → ' + a.refs.join(', ') : '') +
+      a.tags.map(function (x) { return ' #' + x; }).join('');
+  }
+  function cardHtml(a) {
+    var L = t(), mine = me && a.author.sub === me.sub;
+    return '<a class="bk-card-t" href="' + (a.page ? esc(pageHref(a.page, a.annotation ? a.annotation.id : '')) : '#') + '"><b>' + esc(a.id.slice(0, 8)) + '</b> ' + esc(a.title) + '</a>' +
+      '<span class="bk-tk-meta"><span class="sb-site">' + esc(L.fromSite) + '</span>' + a.owners.map(function (o) { return '<span class="bk-tk-who">@' + esc(o) + '</span>'; }).join('') +
+      (a.due && (a.status === 'todo' || a.status === 'doing') ? '<span class="bk-tk-due' + (a.due < new Date().toISOString().slice(0, 10) ? ' bk-late' : '') + '">⏳ ' + esc(a.due) + '</span>' : '') +
+      a.refs.map(function (r) { return '<span class="bk-tk-ref">→ ' + esc(r) + '</span>'; }).join('') + '</span>' +
+      '<span class="sb-card-tools"><select aria-label="' + esc(L.owner) + '" class="sb-c-status">' + ['todo', 'doing', 'done', 'dropped'].map(function (s) {
+        return '<option value="' + s + '"' + (s === a.status ? ' selected' : '') + '>' + esc(L.status[s]) + '</option>';
+      }).join('') + '</select><button type="button" class="sb-btn sb-c-md">' + esc(L.asMarkdown) + '</button>' +
+      (mine ? '<button type="button" class="sb-btn sb-c-del">' + esc(L.del) + '</button>' : '') + '</span>' +
+      '<small>' + esc(a.author.name) + ' · ' + esc(when(a.created)) + '</small>';
+  }
+  var siteActions = [];
+  function boardAdd(a) {
+    siteActions = siteActions.filter(function (x) { return x.id !== a.id; }).concat([a]);
+    boardRender();
+  }
+  function boardRender() {
+    Array.prototype.forEach.call(doc.querySelectorAll('.bk-card.sb-card'), function (c) { c.remove(); });
+    Array.prototype.forEach.call(doc.querySelectorAll('.bk-board'), function (b) {
+      siteActions.forEach(function (a) {
+        var col = b.querySelector('[data-col="' + (a.status === 'dropped' ? 'done' : a.status) + '"] ul');
+        if (!col) return;
+        var li = el('li', 'bk-card sb-card', cardHtml(a));
+        li.setAttribute('data-owners', a.owners.join(' '));
+        li.setAttribute('data-site', a.id);
+        var empty = col.querySelector('.bk-empty'); if (empty) empty.hidden = true;
+        col.insertBefore(li, col.firstChild);
+      });
+    });
+  }
+  doc.addEventListener('change', function (e) {
+    var s = e.target.closest && e.target.closest('.sb-c-status');
+    if (!s) return;
+    var id = s.closest('[data-site]').getAttribute('data-site');
+    call('POST', 'actions/update', { id: id, status: s.value }).then(function (r) { boardAdd(r.item); });
+  });
+  doc.addEventListener('click', function (e) {
+    var b = at(e, '.sb-c-md, .sb-c-del, .sb-newaction');
+    if (!b) return;
+    if (b.classList.contains('sb-newaction')) { actionForm({ page: '' }, b.getBoundingClientRect()); return; }
+    var id = b.closest('[data-site]').getAttribute('data-site'), a = siteActions.filter(function (x) { return x.id === id; })[0];
+    if (b.classList.contains('sb-c-md')) {
+      var text = markdownLine(a);
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { b.textContent = t().copiedMd; }, function () { window.prompt('', text); });
+    } else if (confirm(t().confirmDel)) {
+      call('POST', 'actions/delete', { id: id }).then(function () { siteActions = siteActions.filter(function (x) { return x.id !== id; }); boardRender(); });
+    }
+  });
+  function boardStart() {
+    var bars = doc.querySelectorAll('.bk-board-bar');
+    if (!bars.length) return;
+    Array.prototype.forEach.call(bars, function (bar) {
+      var bt = el('button', 'sb-ui bk-btn sb-newaction', esc(t().newAction)); bt.type = 'button';
+      bar.appendChild(bt);
+    });
+    doc.addEventListener('langchange', function () {
+      Array.prototype.forEach.call(doc.querySelectorAll('.sb-newaction'), function (x) { x.textContent = t().newAction; });
+      boardRender();
+    });
+    call('GET', 'actions').then(function (r) { siteActions = r.items; boardRender(); });
   }
 
   /* ---------------------------------------------------------------- search */
@@ -488,6 +655,12 @@
     doc.addEventListener('langchange', function () { closePop(); render(); });
     fetch('/search/pages.json', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
       .then(function (j) { pageInfo = j[PAGE] || null; }).catch(function () {});
+    fetch('/search/people.json', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+      .then(function (j) { people = j; }).catch(function () {});
+    fetch('/search/actions.json', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+      .then(function (j) { gitActions = j; }).catch(function () {});
+    loadMine().catch(function () {});
+    boardStart();
   }
   fetch('/api/me', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; })
     .then(function (u) { if (u && u.sub) { me = u; start(); } }).catch(function () {});

@@ -169,3 +169,94 @@ html[lang="en"] [data-lang="fr"],html[lang="fr"] [data-lang="en"]{display:none}
   .cx{border:0;background:none}
   body{background:#fff}
 }
+
+/* Rich blocks of Markdown pages (_tools/book/blocks.py): code, tabs, diagrams, API, callouts */
+.bk-code{margin:14px 0 18px;border:1px solid var(--line);border-radius:10px;background:var(--box2);overflow:hidden;max-width:100%}
+.bk-code figcaption{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-bottom:1px solid var(--line);font:500 12.5px/1.2 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--muted);background:color-mix(in srgb,var(--box2) 60%,var(--paper))}
+.bk-code-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk-copy{font:500 12px/1 Inter,system-ui,sans-serif;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);cursor:pointer}
+.bk-copy:hover{border-color:var(--acc)}
+.bk-code pre.hl{margin:0;padding:12px 16px;overflow-x:auto;background:none;border-radius:0;font:13.5px/1.55 "JetBrains Mono",ui-monospace,Consolas,monospace}
+.bk-prose .bk-code pre code,.bk-code pre code{background:none;padding:0;font-size:inherit}
+.bk-code .hll{display:block;background:color-mix(in srgb,var(--acc) 18%,transparent)!important;margin:0 -16px;padding:0 16px}
+.bk-code .linenos{display:inline-block;width:2.2em;margin-right:12px;color:var(--muted)!important;background:none!important;text-align:right;user-select:none;opacity:.7}
+.bk-tabs{margin:14px 0 18px}
+.bk-tabs [role=tablist]{display:flex;gap:2px;flex-wrap:wrap}
+.bk-tabs [role=tab]{font:600 12.5px/1 Inter,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:var(--paper);color:var(--muted);cursor:pointer}
+.bk-tabs [role=tab][aria-selected=true]{background:var(--box2);color:var(--fg)}
+.bk-tabs .bk-code{margin-top:0;border-top-left-radius:0}
+.bk-mermaid,.bk-openapi{margin:14px 0 18px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);overflow-x:auto}
+.bk-mermaid pre.mermaid{margin:0;background:none;text-align:center;font:13px/1.5 "JetBrains Mono",ui-monospace,monospace;color:var(--muted)}
+.bk-mermaid pre.mermaid[data-processed]{color:inherit}
+.bk-openapi figcaption{font-weight:600;margin:0 0 8px}
+.bk-openapi figcaption small{font-weight:400;color:var(--muted);margin-left:6px}
+.bk-openapi-doc{background:#fff;border-radius:8px;overflow:hidden}
+.bk-openapi-frame{display:block;width:100%;height:640px;border:0;background:#fff}
+.bk-callout{max-width:760px;margin:14px 0 18px;padding:10px 16px;border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:10px;background:var(--paper)}
+.bk-callout p{margin:4px 0}
+.bk-callout-t{font:700 12.5px/1.2 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.bk-callout.bk-note{border-left-color:#3b82f6}.bk-callout.bk-note .bk-callout-t{color:#2563eb}
+.bk-callout.bk-tip{border-left-color:#16a34a}.bk-callout.bk-tip .bk-callout-t{color:#15803d}
+.bk-callout.bk-important{border-left-color:#8b5cf6}.bk-callout.bk-important .bk-callout-t{color:#7c3aed}
+.bk-callout.bk-warning,.bk-callout.bk-caution{border-left-color:var(--acc)}.bk-callout.bk-warning .bk-callout-t,.bk-callout.bk-caution .bk-callout-t{color:var(--acc)}
+.bk-callout.bk-decision{border-left-color:var(--acc);background:var(--acc-soft)}.bk-callout.bk-decision .bk-callout-t{color:var(--acc)}
+.bk-callout.bk-assumption{border-left-style:dashed}
+@media print{.bk-copy{display:none}}
+
+/* Decision log as data (_tools/book/dlog.py) */
+.bk-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+.bk-filter input{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);font:14px Inter,system-ui,sans-serif}
+.bk-filter [role=group]{display:inline-flex;flex-wrap:wrap;gap:4px}
+.bk-filter button{font:600 12.5px/1 Inter,system-ui,sans-serif;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--muted);cursor:pointer}
+.bk-filter button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--paper)}
+.bk-filter-n{font-size:13px;color:var(--muted)}
+.bk-dst{display:inline-block;font:600 11.5px/1.3 Inter,system-ui,sans-serif;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.bk-dst-accepted{color:#15803d;border-color:#16a34a;background:color-mix(in srgb,#16a34a 10%,var(--paper))}
+.bk-dst-proposed{color:var(--acc);border-color:var(--acc);background:var(--acc-soft)}
+.bk-dst-open{color:#2563eb;border-color:#3b82f6;background:color-mix(in srgb,#3b82f6 10%,var(--paper))}
+.bk-dst-superseded{color:var(--muted);text-decoration:line-through}
+.bk-dlog tr[data-status=superseded] td{color:var(--muted)}
+.bk-dlog td:first-child,.bk-dlog td:nth-child(2){white-space:nowrap}
+.bk-dlog tr:target td{background:var(--acc-soft)}
+.bk-dcite{font-size:13px}
+.bk-dcited{max-width:820px;margin:40px 0 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:14px}
+.bk-dcited-t{margin:0 0 6px;font:700 12.5px/1.2 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.bk-dcited ul{list-style:none;margin:0;padding:0}
+.bk-dcited li{padding:4px 0;max-width:none}
+.bk-dcited li>span:last-child{color:var(--muted)}
+
+/* Actions written in the pages and the Actions board (_tools/book/tasks.py) */
+.bk-task{list-style:none;position:relative;margin:6px 0;padding:8px 12px 8px 36px;border:1px solid var(--line);border-radius:10px;background:var(--paper);max-width:820px}
+.bk-tk-box{position:absolute;left:12px;top:12px;width:14px;height:14px;border:1.5px solid var(--muted);border-radius:4px}
+.bk-tk-doing .bk-tk-box{border-color:var(--acc);background:linear-gradient(90deg,var(--acc) 50%,transparent 50%)}
+.bk-tk-done .bk-tk-box{border-color:#16a34a;background:#16a34a}
+.bk-tk-done .bk-tk-title,.bk-tk-dropped .bk-tk-title{color:var(--muted)}
+.bk-tk-dropped .bk-tk-title{text-decoration:line-through}
+.bk-tk-id{font:600 12.5px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--acc)}
+.bk-tk-meta{display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle;margin-left:4px}
+.bk-tk-meta>*{font:600 11.5px/1.3 Inter,system-ui,sans-serif;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--paper);text-decoration:none;white-space:nowrap}
+.bk-tk-st.bk-tk-todo{color:var(--fg)}
+.bk-tk-st.bk-tk-doing{color:var(--acc);border-color:var(--acc);background:var(--acc-soft)}
+.bk-tk-st.bk-tk-done{color:#15803d;border-color:#16a34a}
+.bk-tk-who{color:var(--fg)}
+.bk-tk-due.bk-late{color:#fff;background:#dc2626;border-color:#dc2626}
+.bk-tk-ref{color:var(--acc)}
+.bk-board-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0;font-size:13.5px;color:var(--muted)}
+.bk-board-bar [role=group]{display:inline-flex;flex-wrap:wrap;gap:4px}
+.bk-board-bar button{font:600 12.5px/1 Inter,system-ui,sans-serif;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);cursor:pointer}
+.bk-board-bar button small{font-weight:400;color:var(--muted)}
+.bk-board-bar button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--paper)}
+.bk-board-bar button[aria-pressed=true] small{color:var(--paper)}
+.bk-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.bk-col{background:var(--box2);border-radius:12px;padding:10px}
+.bk-prose .bk-col h2{font-size:15px;margin:2px 4px 10px;padding:0;border:0;display:flex;align-items:center;gap:8px}
+.bk-col-n{font-size:12px;font-weight:600;color:var(--muted);background:var(--paper);border-radius:999px;padding:2px 8px}
+.bk-col ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bk-card{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);max-width:none}
+.bk-card .bk-tk-meta{margin:0}
+.bk-card-t{color:var(--fg)!important;text-decoration:none;font-weight:500}
+.bk-card-t b{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;color:var(--acc);margin-right:4px}
+.bk-card small{color:var(--muted)}
+.bk-col .bk-empty{color:var(--muted);font-size:13.5px;padding:6px}
+.bk-card[hidden]{display:none}
+@media (max-width:900px){.bk-board{grid-template-columns:1fr}}

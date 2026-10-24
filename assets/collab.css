@@ -73,3 +73,16 @@ mark.sb-hl:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
 @media (max-width:640px){.sb-notes{right:10px;bottom:10px}.sb-panel{top:0}}
 @media print{.sb-ui{display:none!important}mark.sb-hl{background:none;border:0}}
+
+/* For me, actions and mentions */
+.sb-at{color:var(--acc);font-weight:600}
+.sb-news{font-style:normal;min-width:22px;padding:4px 6px;border-radius:999px;background:#2563eb;color:#fff;font-size:12px;text-align:center}
+.sb-sec{display:flex;align-items:center;gap:6px;margin:12px 0 6px;font:700 12px/1.2 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.sb-sec b{font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--box2);color:var(--fg)}
+.sb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.sb-grid label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.sb-pop select,.sb-pop input[type=date],.sb-card select{padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:13.5px Inter,system-ui,sans-serif}
+.sb-site{color:#2563eb!important;border-color:#3b82f6!important}
+.sb-card-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sb-card .sb-btn{padding:6px 9px;font-size:12px}
+.sb-newaction{margin-left:auto}

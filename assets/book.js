@@ -260,6 +260,104 @@
   window.addEventListener('resize', function () { if (owner) place(owner); });
   window.addEventListener('scroll', function () { if (owner) place(owner); }, { passive: true });
 
+  /* ---------- rich blocks: copy, tabs, diagrams, API contracts ---------- */
+  var BASE = (doc.currentScript && doc.currentScript.src || '').replace(/book\.js(\?.*)?$/, '');
+  function loadScript(src, done) {
+    var s = doc.createElement('script');
+    s.src = BASE + src; s.onload = done; doc.head.appendChild(s);
+  }
+  doc.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.bk-copy');
+    if (b) {
+      var code = b.closest('.bk-code').querySelector('pre');
+      var text = Array.prototype.map.call(code.querySelectorAll('code'), function (c) {
+        var cl = c.cloneNode(true);
+        Array.prototype.forEach.call(cl.querySelectorAll('.linenos'), function (n) { n.remove(); });
+        return cl.textContent;
+      }).join('\n');
+      var label = b.textContent;
+      var ok = function () { b.textContent = b.getAttribute('data-copied'); setTimeout(function () { b.textContent = label; }, 1400); };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(ok);
+      else { var t = doc.createElement('textarea'); t.value = text; doc.body.appendChild(t); t.select(); try { doc.execCommand('copy'); ok(); } catch (x) {} t.remove(); }
+      return;
+    }
+    var tab = e.target.closest && e.target.closest('.bk-tabs [role=tab]');
+    if (tab) {
+      var box = tab.closest('.bk-tabs'), tabs = all('[role=tab]', box), panes = all('[role=tabpanel]', box), i = tabs.indexOf(tab);
+      tabs.forEach(function (t, k) { t.setAttribute('aria-selected', String(k === i)); });
+      panes.forEach(function (p, k) { p.hidden = k !== i; });
+    }
+  });
+  function dark() {
+    var t = root.getAttribute('data-theme');
+    return t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+  function drawDiagrams() {
+    var nodes = all('pre.mermaid').filter(function (n) { return n.offsetParent !== null && !n.hasAttribute('data-processed'); });
+    if (!nodes.length) return;
+    function run() {
+      window.mermaid.initialize({ startOnLoad: false, theme: dark() ? 'dark' : 'neutral', securityLevel: 'strict' });
+      window.mermaid.run({ nodes: nodes });
+    }
+    if (window.mermaid) run(); else loadScript('vendor/mermaid-11.17.2.min.js', run);
+  }
+  function drawContracts() {
+    var nodes = all('.bk-openapi-doc').filter(function (n) { return n.offsetParent !== null && !n.hasAttribute('data-done'); });
+    if (!nodes.length) return;
+    // Redoc lays out a whole page (fixed menu, own scroll): it runs in a frame of its own.
+    nodes.forEach(function (n) {
+      n.setAttribute('data-done', '');
+      var spec = n.getAttribute('data-spec').replace(/<\//g, '<\\/');
+      var f = doc.createElement('iframe');
+      f.className = 'bk-openapi-frame';
+      f.title = 'OpenAPI';
+      f.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font-family:Inter,system-ui,sans-serif}</style></head>' +
+        '<body><div id="r"></div><script src="' + BASE + 'vendor/redoc-2.5.4.standalone.js"><\/script><script>Redoc.init(' + spec +
+        ', {hideDownloadButton: true, nativeScrollbars: true, expandResponses: "200"}, document.getElementById("r"))<\/script></body></html>';
+      n.appendChild(f);
+    });
+  }
+  doc.addEventListener('langchange', function () { setTimeout(function () { drawDiagrams(); drawContracts(); }, 0); });
+
+  /* ---------- filterable tables (decision log) ---------- */
+  all('.bk-filter').forEach(function (bar) {
+    var table = doc.getElementById(bar.getAttribute('data-for'));
+    if (!table) return;
+    var input = bar.querySelector('input'), buttons = all('button', bar), count = bar.querySelector('.bk-filter-n'), status = '';
+    function fold(x) { return x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+    function run() {
+      var q = fold(input.value.trim()), n = 0, rows = all('tbody tr', table);
+      rows.forEach(function (tr) {
+        var ok = (!status || tr.getAttribute('data-status') === status) && (!q || fold(tr.textContent).indexOf(q) >= 0);
+        tr.hidden = !ok; if (ok) n++;
+      });
+      count.textContent = n + ' / ' + rows.length;
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        status = b.getAttribute('data-status');
+        buttons.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        run();
+      });
+    });
+    input.addEventListener('input', run);
+    run();
+  });
+
+  /* ---------- actions: late due dates, owner filter on the board ---------- */
+  var today = new Date().toISOString().slice(0, 10);
+  all('.bk-tk-due[data-due]').forEach(function (d) { if (d.getAttribute('data-due') < today) d.classList.add('bk-late'); });
+  all('.bk-board-bar').forEach(function (bar) {
+    var art = bar.closest('article') || doc, buttons = all('button', bar);
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var o = b.getAttribute('data-owner');
+        buttons.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        all('.bk-card', art).forEach(function (c) { c.hidden = !!o && (' ' + c.getAttribute('data-owners') + ' ').indexOf(' ' + o + ' ') < 0; });
+      });
+    });
+  });
+
   /* ---------- start ---------- */
   all('.bk-lang button').forEach(function (b) { b.addEventListener('click', function () { apply(b.getAttribute('data-set')); }); });
   var fromUrl = new URLSearchParams(location.search).get('lang');
