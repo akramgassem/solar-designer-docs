@@ -642,6 +642,12 @@
       doc.addEventListener('langchange', label);
       sb.addEventListener('click', openSearch);
       tools.insertBefore(sb, tools.firstChild);
+      var ws = el('a', 'bk-btn sb-ui sb-ws', '');
+      ws.href = '/app/index.html';
+      function wsLabel() { ws.textContent = lang() === 'fr' ? 'Espace de travail' : 'Workspace'; }
+      wsLabel();
+      doc.addEventListener('langchange', wsLabel);
+      tools.insertBefore(ws, tools.firstChild);
     }
     [fab, pop, panelBtn, panel, searchBox].forEach(function (x) { doc.body.appendChild(x); });
     root.classList.add('sb-on');
