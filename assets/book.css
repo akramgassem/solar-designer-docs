@@ -16,6 +16,7 @@ body{margin:0;background:var(--bg);color:var(--fg)}
 
 .bk{display:grid;grid-template-columns:var(--bk-side) minmax(0,1fr);min-height:100vh}
 .bk-main{min-width:0}
+.bk-main img{max-width:100%;height:auto;vertical-align:top;margin:0 8px 8px 0}
 
 /* Sidebar */
 .bk-side{position:sticky;top:0;height:100vh;overflow-y:auto;overscroll-behavior:contain;border-right:1px solid var(--line);background:var(--bg);padding:18px 14px 40px 18px;font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
