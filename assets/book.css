@@ -260,3 +260,7 @@ html[lang="en"] [data-lang="fr"],html[lang="fr"] [data-lang="en"]{display:none}
 .bk-col .bk-empty{color:var(--muted);font-size:13.5px;padding:6px}
 .bk-card[hidden]{display:none}
 @media (max-width:900px){.bk-board{grid-template-columns:1fr}}
+/* An image written with #light / #dark (as the content engine reads it) shows in its theme only. */
+img[src$="#dark"]{display:none}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) img[src$="#dark"]{display:inline}:root:not([data-theme="light"]) img[src$="#light"]{display:none}}
+:root[data-theme="dark"] img[src$="#dark"]{display:inline}:root[data-theme="dark"] img[src$="#light"]{display:none}
