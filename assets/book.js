@@ -292,11 +292,34 @@
     var t = root.getAttribute('data-theme');
     return t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   }
+  // Colours a diagram may use (classDef, style, linkStyle): the course palette, light → dark.
+  // Authors write the light value; the dark theme swaps it. Same table as the platform's
+  // diagram/mermaid.ts, which a test keeps in step.
+  var PALETTE = {
+    '#b85f00': '#f2a23c', '#fff0d9': '#3a2b14', '#0b7556': '#43c79a', '#d9f1e6': '#12332a',
+    '#c0392b': '#ff7d6b', '#fde3de': '#3e1d18', '#2457c5': '#7fa8ff', '#e3ebfb': '#1b2842'
+  };
+  // The book's ink, paper, boxes and hairlines, so diagrams look like the page around them.
+  var LOOK = {
+    light: { background: '#ffffff', primaryColor: '#f6f7f9', primaryBorderColor: '#c5ccd4', primaryTextColor: '#1b2129',
+      lineColor: '#7b8591', textColor: '#1b2129', clusterBkg: '#fbfbfc', clusterBorder: '#c5ccd4', titleColor: '#5a636e',
+      edgeLabelBackground: '#ffffff', secondaryColor: '#eef1f4', tertiaryColor: '#ffffff' },
+    dark: { background: '#1a1e24', primaryColor: '#20262e', primaryBorderColor: '#3a434f', primaryTextColor: '#e7eaef',
+      lineColor: '#6b7684', textColor: '#e7eaef', clusterBkg: '#1d2228', clusterBorder: '#3a434f', titleColor: '#9aa4b1',
+      edgeLabelBackground: '#1a1e24', secondaryColor: '#29303a', tertiaryColor: '#1a1e24' }
+  };
   function drawDiagrams() {
     var nodes = all('pre.mermaid').filter(function (n) { return n.offsetParent !== null && !n.hasAttribute('data-processed'); });
     if (!nodes.length) return;
     function run() {
-      window.mermaid.initialize({ startOnLoad: false, theme: dark() ? 'dark' : 'neutral', securityLevel: 'strict' });
+      var d = dark(), look = LOOK[d ? 'dark' : 'light'];
+      if (d) nodes.forEach(function (n) {
+        n.textContent = n.textContent.replace(/#[0-9a-f]{6}\b/gi, function (h) { return PALETTE[h.toLowerCase()] || h; });
+      });
+      look.fontFamily = 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif';
+      look.fontSize = '14px';
+      window.mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: look, securityLevel: 'strict',
+        flowchart: { padding: 14, nodeSpacing: 36, rankSpacing: 52, curve: 'basis' } });
       window.mermaid.run({ nodes: nodes });
     }
     if (window.mermaid) run(); else loadScript('vendor/mermaid-11.17.2.min.js', run);
