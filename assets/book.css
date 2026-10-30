@@ -3,9 +3,9 @@
    concepts/course.css; every class is prefixed bk- (or .cx for concept marks) so that
    hand-written pages keep their own styles. */
 
-:root{--bg:#f5f4ef;--paper:#fff;--fg:#1b2129;--muted:#5a636e;--line:#c5ccd4;--box2:#eef1f4;--acc:#b85f00;--acc-soft:#fff0d9;--bk-side:292px;--bk-top:52px}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121519;--paper:#1a1e24;--fg:#e7eaef;--muted:#9aa4b1;--line:#3a434f;--box2:#29303a;--acc:#f2a23c;--acc-soft:#3a2b14}}
-:root[data-theme="dark"]{--bg:#121519;--paper:#1a1e24;--fg:#e7eaef;--muted:#9aa4b1;--line:#3a434f;--box2:#29303a;--acc:#f2a23c;--acc-soft:#3a2b14;color-scheme:dark}
+:root{--bg:#f5f4ef;--paper:#fff;--fg:#1b2129;--muted:#5a636e;--line:#c5ccd4;--box2:#eef1f4;--acc:#b85f00;--acc-soft:#fff0d9;--good:#0b7556;--good-soft:#d9f1e6;--blue:#2457c5;--blue-soft:#e3ebfb;--bk-side:292px;--bk-top:52px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121519;--paper:#1a1e24;--fg:#e7eaef;--muted:#9aa4b1;--line:#3a434f;--box2:#29303a;--acc:#f2a23c;--acc-soft:#3a2b14;--good:#43c79a;--good-soft:#12332a;--blue:#7fa8ff;--blue-soft:#1b2842}}
+:root[data-theme="dark"]{--bg:#121519;--paper:#1a1e24;--fg:#e7eaef;--muted:#9aa4b1;--line:#3a434f;--box2:#29303a;--acc:#f2a23c;--acc-soft:#3a2b14;--good:#43c79a;--good-soft:#12332a;--blue:#7fa8ff;--blue-soft:#1b2842;color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 .bk,.bk *,.bk-pop,.bk-pop *,.bk-skip{box-sizing:border-box}
 html{background:var(--bg);scroll-padding-top:calc(var(--bk-top) + 12px)}
@@ -203,22 +203,69 @@ html[lang="en"] [data-lang="fr"],html[lang="fr"] [data-lang="en"]{display:none}
 .bk-callout.bk-assumption{border-left-style:dashed}
 @media print{.bk-copy{display:none}}
 
+/* Interactive figures (```widget, blocks.py): the drawing inline, its controls under it
+   (book.js), the caption last. */
+.bk-widget{margin:14px 0 22px;max-width:760px}
+.bk-widget>svg{display:block;width:100%;height:auto;max-height:560px}
+.bk-widget figcaption{margin-top:6px;color:var(--muted);font-size:14px}
+.bk-widget-live{margin:0;padding:18px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:14px}
+.bk-widget-out:empty{display:none}
+.bk-td-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.bk-td-bar button{min-height:34px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--fg);font:500 13.5px/1 Inter,system-ui,sans-serif;cursor:pointer}
+.bk-td-bar button:hover:not(:disabled){background:var(--box2)}
+.bk-td-bar button:disabled{opacity:.5;cursor:default}
+.bk-td-bar .bk-td-play{background:var(--acc);border-color:var(--acc);color:var(--paper)}
+.bk-td-bar .bk-td-play:hover:not(:disabled){background:var(--acc);filter:brightness(1.08)}
+.bk-td-bar .bk-td-all{border-color:transparent;background:none}
+.bk-td-bar button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.bk-prose .bk-td-say{margin:8px 0 0;font-size:14px;min-height:1.5em}
+@media (max-width:640px){.bk-td-bar{gap:6px}.bk-td-bar button{padding:0 10px;font-size:13px}}
+
 /* Decision log as data (_tools/book/dlog.py) */
-.bk-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+.bk-filter{position:sticky;top:var(--bk-top);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 6px;padding:10px 0;background:var(--bg)}
 .bk-filter input{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);font:14px Inter,system-ui,sans-serif}
 .bk-filter [role=group]{display:inline-flex;flex-wrap:wrap;gap:4px}
 .bk-filter button{font:600 12.5px/1 Inter,system-ui,sans-serif;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--muted);cursor:pointer}
+.bk-filter button:hover{color:var(--fg);border-color:var(--muted)}
 .bk-filter button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--paper)}
-.bk-filter-n{font-size:13px;color:var(--muted)}
-.bk-dst{display:inline-block;font:600 11.5px/1.3 Inter,system-ui,sans-serif;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
-.bk-dst-accepted{color:#15803d;border-color:#16a34a;background:color-mix(in srgb,#16a34a 10%,var(--paper))}
+.bk-filter :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.bk-filter-n{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bk-dst{display:inline-block;font:600 11.5px/1.3 Inter,system-ui,sans-serif;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;vertical-align:1px}
+.bk-dst-accepted{color:var(--good);border-color:var(--good);background:var(--good-soft)}
 .bk-dst-proposed{color:var(--acc);border-color:var(--acc);background:var(--acc-soft)}
-.bk-dst-open{color:#2563eb;border-color:#3b82f6;background:color-mix(in srgb,#3b82f6 10%,var(--paper))}
-.bk-dst-superseded{color:var(--muted);text-decoration:line-through}
-.bk-dlog tr[data-status=superseded] td{color:var(--muted)}
-.bk-dlog td:first-child,.bk-dlog td:nth-child(2){white-space:nowrap}
-.bk-dlog tr:target td{background:var(--acc-soft)}
-.bk-dcite{font-size:13px}
+.bk-dst-open{color:var(--blue);border-color:var(--blue);background:var(--blue-soft)}
+.bk-dst-superseded{color:var(--muted);background:var(--box2)}
+.bk-dby{font-size:13px;color:var(--muted)}
+/* One card per decision: id, status and date on top, the decision as its title, then why,
+   argument and the pages that cite it. */
+.bk-prose .bk-dlog{list-style:none;margin:8px 0 24px;padding:0;display:grid;gap:12px;max-width:860px}
+.bk-prose .bk-dcard{max-width:none;padding:14px 18px 12px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;background:var(--paper);scroll-margin-top:calc(var(--bk-top) + 70px)}
+.bk-dcard[data-status=accepted]{border-left-color:var(--good)}
+.bk-dcard[data-status=proposed]{border-left-color:var(--acc)}
+.bk-dcard[data-status=open]{border-left-color:var(--blue)}
+.bk-dcard[hidden]{display:none}
+.bk-dcard:target{box-shadow:0 0 0 2px var(--acc);background:color-mix(in srgb,var(--acc-soft) 45%,var(--paper))}
+.bk-prose .bk-dcard-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 6px;max-width:none;font-size:13px}
+.bk-prose a.bk-did{font:700 13.5px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--fg);text-decoration:none;white-space:nowrap}
+.bk-prose a.bk-did:hover{color:var(--acc);text-decoration:underline}
+.bk-dcard-h time{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bk-prose .bk-dcard-d{margin:0 0 10px;max-width:none;font-size:16px;line-height:1.5;font-weight:600}
+.bk-dcard dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 16px;margin:0;padding-top:10px;border-top:1px solid var(--line);font-size:14.5px;line-height:1.55}
+.bk-dcard dl>div{display:contents}
+.bk-dcard dt{font:600 11.5px/2 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.bk-dcard dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.bk-dcard dl>div:last-child dd{font-size:13.5px}
+.bk-dcard[data-status=superseded]{background:var(--bg);border-style:dashed}
+.bk-dcard[data-status=superseded] .bk-dcard-d{color:var(--muted);font-weight:500}
+.bk-dcard[data-status=superseded] dd{color:var(--muted)}
+@media (max-width:640px){
+  .bk-prose .bk-dcard{padding:12px 14px 10px}
+  .bk-dcard dl{grid-template-columns:1fr;gap:0}
+  .bk-dcard dd{margin-bottom:8px}
+  .bk-dcard dt{line-height:1.6}
+  .bk-filter{position:static}
+  .bk-filter input{min-width:0;max-width:none;flex-basis:100%}
+}
 .bk-dcited{max-width:820px;margin:40px 0 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:14px}
 .bk-dcited-t{margin:0 0 6px;font:700 12.5px/1.2 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .bk-dcited ul{list-style:none;margin:0;padding:0}

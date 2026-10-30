@@ -342,14 +342,14 @@
   }
   doc.addEventListener('langchange', function () { setTimeout(function () { drawDiagrams(); drawContracts(); }, 0); });
 
-  /* ---------- filterable tables (decision log) ---------- */
+  /* ---------- filterable lists (decision log cards) ---------- */
   all('.bk-filter').forEach(function (bar) {
     var table = doc.getElementById(bar.getAttribute('data-for'));
     if (!table) return;
     var input = bar.querySelector('input'), buttons = all('button', bar), count = bar.querySelector('.bk-filter-n'), status = '';
     function fold(x) { return x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
     function run() {
-      var q = fold(input.value.trim()), n = 0, rows = all('tbody tr', table);
+      var q = fold(input.value.trim()), n = 0, rows = all('tbody tr, .bk-dcard', table);
       rows.forEach(function (tr) {
         var ok = (!status || tr.getAttribute('data-status') === status) && (!q || fold(tr.textContent).indexOf(q) >= 0);
         tr.hidden = !ok; if (ok) n++;
@@ -365,6 +365,55 @@
     });
     input.addEventListener('input', run);
     run();
+  });
+
+  /* ---------- widgets: the editor's tap demos, touch by touch ---------- */
+  // Same behaviour as the app's tap-demo widget: the drawing holds the steps (g.td-step and its
+  // <title>); elements show from their data-step on, until their data-until; legend lines
+  // (.td-say) always show. The drawing starts with every step shown.
+  var TD = {
+    en: { play: 'Play', back: 'Back', next: 'Next touch', all: 'Show all', start: 'Before the first touch.', step: 'Step {k} of {n}' },
+    fr: { play: 'Lancer', back: 'Retour', next: 'Toucher suivant', all: 'Tout montrer', start: 'Avant le premier toucher.', step: 'Étape {k} sur {n}' }
+  };
+  function num(v) { return v === null || v === '' ? null : (isFinite(+v) ? +v : null); }
+  all('figure.bk-widget[data-widget="tap-demo"]').forEach(function (fig) {
+    var svg = fig.querySelector('svg'), out = fig.querySelector('.bk-widget-out');
+    if (!svg || !out) return;
+    var steps = all('g.td-step[data-step]', svg).map(function (g) {
+      var t = g.querySelector('title');
+      return { n: num(g.getAttribute('data-step')) || 0, say: t ? t.textContent : '' };
+    }).filter(function (x) { return x.n > 0; }).sort(function (a, b) { return a.n - b.n; });
+    var last = steps.length, k = last, timer = null;
+    if (!last) return;
+    var t = TD[(fig.closest('[lang]') || root).getAttribute('lang') === 'fr' ? 'fr' : 'en'];
+    out.innerHTML = '<div class="bk-td-bar"><button type="button" class="bk-td-play">' + t.play + '</button>' +
+      '<button type="button">' + t.back + '</button><button type="button">' + t.next + '</button>' +
+      '<button type="button" class="bk-td-all">' + t.all + '</button></div><p class="bk-td-say" aria-live="polite"></p>';
+    var b = all('button', out), say = out.querySelector('.bk-td-say');
+    function paint() {
+      all('[data-step], [data-until]', svg).forEach(function (el) {
+        var step = num(el.getAttribute('data-step')), until = num(el.getAttribute('data-until'));
+        var shown = el.classList.contains('td-say') || ((step === null || step <= k) && (until === null || k < until));
+        el.style.display = shown ? '' : 'none';
+        el.classList.toggle('td-now', step === k);
+      });
+      var now = steps[k - 1];
+      say.textContent = now ? t.step.replace('{k}', k).replace('{n}', last) + ' · ' + now.say : t.start;
+      b[0].disabled = timer !== null; b[1].disabled = k === 0; b[2].disabled = k >= last;
+    }
+    function stop() { if (timer !== null) { clearTimeout(timer); timer = null; } }
+    function go(to) { stop(); k = Math.max(0, Math.min(last, to)); paint(); }
+    function tick() {
+      if (k >= last) { timer = null; paint(); return; }
+      k += 1;
+      timer = k >= last ? null : setTimeout(tick, 1400);
+      paint();
+    }
+    b[0].addEventListener('click', function () { stop(); k = 0; timer = setTimeout(tick, 1400); paint(); });
+    b[1].addEventListener('click', function () { go(k - 1); });
+    b[2].addEventListener('click', function () { go(k + 1); });
+    b[3].addEventListener('click', function () { go(last); });
+    paint();
   });
 
   /* ---------- actions: late due dates, owner filter on the board ---------- */
