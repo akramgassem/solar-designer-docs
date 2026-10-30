@@ -261,6 +261,31 @@ html[lang="en"] [data-lang="fr"],html[lang="fr"] [data-lang="en"]{display:none}
 .bk-card[hidden]{display:none}
 @media (max-width:900px){.bk-board{grid-template-columns:1fr}}
 /* An image written with #light / #dark (as the content engine reads it) shows in its theme only. */
+/* Galleries: a paragraph of 3+ images is a grid of thumbnails (gallery.py); book.js opens one
+   full size in the lightbox, with previous / next. */
+.bk-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:760px;margin:14px 0 20px}
+.bk-thumb{margin:0;min-width:0}
+.bk-thumb-open{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--box2);overflow:hidden;cursor:zoom-in;line-height:0}
+.bk-thumb-open:hover{border-color:var(--muted)}
+.bk-thumb-open:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.bk-main .bk-thumb-open img{width:100%;aspect-ratio:4/3;object-fit:cover;object-position:top;margin:0}
+.bk-thumb figcaption{margin-top:6px;color:var(--muted);font:12.5px/1.35 Inter,system-ui,sans-serif;overflow-wrap:anywhere}
+@media (max-width:640px){.bk-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bk-lightbox{box-sizing:border-box;width:min(96vw,1400px);max-width:none;max-height:96vh;padding:12px 56px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--fg);font:14px/1.4 Inter,system-ui,sans-serif}
+.bk-lightbox::backdrop{background:rgba(10,12,15,.78)}
+.bk-lightbox img{display:block;max-width:100%;max-height:calc(96vh - 96px);margin:0 auto;object-fit:contain}
+.bk-lightbox p{margin:10px 0 0;text-align:center}
+.bk-lightbox p span{color:var(--muted);margin-left:8px;font-variant-numeric:tabular-nums}
+.bk-lightbox button{position:absolute;display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);font:20px/1 Inter,system-ui,sans-serif;cursor:pointer}
+.bk-lightbox button:hover{background:var(--box2)}
+.bk-lightbox button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.bk-lightbox button[hidden]{display:none}
+.bk-lb-close{top:10px;right:8px}
+.bk-lb-prev,.bk-lb-next{top:calc(50% - 20px)}
+.bk-lb-prev{left:8px}
+.bk-lb-next{right:8px}
+@media (max-width:640px){.bk-lightbox{padding:52px 8px 64px}.bk-lightbox img{max-height:calc(96vh - 150px)}.bk-lb-prev,.bk-lb-next{top:auto;bottom:10px}.bk-lb-prev{left:calc(50% - 48px)}.bk-lb-next{right:calc(50% - 48px)}}
+
 img[src$="#dark"]{display:none}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) img[src$="#dark"]{display:inline}:root:not([data-theme="light"]) img[src$="#light"]{display:none}}
 :root[data-theme="dark"] img[src$="#dark"]{display:inline}:root[data-theme="dark"] img[src$="#light"]{display:none}
