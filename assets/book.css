@@ -360,6 +360,16 @@ html[lang="en"] [data-lang="fr"],html[lang="fr"] [data-lang="en"]{display:none}
 .bk-pl-btn[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 1px var(--fg)}
 .bk-pl-table{margin-top:12px;font-size:13.5px}
 .bk-pl-sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:8px;vertical-align:-2px;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+/* Funnel prototypes (72-funnels.js): a real-size screen scaled into the column; Enlarge opens it
+   over the page. */
+.bk-fw-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.bk-fw-bar button{min-height:34px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--fg);font:500 13.5px/1 Inter,system-ui,sans-serif;cursor:pointer}
+.bk-fw{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--box2)}
+.bk-fw-screen{position:absolute;left:0;top:0;transform-origin:0 0;font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;line-height:1.35}
+.bk-fw-screen button{line-height:1.2}
+figure.bk-widget.bk-fw-open{position:fixed;inset:0;z-index:60;margin:0;max-width:none;background:rgba(20,22,26,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+figure.bk-widget.bk-fw-open .bk-fw-bar{color:#fff;width:100%;max-width:1180px}
+figure.bk-widget.bk-fw-open figcaption{color:#ddd}
 /* Decision log as data (tools/bookgen/dlog.py) */
 .bk-filter{position:sticky;top:var(--bk-top);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 6px;padding:10px 0;background:var(--bg)}
 .bk-filter input{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);font:14px Inter,system-ui,sans-serif}
