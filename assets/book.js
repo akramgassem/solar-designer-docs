@@ -643,11 +643,13 @@
       { id: 'clay', en: 'Clay', fr: 'Argile', ground: '#EFE6DC', paper: '#FCF8F3', line: '#E0D3C4' },
       { id: 'sage', en: 'Sage', fr: 'Sauge', ground: '#E6EAE4', paper: '#FAFBF8', line: '#D5DBD2' },
       { id: 'mist', en: 'Mist', fr: 'Brume', ground: '#E9ECEE', paper: '#FBFCFD', line: '#D8DDE1' },
+      { id: 'frost', en: 'Frost', fr: 'Givre', ground: '#F2F4F8', paper: '#FFFFFF', line: '#DDE1E6' },
       { id: 'night', en: 'Night', fr: 'Nuit', ground: '#16181D', paper: '#1F2228', line: '#30343C', dark: true }
     ],
     accents: [
       { id: 'spark', en: 'Spark', fr: 'Étincelle', live: '#FFC400', solar: '#F2A900', battery: ['#B5653A', '#E0A27F'], sel: ['#1E6B5C', '#7FC7B3'], selsoft: '#E3EFEB' },
       { id: 'current', en: 'Live current', fr: 'Courant', live: '#00B8A9', solar: '#F0A500', battery: ['#5148C8', '#A9A3F2'], sel: ['#00796F', '#5FD3C6'], selsoft: '#DDF3F0' },
+      { id: 'signal', en: 'Signal', fr: 'Signal', live: '#0F62FE', solar: '#F1C21B', battery: ['#8A3FFC', '#BE95FF'], sel: ['#0043CE', '#78A9FF'], selsoft: '#EDF5FF' },
       { id: 'volt', en: 'Volt', fr: 'Volt', live: '#C8EE00', solar: '#D69A00', battery: ['#6C4BD8', '#B8A6F5'], sel: ['#0F5C46', '#8FD9B9'], selsoft: '#E1EEE8' }
     ],
     text: {
@@ -696,8 +698,8 @@
     paint();
   });
   /* ---------- widgets: the funnel prototypes (design/funnels, design/editor-tools) ---------- */
-  // Intention prototypes, not final screens. Each widget draws a product screen at its real size
-  // (a 390 × 844 phone or an 1180 × 820 tablet), scaled to the page, with an Enlarge button.
+  // Intention prototypes, not final screens. Each widget draws product screens at their real size
+  // (an 1180 × 820 tablet), scaled to the page, with an Enlarge button; the journey is in 73-journey.js.
   // The screens are those of the Australian product, so they stay in English in both languages;
   // the figure's caption carries the page's language. Every number comes from FN.sim, one small
   // model of a Sydney household, so that figures stay consistent when a switch is flipped.
@@ -711,36 +713,66 @@
   /* palette, shared with the palette widget */
   FN.PAL = 'sd-palette';
   FN.palette = function () { try { var p = JSON.parse(localStorage.getItem(FN.PAL) || '{}'); return { ground: p.ground || 'stone', accent: p.accent || 'spark' }; } catch (e) { return { ground: 'stone', accent: 'spark' }; } };
-  FN.tokens = function () {
-    var p = FN.palette();
+  FN.tokens = function (p) {
+    p = p || FN.palette();
     var G = {
-      stone: { ground: '#ECE9E3', paper: '#FBFAF8', line: '#DDD8CF', line2: '#F1EEE9', paper2: '#FFFFFF', canvas: '#E3DFD7', grip: '#CFC9BE', faint: '#B5B0A6' },
-      linen: { ground: '#F4F1EA', paper: '#FFFFFF', line: '#E4DFD4', line2: '#F3EFE8', paper2: '#FFFFFF', canvas: '#ECE7DE', grip: '#D6CFC2', faint: '#B9B2A6' },
-      clay: { ground: '#EFE6DC', paper: '#FCF8F3', line: '#E0D3C4', line2: '#F3EAE0', paper2: '#FFFFFF', canvas: '#E8DCCF', grip: '#D3C3B2', faint: '#B8AA9A' },
-      sage: { ground: '#E6EAE4', paper: '#FAFBF8', line: '#D5DBD2', line2: '#EDF0EA', paper2: '#FFFFFF', canvas: '#DCE2D9', grip: '#C3CBBF', faint: '#A9B2A6' },
-      mist: { ground: '#E9ECEE', paper: '#FBFCFD', line: '#D8DDE1', line2: '#EEF1F3', paper2: '#FFFFFF', canvas: '#DFE3E6', grip: '#C5CCD2', faint: '#AAB2B9' },
-      night: { ground: '#16181D', paper: '#1F2228', line: '#30343C', line2: '#272A31', paper2: '#262A31', canvas: '#1B1E23', grip: '#3A3F48', faint: '#5B6068', ink: '#ECE9E3', ink2: '#C9CDD3', muted: '#A5ABB4', tip: '#30343C', gain: '#6FCF97', gainSoft: '#1D3326', loss: '#F08A73', lossSoft: '#3A221D', sunText: '#E8B85C', sunSoft: '#3A2F18' }
+      stone: { ground: '#ECE9E3', paper: '#FBFAF8', line: '#DDD8CF', line2: '#F1EEE9', paper2: '#FFFFFF', canvas: '#E3DFD7', grip: '#CFC9BE', faint: '#B5B0A6', roofN: '#CFC9BF', roofS: '#C2BBB0', roof: '#C8C2B7', roofLine: '#9C958A', ridge: '#8F887C', sky: '#E3DFD7', earth: '#D9D4CA', drive: '#C9C3B8', walls: '#EFEAE1', roof3: '#8F8679' },
+      linen: { ground: '#F4F1EA', paper: '#FFFFFF', line: '#E4DFD4', line2: '#F3EFE8', paper2: '#FFFFFF', canvas: '#ECE7DE', grip: '#D6CFC2', faint: '#B9B2A6', roofN: '#D6CFC3', roofS: '#CBC3B6', roof: '#D0C9BC', roofLine: '#A39A8C', ridge: '#958C7E', sky: '#ECE7DE', earth: '#E0DACF', drive: '#D2CBC0', walls: '#F5F1EA', roof3: '#958B7C' },
+      clay: { ground: '#EFE6DC', paper: '#FCF8F3', line: '#E0D3C4', line2: '#F3EAE0', paper2: '#FFFFFF', canvas: '#E8DCCF', grip: '#D3C3B2', faint: '#B8AA9A', roofN: '#D9B8A0', roofS: '#CBA990', roof: '#D2B098', roofLine: '#A27E66', ridge: '#93705A', sky: '#E8DCCF', earth: '#DCCDBD', drive: '#CDBFAF', walls: '#F3EAE0', roof3: '#A86E52' },
+      sage: { ground: '#E6EAE4', paper: '#FAFBF8', line: '#D5DBD2', line2: '#EDF0EA', paper2: '#FFFFFF', canvas: '#DCE2D9', grip: '#C3CBBF', faint: '#A9B2A6', roofN: '#C9CFC5', roofS: '#BCC3B8', roof: '#C3C9BF', roofLine: '#949C90', ridge: '#879083', sky: '#DCE2D9', earth: '#CFD7CB', drive: '#C2C9BE', walls: '#EEF1EA', roof3: '#7F8A7B' },
+      mist: { ground: '#E9ECEE', paper: '#FBFCFD', line: '#D8DDE1', line2: '#EEF1F3', paper2: '#FFFFFF', canvas: '#DFE3E6', grip: '#C5CCD2', faint: '#AAB2B9', roofN: '#C9CED3', roofS: '#BCC2C8', roof: '#C3C9CE', roofLine: '#939BA3', ridge: '#868E96', sky: '#DFE3E6', earth: '#D3D8DC', drive: '#C5CBD0', walls: '#F1F3F5', roof3: '#7C858E' },
+      frost: { ground: '#F2F4F8', paper: '#FFFFFF', line: '#DDE1E6', line2: '#EEF1F5', paper2: '#FFFFFF', canvas: '#E8ECF1', grip: '#C1C7CD', faint: '#A2A9B0', ink: '#121619', ink2: '#4D5358', muted: '#697077', roofN: '#D0D6DD', roofS: '#C1C8D0', roof: '#C9CFD6', roofLine: '#97A0AA', ridge: '#88919B', sky: '#E8ECF1', earth: '#DDE2E8', drive: '#CDD3DA', walls: '#FFFFFF', roof3: '#6F7883' },
+      night: { ground: '#16181D', paper: '#1F2228', line: '#30343C', line2: '#272A31', paper2: '#262A31', canvas: '#1B1E23', grip: '#3A3F48', faint: '#5B6068', ink: '#ECE9E3', ink2: '#C9CDD3', muted: '#A5ABB4', tip: '#ECE9E3', gain: '#6FCF97', gainSoft: '#1D3326', loss: '#F08A73', lossSoft: '#3A221D', sunText: '#E8B85C', sunSoft: '#3A2F18', roofN: '#50545D', roofS: '#454952', roof: '#4B4F58', roofLine: '#70757F', ridge: '#7E838D', sky: '#2A2E35', earth: '#33373F', drive: '#3B4048', walls: '#C9C4BA', roof3: '#5E5A54' }
     };
     var A = {
       spark: { live: '#FFC400', sun: '#F2A900', sel: ['#1E6B5C', '#7FC7B3'], selSoft: ['#E3EFEB', '#24332F'], battery: ['#B5653A', '#E0A27F'], batterySoft: ['#F3E6DD', '#3A2A20'] },
       current: { live: '#00B8A9', sun: '#F0A500', sel: ['#00796F', '#5FD3C6'], selSoft: ['#DDF3F0', '#1E3532'], battery: ['#5148C8', '#A9A3F2'], batterySoft: ['#E7E6F8', '#2A2948'] },
+      signal: { live: '#0F62FE', onLive: '#FFFFFF', sun: '#F1C21B', sel: ['#0043CE', '#78A9FF'], selSoft: ['#EDF5FF', '#1C2B4A'], battery: ['#8A3FFC', '#BE95FF'], batterySoft: ['#F6F2FF', '#2E2147'] },
       volt: { live: '#C8EE00', sun: '#D69A00', sel: ['#0F5C46', '#8FD9B9'], selSoft: ['#E1EEE8', '#203830'], battery: ['#6C4BD8', '#B8A6F5'], batterySoft: ['#ECE7FB', '#2D2648'] }
     };
     var g = G[p.ground] || G.stone, a = A[p.accent] || A.spark, d = p.ground === 'night' ? 1 : 0;
     var t = { ink: '#1D2026', ink2: '#4A4F57', muted: '#6E737B', tip: '#1D2026', gain: '#2E7D4F', gainSoft: '#E3F1E8', loss: '#B3412C', lossSoft: '#F6E1DB', sunText: '#8A5E0A', sunSoft: '#F6EBD3', onLive: '#17191E' };
     Object.keys(g).forEach(function (k) { t[k] = g[k]; });
-    t.live = a.live; t.sun = a.sun; t.sel = a.sel[d]; t.selSoft = a.selSoft[d]; t.battery = a.battery[d]; t.batterySoft = a.batterySoft[d]; t.dark = !!d;
+    t.live = a.live; t.sun = a.sun; if (a.onLive) t.onLive = a.onLive; t.sel = a.sel[d]; t.selSoft = a.selSoft[d]; t.battery = a.battery[d]; t.batterySoft = a.batterySoft[d]; t.dark = !!d;
     return t;
   };
   FN.vars = function (t) { return Object.keys(t).filter(function (k) { return k !== 'dark'; }).map(function (k) { return '--c-' + k + ':' + t[k]; }).join(';'); };
+
+  /* three palette presets from design/palette, offered above the prototypes */
+  FN.PRESETS = [{ ground: 'stone', accent: 'spark', en: 'Stone · Spark', fr: 'Pierre · Étincelle', den: 'warm stone, a yellow spark', dfr: 'pierre chaude, étincelle jaune' }, { ground: 'linen', accent: 'current', en: 'Linen · Live current', fr: 'Lin · Courant', den: 'light linen, a teal current', dfr: 'lin clair, courant turquoise' }, { ground: 'frost', accent: 'signal', en: 'Frost · Signal', fr: 'Givre · Signal', den: 'cool white, an electric blue', dfr: 'blanc froid, bleu électrique' }, { ground: 'night', accent: 'volt', en: 'Night · Volt', fr: 'Nuit · Volt', den: 'dark ground, an electric lime', dfr: 'fond sombre, citron électrique' }];
+  // a preset's swatches: ground, card, selection, live action, battery
+  FN.swatch = function (p) { var t = FN.tokens(p); return '<span class="bk-fw-sw" aria-hidden="true">' + [t.ground, t.paper, t.sel, t.live, t.battery].map(function (c) { return '<i style="background:' + c + '"></i>'; }).join('') + '</span>'; };
+  FN.paletteBar = function (fr) {
+    return '<span class="bk-fw-pal"><button type="button" class="bk-fw-pal-btn" aria-haspopup="menu" aria-expanded="false"><span class="bk-fw-pal-k">' + (fr ? 'Palette' : 'Palette') + '</span><span class="bk-fw-pal-cur"></span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      '<span class="bk-fw-pal-menu" role="menu" hidden>' + FN.PRESETS.map(function (p, i) { return '<button type="button" role="menuitemradio" data-pal="' + i + '">' + FN.swatch(p) + '<span class="bk-fw-pal-t"><b>' + p[fr ? 'fr' : 'en'] + '</b><span>' + p[fr ? 'dfr' : 'den'] + '</span></span><svg class="bk-fw-pal-ok" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.5 6 10.5 11 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'; }).join('') +
+      '<a class="bk-fw-pal-more" href="palette.html">' + (fr ? 'Toutes les palettes ›' : 'All palettes ›') + '</a></span></span>';
+  };
+  FN.wirePalette = function (out) {
+    var btn = out.querySelector('.bk-fw-pal-btn'), menu = out.querySelector('.bk-fw-pal-menu'), items = all('[data-pal]', out), fr = FN.isFr(out);
+    function open(v) { menu.hidden = !v; btn.setAttribute('aria-expanded', v ? 'true' : 'false'); if (v) { var on = items.filter(function (b) { return b.getAttribute('aria-checked') === 'true'; })[0] || items[0]; on.focus(); } }
+    function mark() {
+      var cur = FN.palette();
+      items.forEach(function (b) { var p = FN.PRESETS[+b.getAttribute('data-pal')], on = p.ground === cur.ground && p.accent === cur.accent; b.setAttribute('aria-checked', on ? 'true' : 'false'); if (on) out.querySelector('.bk-fw-pal-cur').innerHTML = FN.swatch(p) + '<span>' + p[fr ? 'fr' : 'en'] + '</span>'; });
+      if (!items.some(function (b) { return b.getAttribute('aria-checked') === 'true'; })) out.querySelector('.bk-fw-pal-cur').innerHTML = FN.swatch(cur) + '<span>' + (fr ? 'Personnalisée' : 'Custom') + '</span>';
+    }
+    btn.addEventListener('click', function () { open(menu.hidden); });
+    items.forEach(function (b, i) {
+      b.addEventListener('click', function () { var p = FN.PRESETS[+b.getAttribute('data-pal')]; try { localStorage.setItem(FN.PAL, JSON.stringify({ ground: p.ground, accent: p.accent })); } catch (e) {} window.dispatchEvent(new Event('sd-palette')); open(false); btn.focus(); });
+      b.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); } });
+    });
+    menu.addEventListener('keydown', function (e) { if (e.key === 'Escape') { open(false); btn.focus(); } });
+    doc.addEventListener('click', function (e) { if (!menu.hidden && !out.querySelector('.bk-fw-pal').contains(e.target)) open(false); });
+    window.addEventListener('sd-palette', mark); mark();
+  };
 
   /* the frame: a fixed-size screen scaled to the figure, with an Enlarge toggle */
   FN.frame = function (fig, w, h) {
     var svg = fig.querySelector('svg'), out = fig.querySelector('.bk-widget-out'), fr = FN.isFr(fig);
     if (svg) svg.style.display = 'none';
     out.innerHTML = '<div class="bk-fw-bar"><span>' + (fr ? 'Prototype d’intention · écran du produit australien, en anglais' : 'Intention prototype · a screen of the Australian product') + '</span>' +
-      '<button type="button" class="bk-fw-big">' + (fr ? 'Agrandir' : 'Enlarge') + '</button></div><div class="bk-fw"><div class="bk-fw-screen"></div></div>';
+      '<span class="bk-fw-act">' + FN.paletteBar(fr) + '<button type="button" class="bk-fw-big">' + (fr ? 'Agrandir' : 'Enlarge') + '</button></span></div><div class="bk-fw"><div class="bk-fw-screen"></div></div>';
     var box = out.querySelector('.bk-fw'), screen = out.querySelector('.bk-fw-screen'), big = out.querySelector('.bk-fw-big');
+    FN.wirePalette(out);
     screen.style.width = w + 'px'; screen.style.height = h + 'px';
     function fit() {
       var avail = fig.classList.contains('bk-fw-open') ? Math.min(window.innerWidth - 32, (window.innerHeight - 90) * w / h) : box.clientWidth;
@@ -813,7 +845,12 @@
     return { pv: pv, load: load, imp: imp, exp: exp, socs: socs, evc: evc, plan: best.p.name, power: best.b, total: total };
   };
   FN.TODAY = function () { return FN.sim({ plan: 'flat' }).total; };
-  FN.rebate = function (s) { var r = 6.8 * 38; return r * (Math.min(s, 14) + 0.6 * Math.max(0, Math.min(s, 28) - 14) + 0.15 * Math.max(0, Math.min(s, 50) - 28)); };
+  // incentives (design/markets/incentives): STC spot price about A$39.90 in October 2026; Sydney is zone 3 (1.382), 5 deeming years in 2026;
+  // battery certificates = usable kWh by tier (100 % to 14 kWh, 60 % to 28, 15 % to 50) × the half-yearly factor (6.8 until 31 Dec 2026, then 5.7)
+  FN.STC = 39.9;
+  FN.stcSolar = function (kwp) { return Math.floor(kwp * 1.382 * 5); };
+  FN.batteryCerts = function (s, factor) { return Math.floor((Math.min(s, 14) + 0.6 * Math.max(0, Math.min(s, 28) - 14) + 0.15 * Math.max(0, Math.min(s, 50) - 28)) * (factor || 6.8)); };
+  FN.rebate = function (s, factor) { return FN.batteryCerts(s, factor) * FN.STC; };
   FN.path = function (arr, x0, w, base, max, hgt, close) {
     var s = close ? 'M' + x0 + ' ' + base + ' ' : '';
     for (var h = 0; h < 24; h++) { var x = (x0 + h / 23 * w).toFixed(1), y = (base - arr[h] / max * hgt).toFixed(1); s += (h || close ? 'L' : 'M') + x + ' ' + y + ' '; }
@@ -839,7 +876,23 @@
     plan: ['M5 7h11l-3-3M19 17H8l3 3', 'M5 7h11v10H8z'],
     heat: ['M6 4.5h12v15H6zM9 8.5h6M12 11v6M9.5 14l2.5 3 2.5-3', 'M6 4.5h12v15H6z'],
     car: ['M4 15.5l2-5h12l2 5v3H4zM7.5 18.5v1.5M16.5 18.5v1.5M12.5 6l-2 3.5h3l-2 3.5', 'M4 15.5l2-5h12l2 5v3H4z'],
-    battery: ['M8 5.5h8v15H8zM10.5 3.5h3v2M10.5 12.5l2-3v2.5h1.5l-2 3V12z', 'M8 5.5h8v15H8z']
+    battery: ['M8 5.5h8v15H8zM10.5 3.5h3v2M10.5 12.5l2-3v2.5h1.5l-2 3V12z', 'M8 5.5h8v15H8z'],
+    person: ['M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 20.5a7 7 0 0 1 14 0', 'M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z'],
+    away: ['M4 8.5h16v11H4zM9 8.5V6h6v2.5M4 13h16', 'M4 8.5h16v11H4z'],
+    some: ['M4 11l8-6.5 8 6.5v8.5H4zM12 19.5v-5', 'M12 4.5l8 6.5v8.5h-8z'],
+    home: ['M4 11l8-6.5 8 6.5v8.5H4zM10 19.5v-5h4v5', 'M4 11l8-6.5 8 6.5v8.5H4z'],
+    split: ['M3.5 6h17v6h-17zM6 9.5h12M7 15l-1 3M12 15v3.5M17 15l1 3', 'M3.5 6h17v6h-17z'],
+    ducted: ['M3.5 5.5h17v4h-17zM6 9.5v3M12 9.5v3M18 9.5v3M5 15.5h3M10.5 15.5h3M16 15.5h3', 'M3.5 5.5h17v4h-17z'],
+    flame: ['M12 20.5c-3.5 0-5.5-2.4-5.5-5.3 0-3.2 2.6-4.6 3.4-8 1.8 1.3 2.6 3 2.6 4.6 1-.6 1.6-1.6 1.9-2.6 1.9 1.6 3.1 3.6 3.1 6 0 2.9-2 5.3-5.5 5.3z', 'M12 20.5c-3.5 0-5.5-2.4-5.5-5.3 0-3.2 2.6-4.6 3.4-8 1.8 1.3 2.6 3 2.6 4.6 1-.6 1.6-1.6 1.9-2.6 1.9 1.6 3.1 3.6 3.1 6 0 2.9-2 5.3-5.5 5.3z'],
+    none: ['M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM6 18L18 6', ''],
+    tank: ['M7.5 3.5h9v17h-9zM7.5 8h9M10 12h4M12 12v4', 'M7.5 3.5h9v17h-9z'],
+    solarhw: ['M3.5 13l5-7.5h12l-5 7.5zM6 9.3h12M11 5.5l-5 7.5M15.5 5.5l-5 7.5M8 13v6M15 13v6', 'M3.5 13l5-7.5h12l-5 7.5z'],
+    gasstove: ['M4 14.5h16v5H4zM8 14.5c0-1.5 1.2-2 1.2-3.5M12 14.5c0-1.5 1.2-2 1.2-3.5M16 14.5c0-1.5 1.2-2 1.2-3.5', 'M4 14.5h16v5H4z'],
+    stove: ['M4 6.5h16v13H4zM9 13a2.5 2.5 0 1 0 0-.01M15 13a2.5 2.5 0 1 0 0-.01', 'M4 6.5h16v13H4z'],
+    induction: ['M4 6.5h16v13H4zM9 10.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM15 10.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM9 12.3a.7.7 0 1 1 0 1.4M15 12.3a.7.7 0 1 1 0 1.4', 'M4 6.5h16v13H4z'],
+    pool: ['M3.5 15c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 2-1M3.5 19c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1M8 13V5a2 2 0 0 1 4 0M14 13V5a2 2 0 0 1 4 0M8 9h6', ''],
+    pump: ['M4 9.5h10v8H4zM14 12h4v3h-4M18 13.5h2.5M9 9.5V6M7 6h4', 'M4 9.5h10v8H4z'],
+    pv: ['M3.5 17l4-11h13l-4 11zM5.7 11.5h13M11 6l-4 11M15.5 6l-4 11', 'M3.5 17l4-11h13l-4 11z']
   };
   FN.icon = function (k, color) {
     var i = FN.ICON[k] || FN.ICON.select;
@@ -860,20 +913,20 @@
     return out;
   };
 
-  /* the 3D house, shared by the next-move widget and the studio's 3D card */
+  /* the 3D house, shared by the household's next move and the studio's 3D card */
   FN.three = function (canvas, done) {
     var go = function () {
       var T = window.THREE, r = new T.WebGLRenderer({ canvas: canvas, antialias: true });
       r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap; r.outputEncoding = T.sRGBEncoding;
-      var sc = new T.Scene(); sc.background = new T.Color('#E3DFD7');
+      var C = FN.tokens(), sc = new T.Scene(); sc.background = new T.Color(C.sky);
       var mat = function (c, o) { var m = { color: c, roughness: 0.85 }; for (var k in (o || {})) m[k] = o[k]; return new T.MeshStandardMaterial(m); };
-      var gnd = new T.Mesh(new T.PlaneGeometry(80, 80), mat('#D9D4CA')); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; sc.add(gnd);
-      var drive = new T.Mesh(new T.PlaneGeometry(6, 14), mat('#C9C3B8')); drive.rotation.x = -Math.PI / 2; drive.position.set(11, 0.01, 4); drive.receiveShadow = true; sc.add(drive);
-      var walls = new T.Mesh(new T.BoxGeometry(15, 3, 10), mat('#EFEAE1')); walls.position.y = 1.5; walls.castShadow = true; walls.receiveShadow = true; sc.add(walls);
+      var gnd = new T.Mesh(new T.PlaneGeometry(80, 80), mat(C.earth)); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; sc.add(gnd);
+      var drive = new T.Mesh(new T.PlaneGeometry(6, 14), mat(C.drive)); drive.rotation.x = -Math.PI / 2; drive.position.set(11, 0.01, 4); drive.receiveShadow = true; sc.add(drive);
+      var walls = new T.Mesh(new T.BoxGeometry(15, 3, 10), mat(C.walls)); walls.position.y = 1.5; walls.castShadow = true; walls.receiveShadow = true; sc.add(walls);
       var ry = 3 + 5 * Math.tan(22 * Math.PI / 180), v = [[-7.5, 3, -5], [7.5, 3, -5], [3.75, ry, 0], [-3.75, ry, 0], [-7.5, 3, 5], [7.5, 3, 5]];
       var tri = function (a, b, d) { return v[a].concat(v[b], v[d]); };
       var g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute([].concat(tri(0, 2, 1), tri(0, 3, 2), tri(4, 5, 2), tri(4, 2, 3), tri(0, 4, 3), tri(1, 2, 5)), 3)); g.computeVertexNormals();
-      var roof = new T.Mesh(g, mat('#8F8679', { side: T.DoubleSide })); roof.castShadow = true; roof.receiveShadow = true; sc.add(roof);
+      var roof = new T.Mesh(g, mat(C.roof3, { side: T.DoubleSide })); roof.castShadow = true; roof.receiveShadow = true; sc.add(roof);
       var trunk = new T.Mesh(new T.CylinderGeometry(0.25, 0.35, 3, 8), mat('#6B5543')); trunk.position.set(-12, 1.5, -9); trunk.castShadow = true; sc.add(trunk);
       var crown = new T.Mesh(new T.SphereGeometry(2.6, 16, 12), mat('#7A9374')); crown.position.set(-12, 4.6, -9); crown.castShadow = true; sc.add(crown);
       var bat = new T.Mesh(new T.BoxGeometry(0.25, 1.1, 0.75), mat('#5B5F97')); bat.position.set(7.65, 0.8, 2.2); bat.castShadow = true; sc.add(bat);
@@ -888,7 +941,7 @@
       var cam = new T.PerspectiveCamera(36, 1, 0.5, 300), top = new T.OrthographicCamera(-20, 20, 13.3, -13.3, 0.5, 200);
       top.position.set(0, 60, 0); top.up.set(0, 0, -1); top.lookAt(0, 0, 0);
       var pm = mat('#22303D', { roughness: 0.35, metalness: 0.3 }), pmShade = mat('#3A4552', { roughness: 0.4, metalness: 0.2 });
-      var H = { T: T, r: r, scene: sc, cam: cam, top: top, useTop: false, theta: 0.75, radius: 40, panels: panels, bat: bat, car: car, hp: hp, chim: chim, sun: sun, hemi: hemi, w: 0, h: 0, dead: false };
+      var H = { gnd: gnd, drive: drive, walls: walls, roof: roof, hr: 15, T: T, r: r, scene: sc, cam: cam, top: top, useTop: false, theta: 0.75, radius: 40, panels: panels, bat: bat, car: car, hp: hp, chim: chim, sun: sun, hemi: hemi, w: 0, h: 0, dead: false };
       // set the panels from plan rectangles (FN.layout coordinates) or the default 16
       H.setPanels = function (mods) {
         while (panels.children.length) panels.remove(panels.children[0]);
@@ -903,8 +956,10 @@
       H.setHour = function (hr) {
         var up = hr >= 6 && hr <= 18, t = Math.PI * (Math.min(Math.max(hr, 6), 18) - 6) / 12;
         sun.position.set(40 * Math.cos(t), 6 + 38 * Math.sin(t), -26); sun.intensity = up ? 0.35 + 0.9 * Math.sin(t) : 0.05; hemi.intensity = up ? 0.55 : 0.25;
-        sc.background.set(up ? '#E3DFD7' : '#3A3D45');
+        H.hr = hr; sc.background.set(up ? C.sky : '#3A3D45');
       };
+      H.paint = function () { C = FN.tokens(); gnd.material.color.set(C.earth); drive.material.color.set(C.drive); walls.material.color.set(C.walls); roof.material.color.set(C.roof3); H.setHour(H.hr); };
+      window.addEventListener('sd-palette', function () { if (!H.dead) H.paint(); });
       H.size = function (w, h) { if (w === H.w && h === H.h) return; H.w = w; H.h = h; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
       H.place = function () { cam.position.set(H.radius * Math.sin(H.theta), H.radius * 0.55, H.radius * Math.cos(H.theta)); cam.lookAt(0, 2.5, -0.5); };
       var drag = null;
@@ -919,65 +974,11 @@
     if (window.THREE) go(); else loadScript('vendor/three-0.149.0.min.js', go);
   };
 
-  /* funnel 1 · switch plan, on a phone */
-  all('figure.bk-widget[data-widget="funnel-switch"]').forEach(function (fig) {
-    FN.when(fig, function () {
-      var el = FN.frame(fig, 390, 844), st = { step: 0, chosen: 'Simple Saver', done: false };
-      var cost = function (name) { var p = FN.PLANS.filter(function (x) { return x.name === name; })[0], d = FN.base(15), e = 0; for (var h = 0; h < 24; h++) e += d[h] * p.rate(h); return (e + p.supply) * 365; };
-      function day() {
-        var d = FN.base(15);
-        return '<svg width="100%" height="96" viewBox="0 0 320 96" role="img" aria-label="Average day, peaking between 6 and 8 pm"><path d="' + FN.path(d, 0, 320, 84, 1.9, 76, true) + '" fill="var(--c-selSoft)"></path><path d="' + FN.path(d, 0, 320, 84, 1.9, 76) + '" fill="none" stroke="var(--c-ink)" stroke-width="1.75"></path>' +
-          '<text x="0" y="95" font-size="10" fill="var(--c-muted)">0h</text><text x="150" y="95" font-size="10" fill="var(--c-muted)">12h</text><text x="300" y="95" font-size="10" fill="var(--c-muted)">24h</text></svg>';
-      }
-      function render() {
-        var cur = cost('Flat Rate'), s = st.step, h = '';
-        var plans = ['Flat Rate', 'Simple Saver', 'Time of Use Saver'].map(function (n) { return { n: n, c: cost(n) }; }).sort(function (a, b) { return a.c - b.c; });
-        var dots = [0, 1, 2, 3].map(function (i) { return '<span style="flex:1;height:4px;border-radius:2px;background:' + (i <= s ? 'var(--c-live)' : 'var(--c-line)') + '"></span>'; }).join('');
-        h += '<div style="width:390px;height:844px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);display:flex;flex-direction:column;overflow:hidden">';
-        h += '<div style="display:flex;align-items:center;gap:8px;padding:18px 20px 10px;background:var(--c-paper);border-bottom:1px solid var(--c-line)">' + FN.SUN + '<b style="font-weight:600;font-size:15px">Solar Designer</b><span style="flex:1"></span><span style="font-size:12px;color:var(--c-muted)">My home</span></div>';
-        h += '<div style="display:flex;gap:6px;padding:12px 20px">' + dots + '</div><div style="flex:1;overflow:auto;padding:4px 20px 20px;display:flex;flex-direction:column;gap:14px">';
-        if (s === 0) {
-          h += '<h3 style="margin:6px 0 0;font-size:28px;line-height:1.15;font-weight:600">Pay less, from this month.</h3><p style="margin:0;font-size:15px;line-height:1.55;color:var(--c-ink2)">Show us your bill once. We compare every plan you can actually take, and keep what you give us in your home’s file.</p>';
-          [['Snap your bill', 'Photo or PDF · we read it for you', '2 min', true], ['Meter number (NMI)', '12 months of real readings', '1 min'], ['No bill at hand', 'Five questions, a rougher estimate', '3 min']].forEach(function (o) {
-            h += '<button type="button" data-a="go" data-v="1" style="min-height:64px;border-radius:14px;border:1px solid ' + (o[3] ? 'var(--c-ink)' : 'var(--c-line)') + ';background:var(--c-paper);color:var(--c-ink);padding:12px 16px;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font:inherit"><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:16px;font-weight:600">' + o[0] + '</b><span style="font-size:13px;color:var(--c-muted)">' + o[1] + '</span></span><b style="font-size:13px;font-weight:600;color:var(--c-muted)">' + o[2] + '</b></button>';
-          });
-          h += '<p style="margin:0;font-size:13px;color:var(--c-muted)">No email, no phone number before your first result. Nobody calls you unless you ask.</p>';
-        } else if (s === 1) {
-          h += '<span style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--c-sel);font-weight:600">Your bill, read</span><span style="font-size:15px;color:var(--c-ink2)">You pay today, a year</span><span style="font-size:42px;font-weight:600">' + FN.money(cur) + '</span><span style="font-size:14px;color:var(--c-muted)">' + FN.money(cur / 12) + ' a month · Flat Rate plan · 5,475 kWh a year</span>';
-          h += '<div style="background:var(--c-paper);border:1px solid var(--c-line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:600">Your average day · 15 kWh</span>' + day() + '<span style="font-size:13px;color:var(--c-muted)">Most of it between 5 and 9 pm. That decides which plan wins.</span></div>';
-          h += '<div style="background:var(--c-selSoft);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.4">Saved to <b>My home</b>: your needs. The raw bill stays only if you attach it.</div>';
-          h += '<button type="button" data-a="go" data-v="2" style="min-height:52px;border-radius:26px;border:none;background:var(--c-live);color:var(--c-onLive);font-family:inherit;font-size:16px;font-weight:600;cursor:pointer">See the plans you can take</button>';
-        } else if (s === 2) {
-          h += '<span style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--c-sel);font-weight:600">Plans you can take</span><span style="font-size:14px;color:var(--c-ink2)">Ranked on your own yearly cost, from your real day. Today: ' + FN.money(cur) + '.</span>';
-          plans.forEach(function (p) {
-            var diff = cur - p.c, tag = diff > 1 ? 'saves ' + FN.money(diff) : (diff < -1 ? 'costs ' + FN.money(diff) + ' more' : 'your plan today'), col = diff > 1 ? 'var(--c-gain)' : (diff < -1 ? 'var(--c-loss)' : 'var(--c-muted)');
-            h += '<button type="button" data-a="pick" data-v="' + p.n + '" style="min-height:76px;border-radius:14px;border:1px solid ' + (p.n === st.chosen ? 'var(--c-ink)' : 'var(--c-line)') + ';background:var(--c-paper);color:var(--c-ink);padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:6px;cursor:pointer;font:inherit"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:16px;font-weight:600">' + p.n + '</b><b style="font-size:17px;font-weight:600">' + FN.money(p.c) + '</b></span><span style="font-size:13px;color:' + col + ';font-weight:600">' + tag + '</span></button>';
-          });
-          h += '<div style="border:1px dashed var(--c-line);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--c-muted);line-height:1.5">3 plans hidden because you cannot take them: they need solar, a battery or an electric car. They come back if your home changes.</div><span style="font-size:12px;color:var(--c-muted);line-height:1.5">We may be paid by the retailer when you switch ($45 a switch, the same for every plan). It never changes the order.</span>';
-        } else {
-          var sv = cur - cost(st.chosen);
-          h += '<span style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--c-sel);font-weight:600">Switch to ' + st.chosen + '</span><span style="font-size:15px;color:var(--c-ink2)">You save, a year</span><span style="font-size:38px;font-weight:600;color:var(--c-gain)">' + FN.money(sv * 0.8) + '–' + FN.money(sv * 1.15) + '</span><span style="font-size:14px;color:var(--c-muted)">Most likely ' + FN.money(sv) + '. Depends on how much you use in the evening.</span>';
-          h += '<div style="background:var(--c-paper);border:1px solid var(--c-line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;font-size:14px"><span style="display:flex;justify-content:space-between"><span style="color:var(--c-muted)">New yearly cost</span><b>' + FN.money(cost(st.chosen)) + '</b></span><span style="display:flex;justify-content:space-between"><span style="color:var(--c-muted)">Exit fee</span><b>$0</b></span><span style="display:flex;justify-content:space-between"><span style="color:var(--c-muted)">Cooling-off period</span><b>10 business days</b></span></div>';
-          h += st.done ? '<div style="background:var(--c-selSoft);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Done. Your home is saved.</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">Next: your energy profile, then what solar, a battery, a car or a heat pump would change. Your needs are already in.</span></div>'
-            : '<button type="button" data-a="done" style="min-height:52px;border-radius:26px;border:none;background:var(--c-live);color:var(--c-onLive);font-family:inherit;font-size:16px;font-weight:600;cursor:pointer">Switch now</button>';
-        }
-        h += '</div><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 18px;border-top:1px solid var(--c-line);background:var(--c-paper)"><button type="button" data-a="back" style="min-height:44px;padding:0 14px;border-radius:22px;border:1px solid var(--c-line);background:transparent;color:var(--c-ink2);font:inherit;cursor:pointer">Back</button><span style="font-size:12px;color:var(--c-muted)">Illustrative · one model</span></div></div>';
-        el.innerHTML = h;
-      }
-      FN.wire(el, function (a, v) {
-        if (a === 'go') st.step = +v; else if (a === 'pick') { st.chosen = v; st.step = 3; st.done = false; }
-        else if (a === 'done') st.done = true; else if (a === 'back') { st.step = Math.max(0, st.step - 1); st.done = false; }
-        render();
-      });
-      render();
-    });
-  });
-
   /* screen chrome shared by the tablet prototypes */
   FN.topbar = function (crumbs, mid, right) {
-    return '<div style="height:48px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:0 12px;background:var(--c-paper);border-bottom:1px solid var(--c-line)">' +
-      '<div style="display:flex;align-items:center;gap:10px;min-width:0;font-size:13px;white-space:nowrap">' + FN.SUN + crumbs.map(function (c, i) { return i < crumbs.length - 1 ? '<span style="color:var(--c-muted)">' + c + '</span><span style="color:var(--c-faint)">/</span>' : '<b style="font-weight:600">' + c + '</b>'; }).join('') + '</div>' +
-      '<div style="display:flex;background:var(--c-ground);border-radius:9px;padding:3px">' + mid + '</div><div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">' + right + '</div></div>';
+    return '<div style="height:48px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:0 12px;background:var(--c-paper);border-bottom:1px solid var(--c-line)">' +
+      '<div class="bk-fw-tb-l" style="display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;font-size:13px;white-space:nowrap">' + FN.SUN + crumbs.map(function (c, i) { return i < crumbs.length - 1 ? '<span' + (i === crumbs.length - 2 ? ' class="sh"' : '') + ' style="color:var(--c-muted)">' + c + '</span><span style="color:var(--c-faint)">/</span>' : '<b style="font-weight:600">' + c + '</b>'; }).join('') + '</div>' +
+      '<div style="display:flex;background:var(--c-ground);border-radius:9px;padding:3px">' + mid + '</div><div class="bk-fw-tb-r" style="display:flex;align-items:center;justify-content:flex-end;gap:6px">' + right + '</div></div>';
   };
   FN.tab = function (label, on, act, v) {
     return '<button type="button"' + (act ? ' data-a="' + act + '" data-v="' + v + '"' : '') + ' style="min-height:36px;padding:0 14px;border:none;border-radius:7px;background:' + (on ? 'var(--c-paper)' : 'transparent') + ';color:' + (on ? 'var(--c-ink)' : 'var(--c-muted)') + ';font:inherit;font-size:13px;font-weight:500;cursor:' + (act ? 'pointer' : 'default') + ';' + (on ? 'box-shadow:0 1px 2px rgba(29,32,38,.12)' : '') + '">' + label + '</button>';
@@ -985,242 +986,25 @@
   FN.card = 'background:var(--c-paper);border:1px solid var(--c-line);border-radius:14px';
   FN.kick = 'font-size:11px;color:var(--c-muted);letter-spacing:.04em;text-transform:uppercase';
 
-  /* the energy profile: sources, confidence, the questions that narrow the range */
-  all('figure.bk-widget[data-widget="energy-profile"]').forEach(function (fig) {
-    FN.when(fig, function () {
-      var el = FN.frame(fig, 1180, 820), st = { meter: false, bill: false, ans: {}, q: false, consent: false, busy: '', season: 'year', weekend: false, plans: {} }, timer = null;
-      var Q = [
-        { k: 'people', gain: 6, text: 'How many people live here?', why: 'Sets the size of your usage.', opts: [['1', 1], ['2', 2], ['3', 3], ['4', 4], ['5 or more', 5]] },
-        { k: 'hvac', gain: 4, text: 'How do you heat and cool?', why: 'Air conditioning moves your evenings and your seasons.', opts: [['Split-system air conditioning', 'ac'], ['Gas heater, no cooling', 'gas'], ['Neither', 'none']] },
-        { k: 'hw', gain: 4, text: 'What heats your water?', why: 'Electric hot water can be a third of a bill, at night.', opts: [['Gas', 'gas'], ['Electric tank', 'elec'], ['Heat pump or solar', 'hp']] },
-        { k: 'home', gain: 4, text: 'Is someone home during the day?', why: 'Daytime use is what solar covers best.', opts: [['Most weekdays', 'most'], ['Some days', 'some'], ['Rarely', 'away']] },
-        { k: 'pool', gain: 2, text: 'Is there a pool pump?', why: 'A pump runs for hours, often at the wrong time.', opts: [['No', 'no'], ['Yes', 'yes']] }
-      ];
-      function estimate(a) {
-        var size = { 1: 7.5, 2: 10.4, 3: 12.9, 4: 15.2, 5: 18.0 }[a.people || 3], h, d = [];
-        var shape = a.home === 'most' ? [0.4,0.36,0.34,0.34,0.36,0.46,0.75,1.0,0.95,0.85,0.85,0.85,0.85,0.82,0.8,0.86,1.05,1.4,1.6,1.5,1.25,0.98,0.72,0.5]
-          : a.home === 'away' ? [0.42,0.36,0.34,0.34,0.36,0.5,0.9,1.2,0.9,0.5,0.45,0.45,0.45,0.45,0.48,0.7,1.15,1.7,1.95,1.8,1.4,1.05,0.78,0.55] : FN.LOAD;
-        var ss = shape.reduce(function (x, y) { return x + y; }, 0);
-        for (h = 0; h < 24; h++) d.push(shape[h] * size / ss);
-        var ex = { hw: 0, pool: 0 }, ac = a.hvac === undefined || a.hvac === 'ac';
-        if (a.hw === 'elec') { for (h = 0; h < 6; h++) d[h] += 4 / 6; ex.hw = 4; }
-        if (a.hw === 'hp') { for (h = 11; h < 14; h++) d[h] += 0.5; ex.hw = 1.5; }
-        if (ac) { for (h = 17; h < 22; h++) d[h] += 0.25; for (h = 6; h < 9; h++) d[h] += 0.12; for (h = 0; h < 24; h++) d[h] += 0.02; }
-        if (a.pool === 'yes') { for (h = 10; h < 16; h++) d[h] += 0.5; ex.pool = 3; }
-        return { d: d, ex: ex, ac: ac };
-      }
-      function render() {
-        var a = st.ans, E = estimate(a), curve = st.meter ? FN.base(15) : E.d.slice(), h;
-        var tot = curve.reduce(function (x, y) { return x + y; }, 0);
-        if (st.bill && !st.meter) { curve = curve.map(function (v) { return v * 15 / tot; }); tot = 15; }
-        var sf = st.season === 'summer' ? 1.08 : st.season === 'winter' ? 1.2 : 1;
-        var view = curve.map(function (v, i) { var x = v * sf; if (st.weekend) x *= (i >= 9 && i < 17) ? 1.35 : (i >= 17 && i < 21 ? 0.92 : 1); return x; });
-        var unc = 30; Q.forEach(function (q) { if (a[q.k] !== undefined) unc -= q.gain; });
-        if (st.bill) unc = Math.min(unc, 12); if (st.meter) unc = 5;
-        var up = [], lo = [], line = '';
-        for (h = 0; h < 24; h++) { var x = 40 + h / 23 * 480, y = 180 - view[h] / 2.6 * 150; line += (h ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1) + ' '; up.push(x.toFixed(1) + ' ' + (180 - view[h] * (1 + unc / 100) / 2.6 * 150).toFixed(1)); lo.unshift(x.toFixed(1) + ' ' + (180 - view[h] * (1 - unc / 100) / 2.6 * 150).toFixed(1)); }
-        var spend = tot * 365 * (st.bill || st.meter ? 0.36 : 0.33) + (st.bill || st.meter ? 1.10 : 1.05) * 365;
-        var badge = st.meter ? ['Measured', '12 months · half-hourly', 'var(--c-gainSoft)', 'var(--c-gain)'] : st.bill ? ['From your bills', '4 quarters · your plan read', 'var(--c-sunSoft)', 'var(--c-sunText)'] : ['Estimated', Object.keys(a).length + ' of 5 answers', 'var(--c-line2)', 'var(--c-ink2)'];
-        var next = Q.filter(function (q) { return a[q.k] === undefined; }), movers = [];
-        if (!st.meter) movers.push(['meter', 'Connect your meter', unc - 5, '1 min']);
-        if (!st.bill && !st.meter) movers.push(['bill', 'Snap your last bill', unc - 12, '2 min']);
-        if (!st.meter && !st.bill && next.length) movers.push(['ask', next[0].text.replace('?', ''), next[0].gain, '5 s']);
-        movers = movers.filter(function (m) { return m[2] > 0; }).sort(function (x, y) { return y[2] - x[2]; });
-        var o = '<div style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden">';
-        o += FN.topbar(['My home', '14 Wattle Lane', 'Energy profile'], FN.tab('1 Profile', true) + FN.tab('2 Plans you can take', false) + FN.tab('3 Next move', false), '<span style="font-size:12px;color:var(--c-ink2)">Meter readings stay with open-energy; we see totals</span>');
-        o += '<div style="position:absolute;left:12px;right:12px;top:60px;display:flex;flex-direction:column;gap:10px"><div style="' + FN.card + ';display:flex;align-items:stretch">';
-        o += '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--c-line2);min-width:200px"><span style="' + FN.kick + '">Your profile is</span><span style="display:flex;gap:8px;align-items:center"><b style="font-size:12px;font-weight:600;padding:3px 8px;border-radius:6px;background:' + badge[2] + ';color:' + badge[3] + '">' + badge[0] + '</b><span style="font-size:12px;color:var(--c-ink2)">' + badge[1] + '</span></span></div>';
-        o += '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--c-line2)"><span style="' + FN.kick + '">You use a year</span><b style="font-size:20px;font-weight:600">' + FN.n(tot * 365) + ' kWh</b><span style="font-size:12px;color:var(--c-muted)">' + FN.n(tot, 1) + ' kWh a day</span></div>';
-        o += '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--c-line2)"><span style="' + FN.kick + '">You pay a year</span><b style="font-size:20px;font-weight:600">' + FN.money(spend) + '</b><span style="font-size:12px;color:var(--c-muted)">' + (st.bill || st.meter ? 'on your Flat Rate plan' : 'on a typical plan, assumed') + '</span></div>';
-        o += '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:6px;flex:1"><span style="display:flex;justify-content:space-between;' + FN.kick + '"><span>How sure any saving will be</span><b style="color:var(--c-ink);text-transform:none">±' + unc + ' %</b></span><svg width="100%" height="22" viewBox="0 0 400 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 10 H400" stroke="var(--c-line)" stroke-width="2"></path><path d="M' + (200 - unc * 5) + ' 3 H' + (200 + unc * 5) + ' V17 H' + (200 - unc * 5) + ' Z" fill="var(--c-sel)" opacity=".2"></path><path d="M200 1 V19" stroke="var(--c-ink)" stroke-width="1.5"></path></svg><span style="font-size:12px;color:var(--c-ink2)">A saving of $600 would show as ' + FN.money(600 * (1 - unc / 100)) + '–' + FN.money(600 * (1 + unc / 100)) + '</span></div></div>';
-        o += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:12px;color:var(--c-muted)">What narrows it most</span>' + (movers.length ? movers.map(function (m) { return '<button type="button" data-a="' + m[0] + '" style="min-height:40px;padding:0 12px;border-radius:20px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-ink);font:inherit;font-size:13px;display:flex;gap:8px;align-items:center;cursor:pointer"><b style="font-weight:600">' + m[1] + '</b><span style="color:var(--c-sel)">−' + m[2] + ' pts</span><span style="color:var(--c-muted)">' + m[3] + '</span></button>'; }).join('') : '<b style="font-size:13px;color:var(--c-gain);font-weight:600">Measured: the narrowest range we can give.</b>') + '</div></div>';
-        var src = [
-          ['meter', 'Smart meter', '1 min · best', 'Twelve months, every half hour, read with your consent by open-energy.', st.meter, '✓ Measured · range ±5 %', !st.meter, 'Connect', true],
-          ['bill', 'Your bill', '2 min', 'A photo or the PDF. We read your plan, your rates and four quarters of use. The bill itself is not kept unless you attach it.', st.bill, '✓ Flat Rate 36 c · supply $1.10 · feed-in 5 c', !st.bill && !st.meter, 'Snap or upload'],
-          ['ask', 'A few questions', '5 s each', 'Only the ones that narrow your range, never a kWh to type. ' + Object.keys(a).length + ' of 5 answered.', false, '', next.length > 0 && !st.meter, Object.keys(a).length ? 'Next question' : 'Start']
-        ];
-        o += '<div style="position:absolute;left:12px;top:214px;width:340px;bottom:12px;display:flex;flex-direction:column;gap:10px">' + src.map(function (s) {
-          return '<div style="' + FN.card + ';padding:12px 14px;display:flex;gap:12px">' + FN.icon(s[0], s[4] ? 'var(--c-gain)' : 'var(--c-ink)') + '<div style="display:flex;flex-direction:column;gap:4px;flex:1"><span style="display:flex;justify-content:space-between"><b style="font-size:14px;font-weight:600">' + s[1] + '</b><span style="font-size:11px;color:var(--c-muted)">' + s[2] + '</span></span><span style="font-size:12px;color:var(--c-ink2);line-height:1.45">' + s[3] + '</span>' +
-            (s[6] ? '<button type="button" data-a="' + s[0] + '" style="align-self:flex-start;min-height:40px;padding:0 12px;border-radius:8px;border:' + (s[8] ? 'none' : '1px solid var(--c-ink)') + ';background:' + (s[8] ? 'var(--c-live)' : 'var(--c-paper2)') + ';color:' + (s[8] ? 'var(--c-onLive)' : 'var(--c-ink)') + ';font:inherit;font-size:13px;font-weight:600;cursor:pointer">' + s[7] + '</button>' : '') +
-            (s[4] ? '<b style="font-size:12px;font-weight:600;color:var(--c-gain)">' + s[5] + '</b>' : '') + '</div></div>';
-        }).join('');
-        o += '<div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:8px"><b style="font-size:14px;font-weight:600">Plans for later</b><span style="font-size:12px;color:var(--c-ink2)">Saved as plans and modelled later. Never added to what you use today.</span><div style="display:flex;flex-wrap:wrap;gap:6px">' +
-          [['ev', 'Electric car'], ['hp', 'Heat pump'], ['bat', 'Battery'], ['poolhp', 'Pool heat pump']].map(function (p) { var on = !!st.plans[p[0]]; return '<button type="button" data-a="plan" data-v="' + p[0] + '" aria-pressed="' + on + '" style="min-height:36px;padding:0 10px;border-radius:18px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';font:inherit;font-size:12px;cursor:pointer">' + (on ? '✓ ' : '+ ') + p[1] + '</button>'; }).join('') + '</div></div></div>';
-        var base24 = Math.min.apply(null, view) * 24, eve = 0; for (h = 17; h < 22; h++) eve += view[h];
-        var tg = function (est) { return st.meter ? '<span style="font-size:10px;padding:2px 6px;border-radius:5px;background:var(--c-gainSoft);color:var(--c-gain)">measured</span>' : '<span style="font-size:10px;padding:2px 6px;border-radius:5px;background:var(--c-line2);color:var(--c-ink2)">' + est + '</span>'; };
-        var tagM = st.bill ? 'scaled to bill' : 'estimated';
-        var rows = [['Always on (fridge, standby)', base24, tagM], ['Evening 5–10 pm', eve, tagM], ['Heating and cooling', E.ac || st.meter ? 2.1 * sf : 0, a.hvac ? 'answered' : 'assumed'], ['Hot water', st.meter ? 0 : E.ex.hw, a.hw ? 'answered' : 'assumed gas'], ['Pool pump', st.meter ? 0 : E.ex.pool, a.pool ? 'answered' : 'assumed none']];
-        var bars = '';
-        if (st.meter) bars = [1.12, 1.08, 0.98, 0.9, 0.95, 1.12, 1.2, 1.18, 0.98, 0.9, 0.92, 1.06].map(function (f, i) { return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:100%;height:' + Math.round(f * 62) + 'px;background:var(--c-ink);opacity:.8;border-radius:4px 4px 0 0"></span><span style="font-size:10px;color:var(--c-muted)">' + 'JFMAMJJASOND'[i] + '</span></div>'; }).join('');
-        else if (st.bill) bars = [[1310, 'Jan–Mar'], [1260, 'Apr–Jun'], [1480, 'Jul–Sep'], [1425, 'Oct–Dec']].map(function (b) { return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:100%;height:' + Math.round(b[0] / 1480 * 76) + 'px;background:var(--c-sun);border-radius:4px 4px 0 0"></span><span style="font-size:10px;color:var(--c-muted)">' + FN.n(b[0]) + ' kWh · ' + b[1] + '</span></div>'; }).join('');
-        o += '<div style="position:absolute;left:364px;top:214px;right:12px;bottom:12px;' + FN.card + ';padding:14px 16px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px;font-weight:600">Your typical day</b><div style="display:flex;gap:6px">' +
-          [['year', 'Year'], ['summer', 'Summer'], ['winter', 'Winter'], ['weekend', 'Weekend']].map(function (v) { var on = v[0] === 'weekend' ? st.weekend : (!st.weekend && st.season === v[0]); return '<button type="button" data-a="view" data-v="' + v[0] + '" aria-pressed="' + on + '" style="min-height:34px;padding:0 10px;border-radius:8px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + v[1] + '</button>'; }).join('') + '</div></div>';
-        o += '<div style="display:flex;gap:16px"><svg width="520" height="200" viewBox="0 0 520 200" role="img" aria-label="Average day of use with its uncertainty band"><path d="M0 180 H520" stroke="var(--c-line)"></path><path d="M0 120 H520 M0 60 H520" stroke="var(--c-line2)"></path><text x="0" y="56" font-size="10" fill="var(--c-muted)">2 kWh</text><text x="0" y="116" font-size="10" fill="var(--c-muted)">1 kWh</text><path d="M' + up.join(' L') + ' L' + lo.join(' L') + ' Z" fill="var(--c-sel)" opacity=".18"></path><path d="' + line + '" fill="none" stroke="var(--c-ink)" stroke-width="1.75"></path>' +
-          ['0h', '6h', '12h', '18h', '24h'].map(function (l, i) { return '<text x="' + (40 + i * 120 - (i === 4 ? 20 : 0)) + '" y="196" font-size="10" fill="var(--c-muted)">' + l + '</text>'; }).join('') + '</svg>';
-        o += '<div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="' + FN.kick + '">Where it goes, a day</span>' + rows.map(function (r) { return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:4px 0;border-bottom:1px solid var(--c-line2)"><span>' + r[0] + '</span><span style="display:flex;gap:8px;align-items:center"><b style="font-weight:600">' + FN.n(r[1], 1) + ' kWh</b>' + tg(r[2]) + '</span></div>'; }).join('') + '</div></div>';
-        o += '<span style="' + FN.kick + '">' + (st.meter ? 'Your months · measured' : st.bill ? 'Your last four bills' : 'Your seasons') + '</span>' + (bars ? '<div style="display:flex;align-items:flex-end;gap:6px;height:90px">' + bars + '</div>' : '<div style="height:90px;border:1px dashed var(--c-line);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--c-muted)">Snap a bill or connect your meter to see your real seasons</div>');
-        o += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;border-top:1px solid var(--c-line2)"><span style="font-size:12px;color:var(--c-muted)">Kept in My home · needs layer · totals and an average day only</span><span style="min-height:44px;padding:0 16px;border-radius:10px;background:var(--c-live);color:var(--c-onLive);font-size:14px;font-weight:600;display:flex;align-items:center">See plans you can take</span></div></div>';
-        if (st.q && next.length && !st.meter) {
-          var q = next[0];
-          o += '<div style="position:absolute;left:12px;top:214px;width:340px;' + FN.card + ';border-color:var(--c-sel);padding:14px;box-shadow:0 14px 36px rgba(29,32,38,.18);display:flex;flex-direction:column;gap:10px;z-index:5"><span style="display:flex;justify-content:space-between;font-size:12px;color:var(--c-muted)"><span>Question ' + (Object.keys(a).length + 1) + ' of 5 · the one that narrows most</span><button type="button" data-a="closeq" style="border:none;background:none;color:var(--c-muted);font:inherit;font-size:12px;cursor:pointer">Close</button></span><b style="font-size:17px;font-weight:600;line-height:1.3">' + q.text + '</b><span style="font-size:12px;color:var(--c-ink2)">' + q.why + '</span>' +
-            q.opts.map(function (op) { return '<button type="button" data-a="answer" data-v="' + q.k + '|' + op[1] + '" style="min-height:48px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:14px;text-align:left;padding:0 14px;cursor:pointer">' + op[0] + '</button>'; }).join('') + '</div>';
-        }
-        if (st.consent) o += '<div style="position:absolute;inset:0;background:rgba(29,32,38,.32);display:flex;align-items:center;justify-content:center;z-index:9"><div style="width:480px;' + FN.card + ';padding:20px;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px;font-weight:600">Connect your meter</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">Your meter number (NMI) is on your bill. With your consent, open-energy reads the last 12 months of half-hourly readings from the market operator. Solar Designer receives only totals and an average day. You can withdraw at any time.</span><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" data-a="noconsent" style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">Not now</button><button type="button" data-a="consent" style="min-height:44px;padding:0 16px;border-radius:10px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-weight:600;cursor:pointer">Allow 12 months</button></div></div></div>';
-        if (st.busy) o += '<div style="position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:var(--c-tip);color:var(--c-paper);font-size:13px;padding:10px 14px;border-radius:10px;z-index:8">' + st.busy + '</div>';
-        el.innerHTML = o + '</div>';
-      }
-      function later(msg, patch) { st.busy = msg; st.q = false; render(); clearTimeout(timer); timer = setTimeout(function () { st.busy = ''; for (var k in patch) st[k] = patch[k]; render(); }, 850); }
-      FN.wire(el, function (a, v) {
-        if (a === 'meter') st.consent = true;
-        else if (a === 'consent') { st.consent = false; later('open-energy is reading 12 months of your meter…', { meter: true }); return; }
-        else if (a === 'noconsent') st.consent = false;
-        else if (a === 'bill') { later('Reading your bill…', { bill: true }); return; }
-        else if (a === 'ask') st.q = true;
-        else if (a === 'closeq') st.q = false;
-        else if (a === 'answer') { var p = v.split('|'); st.ans[p[0]] = isNaN(+p[1]) ? p[1] : +p[1]; st.q = Q.some(function (q) { return st.ans[q.k] === undefined; }); }
-        else if (a === 'plan') st.plans[v] = !st.plans[v];
-        else if (a === 'view') { if (v === 'weekend') st.weekend = !st.weekend; else { st.season = v; st.weekend = false; } }
-        render();
-      });
-      render();
-    });
-  });
-
-  /* funnel 2 · my roof at the Guided level: confirm the faces, fill, your day */
-  all('figure.bk-widget[data-widget="my-roof"]').forEach(function (fig) {
-    FN.when(fig, function () {
-      var el = FN.frame(fig, 1180, 820), timer = null;
-      var st = { addr: false, conf: { N: false, W: false, E: false }, tool: 'confirm', preview: false, filled: false, ev: true, hp: false, bat: true, hour: 18, playing: false, result: false, next: -1, hist: [] };
-      var mods = FN.layout('portrait');
-      function opts(s) { return { kwp: s.filled ? 16 * 0.44 : 0, cap: s.filled && s.bat ? 13.5 : 0, ev: s.ev, hp: s.hp, plan: 'best' }; }
-      function render() {
-        var all3 = st.conf.N && st.conf.W && st.conf.E, step = !st.addr ? 0 : !all3 ? 1 : !st.filled ? 2 : 3, h = st.hour;
-        var R = FN.sim(opts(st)), today = FN.TODAY(), save = today - R.total;
-        var o = '<div style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);display:flex;flex-direction:column;overflow:hidden;position:relative">';
-        o += FN.topbar(['My home', st.addr ? '14 Wattle Lane' : 'new'], ['Address', 'Roof', 'Fill', 'Your day'].map(function (l, i) { return FN.tab((i < step ? '✓ ' : (i + 1) + ' ') + l, i === step); }).join(''), '<span style="font-size:12px;color:var(--c-muted)">Guided · no email needed</span>');
-        o += '<div style="flex:1;display:flex;min-height:0">';
-        var tools = [['confirm', 'Confirm', false], ['fill', 'Fill zone', !all3], ['panel', 'Modules', !st.filled], ['chimney', 'Obstacle', !all3]];
-        o += '<div style="width:80px;background:var(--c-paper);border-right:1px solid var(--c-line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px" role="toolbar" aria-label="Tools">' + tools.map(function (t) { var on = st.tool === t[0]; return '<button type="button" data-a="tool" data-v="' + t[0] + '"' + (t[2] ? ' disabled' : '') + ' aria-pressed="' + on + '" style="width:64px;min-height:64px;border:none;border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (t[2] ? 'var(--c-faint)' : on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:inherit;cursor:pointer;box-shadow:' + (on ? 'inset 3px 0 0 var(--c-sel)' : 'none') + '">' + FN.icon(t[0]) + '<span style="font-size:11px;font-weight:500">' + t[1] + '</span></button>'; }).join('') +
-          '<span style="flex:1"></span><button type="button" data-a="undo" style="width:64px;min-height:64px;border:none;background:transparent;color:' + (st.hist.length ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;font-size:11px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 6.5L4.5 10.5l4 4M4.5 10.5h9a5.5 5.5 0 0 1 0 11H11"></path></svg><br>Undo</button></div>';
-        var faces = ['S', 'W', 'E', 'N'].map(function (f) { var c = f !== 'S' && st.conf[f], hi = st.tool === 'confirm' && f !== 'S' && !c; return '<path data-a="face" data-v="' + f + '" d="' + FN.FACES[f] + '" fill="' + (c ? (f === 'N' ? '#CFC9BF' : '#C8C2B7') : f === 'S' ? '#C2BBB0' : '#D5DDD3') + '" stroke="' + (hi ? 'var(--c-sel)' : '#9C958A') + '" stroke-width="' + (hi ? 2.5 : 1) + '" style="cursor:pointer"></path>'; }).join('');
-        var ms = (st.filled || st.preview) ? mods.map(function (m) { var g = !st.filled; return '<rect x="' + m.x.toFixed(1) + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="1.5" fill="' + (g ? 'var(--c-selSoft)' : '#2B3A4A') + '" stroke="' + (g ? 'var(--c-sel)' : '#55667A') + '" stroke-dasharray="' + (g ? '4 3' : 'none') + '"></rect>'; }).join('') : '';
-        var sunUp = st.filled && h >= 6 && h <= 18, ang = Math.PI * (h - 6) / 12, sx = 380 - Math.cos(ang) * 300, sy = 120 - Math.sin(ang) * 80, sl = sunUp ? 60 / Math.max(0.25, Math.sin(ang)) : 0, dx = Math.cos(ang) * sl * 0.8;
-        o += '<div style="flex:1;min-width:0;position:relative;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="0 0 760 712" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Top view of the roof drawn from our own geometry"><g transform="translate(-138 0)">' + faces + ms + '<path d="M368 356 L668 356" stroke="#8F887C" stroke-width="1.5"></path>' +
-          (sunUp ? '<path d="M218 556 L818 556 L' + (818 + dx).toFixed(0) + ' ' + (556 + sl * 0.5).toFixed(0) + ' L' + (218 + dx).toFixed(0) + ' ' + (556 + sl * 0.5).toFixed(0) + ' Z" fill="#1D2026" opacity=".14"></path>' : '') + '</g>' +
-          (sunUp ? '<circle cx="' + sx.toFixed(0) + '" cy="' + sy.toFixed(0) + '" r="16" fill="var(--c-sun)"></circle>' : '') + '<circle cx="716" cy="44" r="20" fill="var(--c-paper)" stroke="var(--c-line)"></circle><path d="M716 30 L721 46 L716 43 L711 46 Z" fill="var(--c-ink)"></path></svg>';
-        o += '<span style="position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">LiDAR-measured · 0.91 · our drawing, not a photo</span>';
-        if (st.addr && !all3) [['N', '46%', '20%', 'north'], ['W', '14%', '46%', 'west'], ['E', '70%', '46%', 'east']].forEach(function (c) { var ok = st.conf[c[0]]; o += '<button type="button" data-a="face" data-v="' + c[0] + '" style="position:absolute;left:' + c[1] + ';top:' + c[2] + ';min-height:44px;padding:0 12px;border-radius:22px;border:1px solid ' + (ok ? 'var(--c-gain)' : 'var(--c-sel)') + ';background:' + (ok ? 'var(--c-gainSoft)' : 'var(--c-paper)') + ';color:' + (ok ? 'var(--c-gain)' : 'var(--c-sel)') + ';font:inherit;font-size:13px;font-weight:600;cursor:pointer">' + (ok ? '✓ ' + c[3] + ' confirmed' : 'Confirm ' + c[3] + ' · 22°') + '</button>'; });
-        if (st.preview && !st.filled) o += '<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:6px;' + FN.card + ';padding:6px;align-items:center"><span style="font-size:13px;color:var(--c-muted);padding:0 8px">16 modules · 7.04 kWp · ' + FN.n(16 * 0.44 * 1460) + ' kWh/yr</span><button type="button" data-a="keep" style="min-height:44px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-size:13px;font-weight:600;cursor:pointer">✓ Keep</button></div>';
-        var coach = [['Find your home', 'Type your address and pick it in the list.'], ['Is this your roof?', 'Tap each face to confirm it. The south face gets no panels.'], ['Fill your roof', 'Fill zone, the north face, then ✓ Keep. Three touches.'], ['Your day', 'Press ▶ or slide the hour. Flip a switch and watch the bill.']][step];
-        if (!st.result) o += '<div style="position:absolute;left:12px;bottom:12px;max-width:360px;' + FN.card + ';padding:10px 12px;font-size:14px;line-height:1.45"><b>' + coach[0] + '</b><br><span style="color:var(--c-muted)">' + coach[1] + '</span></div>';
-        if (!st.addr) o += '<div style="position:absolute;inset:0;background:color-mix(in srgb,var(--c-canvas) 86%,transparent);display:flex;align-items:center;justify-content:center"><div style="width:520px;' + FN.card + ';padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 28px rgba(29,32,38,.16)"><b style="font-size:26px;font-weight:600;line-height:1.2">Your home in the sun, in two minutes.</b><span style="font-size:15px;color:var(--c-ink2);line-height:1.5">We find your roof from open elevation data and draw it; you confirm it with a few taps.</span><span style="min-height:52px;border-radius:10px;border:1px solid var(--c-sel);padding:0 14px;font-size:16px;display:flex;align-items:center;background:var(--c-paper2)">14 Wattle Lane, Marr|</span><div style="display:flex;flex-direction:column;border:1px solid var(--c-line);border-radius:10px;overflow:hidden">' +
-          ['14 Wattle Lane, Marrickville NSW 2204', '14 Wattle Lane, Marayong NSW 2148', '14 Wattle Lane, Maroubra NSW 2035'].map(function (t, i) { return '<button type="button" data-a="addr" style="min-height:48px;border:none;border-bottom:1px solid var(--c-line2);background:' + (i ? 'var(--c-paper2)' : 'var(--c-selSoft)') + ';color:var(--c-ink);text-align:left;padding:0 14px;font:inherit;font-size:15px;cursor:pointer">' + t + '</button>'; }).join('') + '</div><span style="font-size:12px;color:var(--c-muted)">Open address file · free · your bill is already in from the plan check</span></div></div>';
-        o += '</div>';
-        var eff = function (k) { var on = opts(st), off = opts(st); on[k === 'bat' ? 'cap' : k] = k === 'bat' ? 13.5 : true; off[k === 'bat' ? 'cap' : k] = k === 'bat' ? 0 : false; return FN.sim(off).total - FN.sim(on).total; };
-        o += '<div style="width:340px;background:var(--c-paper);border-left:1px solid var(--c-line);display:flex;flex-direction:column">';
-        o += '<div style="padding:14px 16px;border-bottom:1px solid var(--c-line2);display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:var(--c-muted)">Energy spend a year · power, gas, fuel</span><span style="font-size:14px;color:var(--c-muted)">Today <b style="color:var(--c-ink)">' + FN.money(today) + '</b></span><b style="font-size:28px;font-weight:600;color:' + (st.filled ? 'var(--c-gain)' : 'var(--c-faint)') + '">' + (st.filled ? FN.money(R.total) : '—') + '</b><b style="font-size:14px;color:var(--c-gain);font-weight:600">' + (st.filled && save > 0 ? 'You save ' + FN.money(save * 0.85) + '–' + FN.money(save * 1.1) + ' a year' : 'Fill your roof to see it') + '</b><span style="font-size:12px;color:var(--c-muted)">' + (st.filled ? 'Best plan for this home: ' + R.plan : 'Your bill is in from the plan check') + '</span></div>';
-        o += '<div style="padding:12px 16px;border-bottom:1px solid var(--c-line2);display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:14px;font-weight:600">Your day · ' + (h < 10 ? '0' : '') + h + ':00</b><button type="button" data-a="play" aria-label="Play the day" style="min-width:44px;min-height:44px;border-radius:22px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);cursor:pointer">' + (st.playing ? '❚❚' : '▶') + '</button></div>' +
-          '<svg width="100%" height="96" viewBox="0 0 300 96" role="img" aria-label="Production, home use and battery over a day"><path d="' + FN.path(R.pv, 0, 300, 84, 4.5, 80, true) + '" fill="var(--c-sun)" opacity=".35"></path><path d="' + FN.path(R.load, 0, 300, 84, 4.5, 80) + '" fill="none" stroke="var(--c-ink)" stroke-width="1.75"></path>' + (st.bat && st.filled ? '<path d="' + FN.path(R.socs.map(function (x) { return x * 4.5; }), 0, 300, 84, 4.5, 80) + '" fill="none" stroke="var(--c-battery)" stroke-width="1.8" stroke-dasharray="4 3"></path>' : '') + '<path d="M' + (h / 23 * 300).toFixed(1) + ' 2 V84" stroke="var(--c-live)" stroke-width="2"></path></svg>' +
-          '<input type="range" min="0" max="23" step="1" value="' + h + '" data-in="hour" aria-label="Hour of the day" style="width:100%;accent-color:var(--c-sel)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px"><span>Panels <b style="color:var(--c-sunText)">' + R.pv[h].toFixed(1) + ' kW</b></span><span>Home <b>' + R.load[h].toFixed(1) + ' kW</b></span><span>Battery <b style="color:var(--c-battery)">' + (st.bat && st.filled ? Math.round(R.socs[h] * 100) + '%' : '—') + '</b></span><span>Grid <b>' + (R.imp[h] > 0.05 ? 'in ' + R.imp[h].toFixed(1) + ' kW' : R.exp[h] > 0.05 ? 'out ' + R.exp[h].toFixed(1) + ' kW' : '0 kW') + '</b></span></div></div>';
-        o += '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;overflow:auto"><b style="font-size:14px;font-weight:600">What would change?</b>' + [['bat', 'Battery 13.5 kWh'], ['ev', 'Electric car · 40 km a day'], ['hp', 'Heat-pump hot water']].map(function (w) {
-          var on = st[w[0]], e = st.filled ? eff(w[0]) : 0;
-          return '<button type="button" data-a="sw" data-v="' + w[0] + '" aria-pressed="' + on + '" style="min-height:58px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);text-align:left;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font:inherit;cursor:pointer"><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">' + w[1] + '</b><b style="font-size:12px;font-weight:600;color:' + (!st.filled ? 'var(--c-muted)' : e >= 0 ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (st.filled ? (e >= 0 ? 'saves ' : 'costs ') + FN.money(e) + ' a year' : 'fill your roof first') + '</b></span><b style="font-size:12px;color:' + (on ? 'var(--c-sel)' : 'var(--c-muted)') + '">' + (on ? 'ON' : 'OFF') + '</b></button>';
-        }).join('') + (st.filled ? '<button type="button" data-a="result" style="min-height:48px;border-radius:10px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px">See what it costs and who can install it</button>' : '') + '</div></div></div>';
-        if (st.result) {
-          var kwp = 7.04, up = kwp * 900 + (st.bat ? 11500 - FN.rebate(13.5) : 0) + (st.hp ? 3200 : 0) + (st.ev ? 1400 : 0), pay = save > 0 ? up / save : 0;
-          o += '<div style="position:absolute;inset:48px 0 0 0;background:var(--c-ground);display:flex;flex-direction:column;padding:22px 28px;gap:14px;overflow:auto"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:24px;font-weight:600">Your home, and what it takes</b><button type="button" data-a="close" style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">Back to my roof</button></div>';
-          o += '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">' + [['System', kwp.toFixed(2) + ' kWp' + (st.bat ? ' + 13.5 kWh' : ''), '16 modules, north face' + (st.ev ? ' · car charger' : '') + (st.hp ? ' · heat pump' : '')], ['Upfront, after rebates', FN.money(up), st.bat ? 'Battery rebate about ' + FN.money(FN.rebate(13.5)) + ' included' : 'Solar certificates included'], ['Pays back in', save > 0 ? (pay * 0.9).toFixed(1) + '–' + (pay * 1.25).toFixed(1) + ' years' : 'does not pay back', 'A range: sun, use and prices vary']].map(function (c) { return '<div style="' + FN.card + ';padding:14px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:var(--c-muted)">' + c[0] + '</span><b style="font-size:20px;font-weight:600">' + c[1] + '</b><span style="font-size:13px;color:var(--c-muted)">' + c[2] + '</span></div>'; }).join('') + '</div>';
-          o += '<b style="font-size:16px;font-weight:600">Who installs it?</b><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">' + [['An installer I choose', 'You pick; they receive your home after you consent.'], ['Let Solar Designer propose 3', 'Matched on area and skills. You see who before they see you.'], ['Keep it for now', 'Saved in My home.']].map(function (n, i) { return '<button type="button" data-a="next" data-v="' + i + '" style="min-height:88px;border-radius:12px;border:1px solid ' + (st.next === i ? 'var(--c-sel)' : 'var(--c-line)') + ';background:var(--c-paper);color:var(--c-ink);text-align:left;padding:12px 14px;display:flex;flex-direction:column;gap:4px;font:inherit;cursor:pointer"><b style="font-size:15px;font-weight:600">' + n[0] + '</b><span style="font-size:13px;color:var(--c-muted);line-height:1.4">' + n[1] + '</span></button>'; }).join('') + '</div>';
-          if (st.next === 1) o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:14px 16px;display:flex;flex-direction:column;gap:10px"><b style="font-size:15px;font-weight:600">Before anyone sees your home</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">These 3 installers receive your roof, your needs as totals (never your meter readings) and this draft. They never see each other’s proposals. Nobody calls you unless you ask.</span><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-size:13px"><span style="background:var(--c-line2);border-radius:8px;padding:10px">Installer 1 · 9 km · batteries</span><span style="background:var(--c-line2);border-radius:8px;padding:10px">Installer 2 · 14 km · heat pumps too</span><span style="background:var(--c-line2);border-radius:8px;padding:10px">Installer 3 · 21 km · CEC approved</span></div><span style="align-self:flex-start;min-height:48px;padding:0 18px;border-radius:10px;background:var(--c-live);color:var(--c-onLive);font-size:15px;font-weight:600;display:flex;align-items:center">Share my home with these 3</span></div>';
-          o += '</div>';
-        }
-        el.innerHTML = o + '</div>';
-      }
-      FN.wire(el, function (a, v) {
-        if (a === 'addr') st.addr = true;
-        else if (a === 'tool') { st.tool = v; st.preview = false; }
-        else if (a === 'face') {
-          if ((st.tool === 'confirm' || !(st.conf.N && st.conf.W && st.conf.E)) && v !== 'S' && !st.conf[v]) { st.hist.push(JSON.stringify([st.conf, st.filled])); st.conf[v] = true; }
-          else if (st.tool === 'fill' && v === 'N' && !st.filled) st.preview = true;
-        }
-        else if (a === 'keep') { st.hist.push(JSON.stringify([st.conf, st.filled])); st.filled = true; st.preview = false; st.tool = 'confirm'; }
-        else if (a === 'undo' && st.hist.length) { var p = JSON.parse(st.hist.pop()); st.conf = p[0]; st.filled = p[1]; st.preview = false; }
-        else if (a === 'hour') st.hour = +v;
-        else if (a === 'play') { if (timer) { clearInterval(timer); timer = null; st.playing = false; } else { st.playing = true; timer = setInterval(function () { st.hour = (st.hour + 1) % 24; render(); }, 600); } }
-        else if (a === 'sw') st[v] = !st[v];
-        else if (a === 'result') st.result = true; else if (a === 'close') st.result = false; else if (a === 'next') st.next = +v;
-        render();
-      });
-      render();
-    });
-  });
-
-  /* next move: measures ranked by payback, a waterfall, the 3D home */
-  all('figure.bk-widget[data-widget="next-move"]').forEach(function (fig) {
-    FN.when(fig, function () {
-      var el = FN.frame(fig, 1180, 820), st = { plan: true, solar: false, hp: false, ev: false, bat: false, hour: 15, playing: false, top: false }, H = null, timer = null;
-      el.innerHTML = '<div style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden">' +
-        FN.topbar(['My home', '14 Wattle Lane', 'Next move'], FN.tab('✓ Profile · measured', false) + FN.tab('✓ Plan switched', false) + FN.tab('3 Next move', true), '<span style="font-size:12px;color:var(--c-ink2)">Range ±5 % · measured profile</span>') +
-        '<div class="nm-ribbon" style="position:absolute;left:12px;right:12px;top:60px;height:118px;' + FN.card + ';display:flex;align-items:stretch"></div>' +
-        '<div class="nm-moves" style="position:absolute;left:12px;top:190px;width:360px;bottom:12px;display:flex;flex-direction:column;gap:8px"></div>' +
-        '<div style="position:absolute;left:384px;top:190px;right:12px;bottom:12px;' + FN.card + ';overflow:hidden;display:flex;flex-direction:column"><div style="position:relative;height:520px;background:var(--c-canvas)"><canvas class="nm-canvas" width="784" height="520" aria-label="Your home in 3D: drag to turn around it" style="width:784px;height:520px;display:block;touch-action:none;cursor:grab"></canvas><div class="nm-over"></div></div><div class="nm-strip" style="flex:1;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid var(--c-line2)"></div></div></div>';
-      var q = function (c) { return el.querySelector(c); };
-      var INFO = {
-        plan: ['plan', 'Plan switch', 'best plan, checked again after each move', 0, 'done in step 2'],
-        solar: ['fill', 'Solar 7.04 kWp', '16 modules on the north face', 7.04 * 900, ''],
-        hp: ['heat', 'Heat-pump hot water', 'replaces gas · runs at midday', 3200, 'from your plans'],
-        ev: ['car', 'Electric car charger', '40 km a day · charges with the sun', 1400, 'from your plans'],
-        bat: ['battery', 'Battery 13.5 kWh', 'stores noon for the evening · rebate about ' + FN.money(FN.rebate(13.5)), 11500 - FN.rebate(13.5), '']
-      };
-      var ORDER = ['plan', 'solar', 'hp', 'ev', 'bat'];
-      function opt(m) { return { plan: m.plan ? 'best' : 'flat', kwp: m.solar ? 7.04 : 0, cap: m.bat ? 13.5 : 0, ev: m.ev, hp: m.hp }; }
-      function render() {
-        var today = FN.TODAY(), acc = { plan: false, solar: false, hp: false, ev: false, bat: false }, prev = today, delta = {};
-        ORDER.forEach(function (k) { if (st[k]) { acc[k] = true; var t = FN.sim(opt(acc)).total; delta[k] = t - prev; prev = t; } });
-        var fin = prev, save = today - fin, R = FN.sim(opt(st)), h = st.hour;
-        var steps = [['Today', today, 1]]; ORDER.forEach(function (k) { if (st[k]) steps.push([{ plan: 'Plan', solar: 'Solar', hp: 'Heat pump', ev: 'Car', bat: 'Battery' }[k], delta[k], 0]); }); steps.push(['New', fin, 1]);
-        var mx = today * 1.05, run = today, bars = steps.map(function (s, i) {
-          var x = 10 + i * 112, y, hh, fill, val, col;
-          if (s[2]) { y = 8 + 84 - s[1] / mx * 84; hh = s[1] / mx * 84; fill = 'var(--c-ink)'; val = FN.money(s[1]); col = 'var(--c-ink)'; }
-          else { var a2 = run, b2 = run + s[1]; run = b2; y = 8 + 84 - Math.max(a2, b2) / mx * 84; hh = Math.max(2, Math.abs(s[1]) / mx * 84); fill = s[1] <= 0 ? 'var(--c-gain)' : 'var(--c-loss)'; val = (s[1] <= 0 ? '−' : '+') + FN.money(s[1]); col = fill; }
-          return '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="96" height="' + hh.toFixed(1) + '" rx="3" fill="' + fill + '" opacity="' + (i === 0 ? 0.35 : 0.85) + '"></rect><text x="' + (x + 48) + '" y="' + Math.max(10, y - 3).toFixed(1) + '" font-size="11" fill="' + col + '" text-anchor="middle" font-weight="600">' + val + '</text><text x="' + (x + 48) + '" y="112" font-size="11" fill="var(--c-ink2)" text-anchor="middle">' + s[0] + '</text>';
-        }).join('');
-        q('.nm-ribbon').innerHTML = '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--c-line2);min-width:210px"><span style="' + FN.kick + '">Energy spend a year</span><span style="font-size:13px;color:var(--c-ink2)">today ' + FN.money(today) + '</span><b style="font-size:26px;font-weight:600;color:var(--c-gain)">' + FN.money(fin) + '</b><span style="font-size:12px;color:var(--c-ink2)">saves ' + FN.money(save * 0.95) + '–' + FN.money(save * 1.05) + ' · power, gas, fuel</span></div><svg width="900" height="116" viewBox="0 0 900 116" role="img" aria-label="Waterfall from today’s energy spend to the new spend">' + bars + '</svg>';
-        var solo = function (k) { var a3 = {}, b3 = {}; for (var x in st) { a3[x] = st[x]; b3[x] = st[x]; } a3[k] = true; b3[k] = false; return FN.sim(opt(b3)).total - FN.sim(opt(a3)).total; };
-        var rank = ['solar', 'hp', 'ev', 'bat'].map(function (k) { var s = solo(k); return { k: k, s: s, pay: s > 0 ? INFO[k][3] / s : 99 }; }).sort(function (a4, b4) { return a4.pay - b4.pay; });
-        q('.nm-moves').innerHTML = '<span style="' + FN.kick + ';padding:0 4px">Your next moves · ranked by payback</span>' + [{ k: 'plan', s: today - FN.sim({ plan: 'best' }).total, pay: 0 }].concat(rank).map(function (m) {
-          var on = st[m.k], I = INFO[m.k], e = on && delta[m.k] !== undefined ? -delta[m.k] : m.s;
-          var tag = I[4] || (m.pay < 99 ? 'pays back ~' + m.pay.toFixed(1) + ' yrs' : 'needs solar first');
-          return '<div style="' + FN.card + ';border-color:' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';padding:10px 12px;display:flex;gap:10px;align-items:center">' + FN.icon(I[0], on ? 'var(--c-sel)' : 'var(--c-ink2)') + '<div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="display:flex;gap:6px;align-items:baseline"><b style="font-size:14px;font-weight:600">' + I[1] + '</b><span style="font-size:11px;color:var(--c-muted)">' + tag + '</span></span><span style="font-size:12px;color:var(--c-ink2)">' + I[2] + (I[3] ? ' · ' + FN.money(I[3]) + ' upfront' : ' · no cost') + '</span><b style="font-size:12px;font-weight:600;color:' + (e >= 0 ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (e >= 0 ? 'saves ' : 'costs ') + FN.money(e) + ' a year' + (on ? '' : ' if added') + '</b></div>' +
-            '<button type="button" data-a="toggle" data-v="' + m.k + '" aria-pressed="' + on + '" style="min-width:64px;min-height:40px;border-radius:20px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-live)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-live)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-onLive)') + ';font:inherit;font-size:13px;font-weight:600;cursor:pointer">' + (on ? 'Added' : 'Add') + '</button></div>';
-        }).join('') + '<span style="font-size:11px;color:var(--c-muted);line-height:1.5;padding:0 4px;margin-top:auto">Each move is a measure on your scenario. Its effect is measured on top of the moves above it, and the best plan is checked again after each one.</span>';
-        var parts = []; if (st.solar) parts.push('panels'); if (st.bat) parts.push('battery'); if (st.ev) parts.push('car'); if (st.hp) parts.push('heat pump');
-        q('.nm-over').innerHTML = '<div style="position:absolute;left:12px;top:12px;display:flex;gap:6px"><span style="font-size:12px;padding:5px 9px;border-radius:7px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">LiDAR faces · our drawing</span><span style="font-size:12px;padding:5px 9px;border-radius:7px;background:var(--c-paper);color:var(--c-ink2);border:1px solid var(--c-line)">' + (parts.length ? 'Added: ' + parts.join(', ') : 'Add a move to see it on your home') + '</span></div>' +
-          '<div style="position:absolute;right:12px;top:12px;display:flex;background:var(--c-paper);border:1px solid var(--c-line);border-radius:9px;padding:3px">' + [['3d', '3D · show'], ['top', 'Top · edit']].map(function (c) { var on = (c[0] === 'top') === st.top; return '<button type="button" data-a="cam" data-v="' + c[0] + '" aria-pressed="' + on + '" style="min-height:34px;padding:0 12px;border:none;border-radius:7px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + c[1] + '</button>'; }).join('') + '</div>' + (H ? '' : '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--c-ink2);pointer-events:none">3D view loading…</div>');
-        q('.nm-strip').innerHTML = '<button type="button" data-a="play" aria-label="Play the day" style="min-width:44px;min-height:44px;border-radius:22px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);cursor:pointer">' + (st.playing ? '❚❚' : '▶') + '</button><b style="font-size:13px;font-weight:600;min-width:46px">' + (h < 10 ? '0' : '') + h + ':00</b><input type="range" min="0" max="23" step="1" value="' + h + '" data-in="hour" aria-label="Hour of the day" style="width:220px;accent-color:var(--c-sel)">' +
-          '<span style="font-size:13px">Panels <b style="color:var(--c-sunText)">' + R.pv[h].toFixed(1) + ' kW</b></span><span style="font-size:13px">Home <b>' + R.load[h].toFixed(1) + ' kW</b></span><span style="font-size:13px">Battery <b style="color:var(--c-battery)">' + (st.bat ? Math.round(R.socs[h] * 100) + '%' : '—') + '</b></span><span style="font-size:13px">Grid <b>' + (R.imp[h] > 0.05 ? 'in ' + R.imp[h].toFixed(1) + ' kW' : R.exp[h] > 0.05 ? 'out ' + R.exp[h].toFixed(1) + ' kW' : '0 kW') + '</b></span>';
-        if (H) { H.setPanels(st.solar ? FN.layout('portrait') : []); H.bat.visible = st.bat; H.car.visible = st.ev; H.hp.visible = st.hp; H.setHour(h); H.useTop = st.top; }
-      }
-      FN.wire(el, function (a, v) {
-        if (a === 'toggle') st[v] = !st[v];
-        else if (a === 'hour') st.hour = +v;
-        else if (a === 'cam') st.top = v === 'top';
-        else if (a === 'play') { if (timer) { clearInterval(timer); timer = null; st.playing = false; } else { st.playing = true; timer = setInterval(function () { st.hour = (st.hour + 1) % 24; render(); }, 650); } }
-        render();
-      });
-      render();
-      FN.three(q('.nm-canvas'), function (h3) { H = h3; H.size(784, 520); H.radius = 40; H.place(); render(); });
-    });
-  });
-
-  /* the installer studio at the Standard level (design/editor-tools) */
-  all('figure.bk-widget[data-widget="studio"]').forEach(function (fig) {
-    FN.when(fig, function () {
-      var el = FN.frame(fig, 1180, 820), H = null, t3 = null, tChip = null, tToast = null;
+  /* the installer studio at the Standard level: alone in design/editor-tools, and as the
+     installer's screen of the journey (design/funnels), where opts.site is the household's site:
+     its inbox shows the site once shared, and its Proposal step sends the offer back. */
+  // the installer's catalogue, from its price list (illustrative prices, excluding GST)
+  FN.CAT = {
+    modules: [{ w: 400, name: '400 W mono, budget', price: 150, warranty: '12 / 25 years' }, { w: 440, name: '440 W mono, tier 1', price: 185, warranty: '25 / 30 years' }, { w: 475, name: '475 W n-type, premium', price: 230, warranty: '25 / 30 years' }],
+    inverters: [{ kw: 5, name: '5 kW hybrid', price: 1650 }, { kw: 6, name: '6 kW hybrid', price: 1900 }, { kw: 8, name: '8 kW hybrid', price: 2600 }]
+  };
+  FN.studio = function (el, opts) {
+    opts = opts || {};
+    var J = !!opts.site, S = opts.site;
+    (function () {
+      var H = null, t3 = null, tChip = null, tToast = null;
       var HOME = { tools: [12, 60], notes: [1108, 60], read: [84, 60], changes: [826, 132], coach: [84, 590], v3: [768, 556] };
       var st = { level: 1, mode: 1, tool: 'select', selFace: false, preview: false, filled: false, variant: 'portrait', chimney: false, chimH: '1.00', pad: false, fresh: true, removed: [], bat: 13.5,
-        sheet: false, present: false, imagery: true, shade: true, hist: [], log: [], touches: [0, 0, 0, 0, 0], task: 0, toast: '', busy: false, chip: null, hover: null, notif: false, settings: false,
-        pos: JSON.parse(JSON.stringify(HOME)), swapped: false, hour3: 9 };
+        sheet: false, present: false, imagery: true, shade: true, hist: [], log: [], touches: [0, 0, 0, 0, 0], task: 0, toast: '', busy: false, chip: null, hover: null, notif: false, settings: false, layers: false, mods: true,
+        pos: JSON.parse(JSON.stringify(HOME)), swapped: false, hour3: 9, modW: 440, inv: 6, qs: 'cover', qseen: {}, qnotes: [] };
+      // in the journey the studio starts on its inbox, and the household's draft (16 portrait modules) comes with the site
+      if (J) { st.mode = -1; st.filled = true; st.bat = S.measures.bat ? 13.5 : 0; }
       el.innerHTML = '<div class="sd-root" style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden;user-select:none">' +
         '<div class="sd-top"></div><div class="sd-plan" style="position:absolute;left:0;top:48px;width:1180px;height:772px"></div>' +
         '<div class="sd-3d" style="position:absolute;overflow:hidden;background:var(--c-canvas)"><canvas class="sd-canvas" width="1180" height="772" aria-label="The roof in 3D, mirroring the plan: drag to turn" style="width:100%;height:100%;display:block;touch-action:none;cursor:grab"></canvas></div>' +
@@ -1233,8 +1017,8 @@
       }
       function energy(s) {
         if (!s.filled) return { n: 0, kwp: 0, kwh: 0, save: 0, eff: 0 };
-        var M = mods(s).filter(function (m) { return !m.blocked && !m.removed; }), n = M.length, loss = M.reduce(function (a, m) { return a + (m.shaded ? 0.15 : 0); }, 0), eff = (n - loss) * 0.44;
-        return { n: n, kwp: n * 0.44, kwh: eff * 1460, eff: eff, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: eff, cap: s.bat, ev: true }).total };
+        var M = mods(s).filter(function (m) { return !m.blocked && !m.removed; }), n = M.length, loss = M.reduce(function (a, m) { return a + (m.shaded ? 0.15 : 0); }, 0), eff = (n - loss) * s.modW / 1000;
+        return { n: n, kwp: n * s.modW / 1000, kwh: eff * 1460, eff: eff, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: eff, cap: s.bat, ev: J ? S.measures.ev : true, hp: J && S.measures.hp }).total };
       }
       function touch() { if (st.task < 5) st.touches[st.task]++; }
       function check() {
@@ -1269,7 +1053,7 @@
         var btn = function (a, label, svg, on, color) { return '<button type="button" data-a="' + a + '" aria-label="' + label + '" style="width:40px;height:40px;border:none;border-radius:8px;background:' + (on ? 'var(--c-line2)' : 'transparent') + ';color:' + (color || 'var(--c-ink)') + ';cursor:pointer;position:relative">' + svg + '</button>'; };
         var ico = function (d) { return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"></path></svg>'; };
         var sep = '<span style="width:1px;height:24px;background:var(--c-line);margin:0 4px"></span>';
-        return FN.topbar(['Sites', '14 Wattle Lane, Marrickville', 'Design v1'], ['Roof', 'Layout', 'Battery', 'Proposal'].map(function (l, i) { return FN.tab(l, i === st.mode, 'mode', i); }).join(''),
+        return FN.topbar(J && !S.shared ? ['Sites', 'Inbox'] : ['Sites', '14 Wattle Lane, Marrickville', 'Design v1'], (J ? [['Inbox', -1], ['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]] : [['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]]).map(function (x) { return FN.tab(x[0] + (x[1] === -1 && J && S.shared && !S.opened ? ' · 1' : ''), x[1] === st.mode, 'mode', x[1]); }).join(''),
           '<span style="font-size:12px;color:var(--c-gain);display:flex;align-items:center;gap:5px;padding:0 6px"><span style="width:7px;height:7px;border-radius:4px;background:var(--c-gain)"></span>Synced 14:02</span>' + sep +
           btn('undo', 'Undo', ico('M8.5 6.5L4.5 10.5l4 4M4.5 10.5h9a5.5 5.5 0 0 1 0 11H11'), false, st.hist.length ? 'var(--c-ink)' : 'var(--c-faint)') + btn('redo', 'Redo', ico('M15.5 6.5l4 4-4 4M19.5 10.5h-9a5.5 5.5 0 0 0 0 11H13'), false, 'var(--c-faint)') + sep +
           btn('notif', 'Notifications, 3 new', ico('M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0') + '<span style="position:absolute;top:7px;right:7px;width:15px;height:15px;border-radius:8px;background:var(--c-loss);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">3</span>', st.notif) +
@@ -1278,18 +1062,18 @@
       }
       function plan() {
         var M = mods(st), hc = parseFloat(st.chimH) || 0, len = hc * 64, o = '<svg width="1180" height="772" viewBox="0 0 1180 772" role="img" aria-label="Top view of the hip roof">' + (st.imagery ? '<path d="M0 0 H1180 V772 H0 Z" fill="var(--c-canvas)"></path><path d="M0 690 H1180 V740 H0 Z" fill="var(--c-line)" opacity=".5"></path>' : '<path d="M0 0 H1180 V772 H0 Z" fill="var(--c-ground)"></path>') + '<g transform="translate(30 100)">';
-        o += ['S', 'W', 'E', 'N'].map(function (k) { var sel = k === 'N' && (st.selFace || st.preview); return '<path data-a="face" data-v="' + k + '" d="' + FN.FACES[k] + '" fill="' + (k === 'N' ? '#CFC9BF' : k === 'S' ? '#C2BBB0' : '#C8C2B7') + '" stroke="' + (sel ? 'var(--c-sel)' : '#9C958A') + '" stroke-width="' + (sel ? 2 : 1) + '" style="cursor:pointer"></path>'; }).join('');
+        o += ['S', 'W', 'E', 'N'].map(function (k) { var sel = k === 'N' && (st.selFace || st.preview); return '<path data-a="face" data-v="' + k + '" d="' + FN.FACES[k] + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : k === 'S' ? 'var(--c-roofS)' : 'var(--c-roof)') + '" stroke="' + (sel ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (sel ? 2 : 1) + '" style="cursor:pointer"></path>'; }).join('');
         if (st.filled || st.preview) o += '<path d="M234 172 L802 172 L656 340 L380 340 Z" fill="none" stroke="var(--c-sel)" stroke-dasharray="5 5"></path>';
         if (st.chimney && st.shade && hc > 0.3) o += '<path d="M508 210 L532 210 L526 ' + (210 + len) + ' L502 ' + (210 + len) + ' Z" fill="#1D2026" opacity=".16"></path>';
-        if (st.filled || st.preview) M.forEach(function (m) { if (m.blocked) return; var g = st.preview && !st.filled; o += '<rect data-a="mod" data-v="' + m.id + '" x="' + m.x.toFixed(1) + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="1.5" fill="' + (m.removed ? 'none' : g ? 'var(--c-selSoft)' : m.shaded && st.shade ? '#46525E' : '#2B3A4A') + '" stroke="' + (m.removed ? 'var(--c-loss)' : g ? 'var(--c-sel)' : '#55667A') + '" stroke-dasharray="' + (m.removed || g ? '4 3' : 'none') + '" style="cursor:pointer"></rect>'; });
+        if ((st.filled || st.preview) && st.mods) M.forEach(function (m) { if (m.blocked) return; var g = st.preview && !st.filled; o += '<rect data-a="mod" data-v="' + m.id + '" x="' + m.x.toFixed(1) + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="1.5" fill="' + (m.removed ? 'none' : g ? 'var(--c-selSoft)' : m.shaded && st.shade ? '#46525E' : '#2B3A4A') + '" stroke="' + (m.removed ? 'var(--c-loss)' : g ? 'var(--c-sel)' : '#55667A') + '" stroke-dasharray="' + (m.removed || g ? '4 3' : 'none') + '" style="cursor:pointer"></rect>'; });
         if (st.chimney) o += '<rect x="496" y="174" width="48" height="48" fill="none" stroke="var(--c-loss)" stroke-dasharray="3 4"></rect><rect data-a="pad" x="508" y="186" width="24" height="24" fill="#8C7462" stroke="#5E4B3E" style="cursor:pointer"></rect>';
-        return o + '<path d="M368 356 L668 356" stroke="#8F887C" stroke-width="1.5"></path></g><circle cx="1050" cy="716" r="20" fill="var(--c-paper)" stroke="var(--c-line)"></circle><path d="M1050 702 L1055 718 L1050 715 L1045 718 Z" fill="var(--c-ink)"></path></svg>';
+        return o + '<path d="M368 356 L668 356" stroke="var(--c-ridge)" stroke-width="1.5"></path></g><circle cx="1050" cy="716" r="20" fill="var(--c-paper)" stroke="var(--c-line)"></circle><path d="M1050 702 L1055 718 L1050 715 L1045 718 Z" fill="var(--c-ink)"></path></svg>';
       }
       function grip(key, vertical) { return '<div data-grip="' + key + '" title="Drag to move · double tap to dock" style="' + (vertical ? 'width:16px;border-right:1px solid var(--c-line2)' : 'height:16px;width:100%') + ';cursor:grab;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="' + (vertical ? 'width:3px;height:18px' : 'width:18px;height:3px') + ';border-radius:2px;background:var(--c-grip)"></span></div>'; }
       function rail(key, list) {
         var p = st.pos[key];
         return '<div style="position:absolute;left:' + p[0] + 'px;top:' + p[1] + 'px;width:60px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);padding:4px 0 8px;display:flex;flex-direction:column;align-items:center;gap:2px;z-index:4" role="toolbar">' + grip(key) + list.map(function (t, i) {
-          var on = t === 'layers' ? st.settings : st.tool === t;
+          var on = t === 'layers' ? st.layers : st.tool === t;
           return '<button type="button" data-a="tool" data-v="' + t + '" data-tip="' + t + '|' + key + '|' + i + '" aria-label="' + TIPS[t][0] + '" aria-pressed="' + on + '" style="width:48px;height:48px;border:none;border-radius:11px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer">' + FN.icon(t === 'layers' ? 'layers' : t) + '</button>';
         }).join('') + '</div>';
       }
@@ -1302,38 +1086,100 @@
         o += '<div style="position:absolute;left:' + P.read[0] + 'px;top:' + P.read[1] + 'px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);display:flex;align-items:stretch;z-index:4">' + grip('read', true) +
           '<div style="padding:10px 16px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--c-line2);min-width:168px"><span style="' + FN.kick + '">Saves a year</span><b style="font-size:22px;font-weight:600;color:' + (st.busy || !st.filled ? 'var(--c-faint)' : 'var(--c-gain)') + '">' + (st.filled ? FN.money(E.save * 0.85) + '–' + FN.money(E.save * 1.1) : '—') + '</b></div>' +
           kp.map(function (k) { return '<div style="padding:10px 14px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--c-line2)"><span style="' + FN.kick + '">' + k[0] + '</span><b style="font-size:16px;font-weight:600;color:' + (st.busy ? 'var(--c-faint)' : 'var(--c-ink)') + '">' + k[1] + '</b></div>'; }).join('') +
-          '<button type="button" data-a="sheet" style="border:none;background:transparent;padding:10px 14px;display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:var(--c-ink);cursor:pointer"><span style="' + FN.kick + '">Battery ▸</span><b style="font-size:16px;font-weight:600;color:var(--c-battery)">' + (st.bat ? st.bat + ' kWh' : 'none') + '</b></button><span style="align-self:center;font-size:11px;color:var(--c-muted);padding:0 12px 0 4px;display:flex;gap:6px;align-items:center">' + (st.busy ? '<span style="width:6px;height:6px;border-radius:3px;background:var(--c-live)"></span>computing…' : st.filled ? 'API · 0.3 s' : 'fill a face') + '</span></div>';
+          '<button type="button" data-a="sheet" style="border:none;background:transparent;padding:10px 14px;display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:var(--c-ink);cursor:pointer"><span style="' + FN.kick + '">Equipment ▸</span><b style="font-size:14px;font-weight:600;color:var(--c-battery)">' + st.modW + ' W · ' + st.inv + ' kW · ' + (st.bat ? st.bat + ' kWh' : 'no battery') + '</b></button><span style="align-self:center;font-size:11px;color:var(--c-muted);padding:0 12px 0 4px;display:flex;gap:6px;align-items:center">' + (st.busy ? '<span style="width:6px;height:6px;border-radius:3px;background:var(--c-live)"></span>computing…' : st.filled ? 'API · 0.3 s' : 'fill a face') + '</span></div>';
         var ctx = [];
         if (st.preview && !st.filled) { ctx = ['portrait', 'landscape', 'mixed'].map(function (v) { return [v.charAt(0).toUpperCase() + v.slice(1), 'variant', v, st.variant === v]; }); ctx.push(['✓ Keep', 'keep', '', 'k']); }
         else if (st.selFace) ctx = [['Edit vertices', 'noop', '', false], ['Setbacks', 'noop', '', false], ['Delete', 'noop', '', false]];
         if (ctx.length) o += '<div style="position:absolute;left:' + P.read[0] + 'px;top:' + (P.read[1] + 70) + 'px;display:flex;align-items:center;gap:4px;' + FN.card + ';padding:4px;box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4"><span style="font-size:12px;color:var(--c-muted);padding:0 8px">North face</span>' + ctx.map(function (x) { var k = x[3] === 'k'; return '<button type="button" data-a="' + x[1] + '" data-v="' + x[2] + '" style="min-height:40px;padding:0 12px;border-radius:8px;border:1px solid ' + (k ? 'var(--c-ink)' : x[3] ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (k ? 'var(--c-ink)' : x[3] ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (k ? 'var(--c-paper)' : x[3] ? 'var(--c-sel)' : x[0] === 'Delete' ? 'var(--c-loss)' : 'var(--c-ink)') + ';font:inherit;font-size:13px;cursor:pointer">' + x[0] + '</button>'; }).join('') + '</div>';
-        if (st.hover) { var tp = TIPS[st.hover.k]; o += '<div style="position:absolute;left:' + st.hover.x + 'px;top:' + st.hover.y + 'px;width:260px;background:var(--c-tip);color:var(--c-paper);border-radius:12px;padding:12px;box-shadow:0 10px 28px rgba(29,32,38,.25);display:flex;flex-direction:column;gap:6px;z-index:6;pointer-events:none"><span style="display:flex;justify-content:space-between"><b style="font-size:14px">' + tp[0] + '</b><span style="font-size:11px;border:1px solid currentColor;opacity:.7;border-radius:4px;padding:1px 5px">' + tp[1] + '</span></span>' + tp[2].map(function (s, i) { return '<span style="font-size:12px;line-height:1.45;opacity:.9">' + (i + 1) + ' · ' + s + '</span>'; }).join('') + '<span style="font-size:11px;opacity:.75">' + tp[3] + '</span></div>'; }
+        if (st.hover && !st.layers && !st.settings) { var tp = TIPS[st.hover.k]; o += '<div style="position:absolute;left:' + st.hover.x + 'px;top:' + st.hover.y + 'px;width:260px;background:var(--c-tip);color:var(--c-paper);border-radius:12px;padding:12px;box-shadow:0 10px 28px rgba(29,32,38,.25);display:flex;flex-direction:column;gap:6px;z-index:6;pointer-events:none"><span style="display:flex;justify-content:space-between"><b style="font-size:14px">' + tp[0] + '</b><span style="font-size:11px;border:1px solid currentColor;opacity:.7;border-radius:4px;padding:1px 5px">' + tp[1] + '</span></span>' + tp[2].map(function (s, i) { return '<span style="font-size:12px;line-height:1.45;opacity:.9">' + (i + 1) + ' · ' + s + '</span>'; }).join('') + '<span style="font-size:11px;opacity:.75">' + tp[3] + '</span></div>'; }
         o += '<div style="position:absolute;left:' + P.changes[0] + 'px;top:' + P.changes[1] + 'px;width:270px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4;overflow:hidden"><div data-grip="changes" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600">Changes</b><span style="font-size:11px;color:var(--c-muted)">' + (st.log.length ? st.log.length + ' recent' : 'none yet') + '</span></div>' +
           (st.log.length ? st.log.map(function (l) { return '<div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--c-line2);font-size:12px"><span style="width:3px;border-radius:2px;background:' + l.color + '"></span><span style="flex:1"><b style="font-weight:600">' + l.label + '</b><br><span style="color:var(--c-ink2)">' + l.delta + '</span></span><b style="color:' + l.color + ';font-weight:600;white-space:nowrap">' + l.money + '</b></div>'; }).join('') : '<span style="display:block;padding:12px;font-size:12px;color:var(--c-muted);line-height:1.5">Each edit lands here with what it gains or costs. Undo walks back through it.</span>') + '</div>';
         var v = P.v3;
         o += '<div style="position:absolute;left:' + v[0] + 'px;top:' + v[1] + 'px;width:330px;height:252px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.12);z-index:4;overflow:hidden"><div data-grip="v3" style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600">' + (st.swapped ? 'Plan · editing stays here' : '3D · mirrors the plan') + '</b><span style="display:flex;gap:4px">' +
           [[9, '9 am'], [12, 'noon'], [15, '3 pm']].map(function (x) { var on = st.hour3 === x[0]; return '<button type="button" data-a="hour3" data-v="' + x[0] + '" style="min-height:28px;padding:0 7px;border-radius:6px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:11px;cursor:pointer">' + x[1] + '</button>'; }).join('') +
           '<button type="button" data-a="swap" aria-label="Swap the 3D view and the plan" style="width:32px;height:28px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);cursor:pointer">⇄</button></span></div>' +
-          (st.swapped ? '<svg width="330" height="212" viewBox="200 140 640 420" aria-hidden="true">' + ['S', 'W', 'E', 'N'].map(function (k) { return '<path d="' + FN.FACES[k] + '" fill="#C8C2B7" stroke="#9C958A" stroke-width="2"></path>'; }).join('') + mods(st).filter(function (m) { return st.filled && !m.blocked && !m.removed; }).map(function (m) { return '<rect x="' + m.x + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" fill="#2B3A4A"></rect>'; }).join('') + '</svg>' : '') + (H ? '' : '<div style="height:212px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--c-ink2)">3D loading…</div>') + '</div>';
+          (st.swapped ? '<svg width="330" height="212" viewBox="200 140 640 420" aria-hidden="true">' + ['S', 'W', 'E', 'N'].map(function (k) { return '<path d="' + FN.FACES[k] + '" fill="var(--c-roof)" stroke="var(--c-roofLine)" stroke-width="2"></path>'; }).join('') + mods(st).filter(function (m) { return st.filled && !m.blocked && !m.removed; }).map(function (m) { return '<rect x="' + m.x + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" fill="#2B3A4A"></rect>'; }).join('') + '</svg>' : '') + (H ? '' : '<div style="height:212px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--c-ink2)">3D loading…</div>') + '</div>';
         if (st.swapped) o += '<span style="position:absolute;left:92px;bottom:14px;font-size:12px;padding:5px 9px;border-radius:7px;background:var(--c-paper);border:1px solid var(--c-line);color:var(--c-ink2);z-index:3">3D checks · editing stays on the plan · ⇄ to swap back</span>';
         if (st.pad) o += '<div style="position:absolute;left:600px;top:200px;width:210px;' + FN.card + ';border-color:var(--c-sel);padding:10px;box-shadow:0 10px 28px rgba(29,32,38,.18);display:flex;flex-direction:column;gap:8px;z-index:6"><span style="font-size:12px;color:var(--c-muted)">Chimney height above the roof</span><b style="font-size:22px;font-weight:600;color:var(--c-sel);border-bottom:1.5px solid var(--c-sel)">' + st.chimH + ' m</b><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px">' +
           ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '✓'].map(function (k) { var ok = k === '✓'; return '<button type="button" data-a="key" data-v="' + k + '" style="min-height:44px;border-radius:8px;border:1px solid var(--c-line);background:' + (ok ? 'var(--c-ink)' : 'var(--c-paper2)') + ';color:' + (ok ? 'var(--c-paper)' : 'var(--c-ink)') + ';font:inherit;font-size:16px;cursor:pointer">' + k + '</button>'; }).join('') + '</div></div>';
         var TD = [['Fill the north face', 3], ['Chimney at 1.20 m', 6], ['Remove a module', 2], ['Try another battery', 2], ['Present', 1]];
         var hints = ['Hover a tool for its tutorial. Fill zone, the north face, ✓ Keep.', 'Obstacle, tap the face, 1 . 2 on the pad, ✓.', 'Modules, then tap any module.', 'Battery ▸ in the reading card, pick a size.', 'Present, top right.', 'Done. Drag any card or bar by its grip; settings reset the layout.'];
-        o += '<div style="position:absolute;left:' + P.coach[0] + 'px;top:' + P.coach[1] + 'px;width:290px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4;overflow:hidden"><div data-grip="coach" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600">Demos · touches counted</b><span style="font-size:11px;color:var(--c-muted)">catalogue §6</span></div><div style="padding:6px 8px;display:flex;flex-direction:column;gap:2px">' +
+        if (!J) o += '<div style="position:absolute;left:' + P.coach[0] + 'px;top:' + P.coach[1] + 'px;width:290px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4;overflow:hidden"><div data-grip="coach" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600">Demos · touches counted</b><span style="font-size:11px;color:var(--c-muted)">catalogue §6</span></div><div style="padding:6px 8px;display:flex;flex-direction:column;gap:2px">' +
           TD.map(function (t, k) { var cur = k === st.task, dn = k < st.task, u = st.touches[k]; return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 6px;border-radius:6px;background:' + (cur ? 'var(--c-selSoft)' : 'transparent') + '"><span style="color:' + (dn ? 'var(--c-gain)' : 'var(--c-ink)') + ';font-weight:' + (cur ? 600 : 400) + '">' + (dn ? '✓ ' : '') + t[0] + '</span><span style="color:' + (u > t[1] ? 'var(--c-loss)' : 'var(--c-muted)') + '">' + (dn || cur ? u + ' / ' : '') + t[1] + '</span></div>'; }).join('') + '<span style="font-size:11px;color:var(--c-muted);padding:4px 6px">' + hints[Math.min(st.task, 5)] + '</span></div></div>';
         if (st.notif) o += '<div style="position:absolute;right:120px;top:52px;width:320px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;overflow:hidden"><b style="display:block;padding:10px 12px;font-size:12px;font-weight:600;border-bottom:1px solid var(--c-line2)">Notifications</b>' + [['Rebate steps down on 1 January', '2 quotes in flight need re-pricing.', 'var(--c-sun)'], ['Survey photos arrived', '12 photos from the phone, attached to this site.', 'var(--c-sel)'], ['Household opened proposal v0', 'Unit 4, 22 Ash Street, yesterday 19:40.', 'var(--c-muted)']].map(function (n) { return '<div style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-line2);font-size:12px;line-height:1.45"><span style="width:3px;border-radius:2px;background:' + n[2] + '"></span><span><b style="font-weight:600">' + n[0] + '</b><br><span style="color:var(--c-ink2)">' + n[1] + '</span></span></div>'; }).join('') + '</div>';
-        if (st.settings) o += '<div style="position:absolute;right:80px;top:52px;width:280px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:12px;display:flex;flex-direction:column;gap:10px"><b style="font-size:12px;font-weight:600">View settings</b><span style="font-size:12px;color:var(--c-muted)">Disclosure level</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px">' + ['Guided', 'Standard', 'Expert'].map(function (l, k) { return '<button type="button" data-a="level" data-v="' + k + '" style="flex:1;min-height:36px;border:none;border-radius:6px;background:' + (k === st.level ? 'var(--c-paper)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + l + '</button>'; }).join('') + '</div>' +
-          [['Imagery · Mar 2026', 'imagery'], ['Shade, 9 am in June', 'shade']].map(function (r) { return '<button type="button" data-a="layer" data-v="' + r[1] + '" style="min-height:40px;display:flex;justify-content:space-between;align-items:center;border:none;background:transparent;color:var(--c-ink);font:inherit;font-size:13px;padding:0;cursor:pointer"><span>' + r[0] + '</span><span style="font-size:12px;color:' + (st[r[1]] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st[r[1]] ? 'shown' : 'hidden') + '</span></button>'; }).join('') + '<button type="button" data-a="reset" style="min-height:40px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:13px;cursor:pointer">Reset panels to the F layout</button></div>';
+        if (st.settings) o += '<div style="position:absolute;right:80px;top:52px;width:280px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:12px;display:flex;flex-direction:column;gap:10px"><b style="font-size:12px;font-weight:600">View settings</b><span style="font-size:12px;color:var(--c-muted)">Disclosure level</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px">' + ['Guided', 'Standard', 'Expert'].map(function (l, k) { return '<button type="button" data-a="level" data-v="' + k + '" style="flex:1;min-height:36px;border:none;border-radius:6px;background:' + (k === st.level ? 'var(--c-paper)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + l + '</button>'; }).join('') + '</div>' + '<button type="button" data-a="reset" style="min-height:40px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:13px;cursor:pointer">Reset panels to the F layout</button></div>';
+        if (st.layers) { var ln = P.notes, li = right.indexOf('layers'); o += '<div style="position:absolute;left:' + (ln[0] - 252) + 'px;top:' + Math.max(56, ln[1] + 16 + li * 50 - 8) + 'px;width:240px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:8px;display:flex;flex-direction:column"><b style="font-size:12px;font-weight:600;color:var(--c-muted);padding:6px 8px">Layers</b>' +
+          [['Imagery · Mar 2026', 'imagery'], ['Modules', 'mods'], ['Shade, 9 am in June', 'shade']].map(function (r) { return '<button type="button" data-a="layer" data-v="' + r[1] + '" aria-pressed="' + !!st[r[1]] + '" style="min-height:42px;display:flex;justify-content:space-between;align-items:center;border:none;background:transparent;color:var(--c-ink);font:inherit;font-size:13px;padding:0 8px;cursor:pointer"><span>' + r[0] + '</span><span style="font-size:12px;color:' + (st[r[1]] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st[r[1]] ? 'shown' : 'hidden') + '</span></button>'; }).join('') + '</div>'; }
         if (st.toast) o += '<div style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--c-tip);color:var(--c-paper);font-size:13px;padding:9px 14px;border-radius:10px;z-index:8">' + st.toast + '</div>';
-        if (st.sheet) { var sizes = [0, 10, 13.5, 20, 28]; o += '<div style="position:absolute;left:92px;right:92px;bottom:16px;' + FN.card + ';border-radius:16px;padding:14px 16px;box-shadow:0 14px 36px rgba(29,32,38,.18);display:flex;flex-direction:column;gap:10px;z-index:7"><div style="display:flex;justify-content:space-between"><b style="font-size:14px;font-weight:600">Battery what-if · open-energy</b><span style="font-size:12px;color:var(--c-muted)">Rebate tiers 14 · 28 · 50 kWh · export limit 5 kW</span></div><div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px">' +
-          sizes.map(function (s, i) { var sv = FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: s, ev: true }).total, pv0 = i ? FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: sizes[i - 1], ev: true }).total : 0, on = st.bat === s, reb = s ? FN.rebate(s) : 0;
-            return '<button type="button" data-a="bat" data-v="' + s + '" aria-pressed="' + on + '" style="min-height:108px;border-radius:12px;border:1px solid ' + (on ? 'var(--c-battery)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-batterySoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:8px 10px;text-align:left;display:flex;flex-direction:column;gap:3px;font:inherit;cursor:pointer"><b style="font-size:15px;font-weight:600">' + (s ? s + ' kWh' : 'None') + '</b><span style="font-size:12px;color:var(--c-muted)">rebate ' + FN.money(reb) + ' · net ' + FN.money(s ? 1100 + 790 * s - reb : 0) + '</span><b style="font-size:13px;font-weight:600;color:var(--c-gain)">saves ' + FN.money(sv) + '/yr</b><span style="font-size:12px;color:' + (s > 14 ? 'var(--c-loss)' : 'var(--c-muted)') + '">' + (i ? '+' + FN.money((sv - pv0) / (s - sizes[i - 1])) + '/yr per kWh' : '—') + '</span></button>'; }).join('') +
-          '</div><span style="font-size:12px;color:var(--c-muted)">Past 14 kWh each kWh earns less: the rebate drops to 60 % and the evenings use about 9 kWh.</span></div>'; }
+        if (st.sheet) {
+          var sizes = [0, 10, 13.5, 20, 28], ratio = E.kwp / st.inv, okRatio = ratio <= 1.33;
+          var pick = function (act, v, on, title, sub, extra) { return '<button type="button" data-a="' + act + '" data-v="' + v + '" aria-pressed="' + on + '" style="min-height:62px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:6px 10px;text-align:left;display:flex;flex-direction:column;gap:2px;font:inherit;cursor:pointer"><b style="font-size:13px;font-weight:600">' + title + '</b><span style="font-size:11.5px;color:var(--c-muted)">' + sub + '</span>' + (extra || '') + '</button>'; };
+          o += '<div style="position:absolute;left:84px;right:84px;bottom:12px;' + FN.card + ';border-radius:16px;padding:12px 16px;box-shadow:0 14px 36px rgba(29,32,38,.18);display:flex;flex-direction:column;gap:9px;z-index:7">' +
+            '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:14px;font-weight:600">Equipment · from your catalogue and price list</b><span style="font-size:12px;color:var(--c-muted)">every choice recomputes yield, savings and incentives</span></div>' +
+            '<div style="display:grid;grid-template-columns:110px repeat(3,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Modules</span>' + FN.CAT.modules.map(function (m) { return pick('modw', m.w, st.modW === m.w, m.name, '$' + m.price + ' each · warranty ' + m.warranty + ' · ' + (E.n * m.w / 1000).toFixed(2) + ' kWp'); }).join('') + '</div>' +
+            '<div style="display:grid;grid-template-columns:110px repeat(3,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Inverter</span>' + FN.CAT.inverters.map(function (x) { var r = E.kwp / x.kw, ok = r <= 1.33; return pick('inv', x.kw, st.inv === x.kw, x.name, '$' + x.price + ' · panels at ' + Math.round(r * 100) + ' %', '<span style="font-size:11px;font-weight:600;color:' + (ok ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (ok ? '✓ under the 133 % limit' : '✗ over the 133 % limit') + '</span>'); }).join('') + '</div>' +
+            '<div style="display:grid;grid-template-columns:110px repeat(5,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Battery</span>' + sizes.map(function (z, i) {
+              var sv = FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: z, ev: J ? S.measures.ev : true }).total, pv0 = i ? FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: sizes[i - 1], ev: J ? S.measures.ev : true }).total : 0;
+              return pick('bat', z, st.bat === z, z ? z + ' kWh' : 'None', z ? 'rebate ' + FN.money(FN.rebate(z)) + ' · saves ' + FN.money(sv) + '/yr' : 'saves ' + FN.money(sv) + '/yr', z ? '<span style="font-size:11px;color:' + (z > 14 ? 'var(--c-loss)' : 'var(--c-muted)') + '">+' + FN.money((sv - pv0) / (z - sizes[i - 1])) + '/yr per kWh</span>' : '');
+            }).join('') + '</div>' +
+            '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;padding-top:2px"><span style="color:' + (okRatio ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (okRatio ? '✓' : '✗') + ' DC/AC ' + ratio.toFixed(2) + '</span><span style="color:var(--c-gain)">✓ battery and inverter compatible (hybrid)</span><span style="color:var(--c-gain)">✓ CEC-listed</span><span style="color:var(--c-gain)">✓ VPP-capable: rebate eligible</span><span style="color:var(--c-muted)">export limit 5 kW · rebate tiers 14 · 28 · 50 kWh</span></div></div>';
+        }
         if (st.present) { var vs = ['mixed', 'portrait', 'landscape'].map(function (vv) { var s2 = {}; for (var k in st) s2[k] = st[k]; s2.variant = vv; s2.removed = []; s2.filled = true; return { v: vv, e: energy(s2) }; }).sort(function (a5, b5) { return b5.e.save - a5.e.save; });
-          o += '<div style="position:absolute;inset:0;background:var(--c-ground);display:flex;flex-direction:column;z-index:9"><div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:var(--c-paper);border-bottom:1px solid var(--c-line)"><b style="font-size:14px;font-weight:600">Your home · 14 Wattle Lane</b><button type="button" data-a="unpresent" style="min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">Back to design</button></div><div style="flex:1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;padding:20px">' +
+          o += '<div style="position:absolute;inset:0;background:var(--c-ground);display:flex;flex-direction:column;z-index:9"><div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:var(--c-paper);border-bottom:1px solid var(--c-line)"><b style="font-size:14px;font-weight:600">Your home · 14 Wattle Lane</b><span style="display:flex;gap:8px"><button type="button" data-a="unpresent" style="min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">Back to design</button>' + (J ? (function (g) { return '<button type="button" data-a="mode" data-v="' + g.v + '" style="min-height:36px;padding:0 16px;border-radius:8px;' + gateStyle(g) + ';font:inherit;font-weight:600;cursor:pointer">' + g.l + '</button>'; })(gate(E)) : '') + '</span></div><div style="flex:1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;padding:20px">' +
             '<div style="' + FN.card + ';border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:var(--c-muted)">Three layouts, ranked on your own bill</span>' + vs.map(function (x) { var on = st.variant === x.v; return '<button type="button" data-a="pvariant" data-v="' + x.v + '" style="min-height:72px;border-radius:12px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:10px 14px;text-align:left;display:flex;justify-content:space-between;align-items:center;font:inherit;cursor:pointer"><span><b style="font-size:15px;font-weight:600">' + x.v.charAt(0).toUpperCase() + x.v.slice(1) + ' · ' + x.e.n + ' modules</b><br><span style="font-size:12px;color:var(--c-muted)">' + x.e.kwp.toFixed(2) + ' kWp · ' + FN.n(x.e.kwh) + ' kWh/yr</span></span><b style="font-size:15px;font-weight:600;color:var(--c-gain)">' + FN.money(x.e.save * 0.85) + '–' + FN.money(x.e.save * 1.1) + '</b></button>'; }).join('') + '</div>' +
             '<div style="' + FN.card + ';border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:var(--c-muted)">You save, a year</span><b style="font-size:38px;font-weight:600;color:var(--c-gain)">' + (st.filled ? FN.money(E.save * 0.85) + '–' + FN.money(E.save * 1.1) : '—') + '</b><span style="font-size:13px;color:var(--c-ink2)">With ' + E.kwp.toFixed(2) + ' kWp and a ' + (st.bat ? st.bat + ' kWh' : 'no') + ' battery.</span><b style="font-size:13px;font-weight:600;margin-top:8px">What it depends on</b><span style="font-size:13px;color:var(--c-ink2)">Sunshine year to year ±8 % · evening use ±10 % · plan prices · ' + (st.chimney ? mods(st).filter(function (m) { return m.shaded; }).length + ' modules in the chimney’s winter shade' : 'no obstacle drawn') + '</span><span style="font-size:11px;color:var(--c-muted);margin-top:auto">Indicative estimate. The signed proposal freezes these numbers with the engine version.</span></div></div></div>'; }
+        if (J && st.mode === -1) o += inbox();
+        if (J && st.mode === 3) o += proposal(E);
+        return o;
+      }
+      function inbox() {
+        var o = '<div style="position:absolute;inset:48px 0 0 0;background:var(--c-ground);z-index:8;padding:22px 28px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:24px;font-weight:600">Ready to design</b><span style="font-size:13px;color:var(--c-muted)">Sites shared with you by households · within 25 km</span></div>';
+        if (!S.shared) return o + '<div style="' + FN.card + ';border-style:dashed;padding:40px;text-align:center;color:var(--c-muted);font-size:15px;line-height:1.6">No site yet.<br>When a household shares its home with you, it lands here with its roof, its needs and its draft.</div></div>';
+        var P = S.profile, w = [];
+        if (S.measures.bat) w.push('battery'); if (S.measures.ev) w.push('car'); if (S.measures.hp) w.push('heat pump');
+        o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:16px 18px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 190px;gap:16px;align-items:center">' +
+          '<span style="display:flex;flex-direction:column;gap:4px"><b style="font-size:17px;font-weight:600">14 Wattle Lane, Marrickville</b><span style="font-size:13px;color:var(--c-muted)">Shared with you by name · consent given ' + S.sharedAt + '</span></span>' +
+          '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">Roof</span><b style="font-weight:600">3 faces confirmed · LiDAR 0.91</b></span>' +
+          '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">Needs</span><b style="font-weight:600">15 kWh a day · ' + P.badge + ' (±' + P.unc + ' %)</b></span>' +
+          '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">Wants</span><b style="font-weight:600">solar' + (w.length ? ' + ' + w.join(' + ') : '') + ' · plan ' + (S.plan || 'Flat Rate') + '</b></span>' +
+          '<button type="button" data-a="open" style="min-height:44px;padding:0 16px;border-radius:10px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:14px;font-weight:600;cursor:pointer">' + (S.signed ? 'Signed ✓' : S.proposal ? 'Proposal sent' : 'Open in studio') + '</button></div>';
+        return o + '<span style="font-size:13px;color:var(--c-muted);line-height:1.5">You see the place and the needs as totals, never the meter readings, and never another installer’s proposal. The household’s draft design comes with the site.</span></div>';
+      }
+      function gate(E) {
+        if (S && S.signed) return { k: 'done', l: 'Signed by the household ✓', v: 3 };
+        if (S && S.proposal) return { k: 'done', l: 'Proposal sent ✓', v: 3 };
+        if (!st.filled) return { k: 'todo', l: 'Fill a face first ›', v: 1 };
+        if (!st.eqSeen) return { k: 'todo', l: 'Check the equipment ›', v: 2 };
+        if (E.kwp / st.inv > 1.33) return { k: 'warn', l: 'Inverter too small: fix it ›', v: 2 };
+        return { k: 'go', l: 'Make it a proposal ›', v: 3 };
+      }
+      function gateStyle(g) { return g.k === 'go' ? 'background:var(--c-live);color:var(--c-onLive);border:none' : g.k === 'done' ? 'background:var(--c-selSoft);color:var(--c-sel);border:none' : 'background:var(--c-paper2);color:' + (g.k === 'warn' ? 'var(--c-loss)' : 'var(--c-ink)') + ';border:1px solid ' + (g.k === 'warn' ? 'var(--c-loss)' : 'var(--c-line)'); }
+      // the installer's quote, built from the design and reviewed one section at a time before it is sent
+      var QNOTES = [['Access', 'side gate 1.1 m, ladder on the west side; dog kept inside on the day'], ['Spare tiles', 'six spare tiles in the garage, to replace any we crack'], ['Visit', 'the household is home on Tuesdays and Thursdays']];
+      function quoteData(E) {
+        var ms = mods(st).filter(function (m) { return st.filled && !m.blocked && !m.removed; }), notes = [];
+        if (st.chimney) notes.push(['Chimney', 'brick, 0.60 × 0.60 m, ' + (parseFloat(st.chimH) || 1).toFixed(2) + ' m above the roof, 1.05 m below the ridge; modules kept 0.40 m away; it shades ' + ms.filter(function (m) { return m.shaded && st.shade; }).length + ' modules on winter mornings', true]);
+        if (st.removed.length) notes.push(['Modules', st.removed.length + ' taken off the layout by hand, to clear a vent or a shaded corner', false]);
+        notes.push(['Switchboard', 'circuit breakers with room for two more; no upgrade needed', false], ['Meter', 'smart meter, import and export; the network keeps it', false]);
+        st.qnotes.forEach(function (i) { notes.push([QNOTES[i][0], QNOTES[i][1], false]); });
+        return FN.offer({ n: E.n, kwp: E.kwp, eff: E.eff, kwh: E.kwh, modW: st.modW, inv: st.inv, bat: st.bat, ev: S.measures.ev, hp: S.measures.hp, save: E.save, unc: S.profile.unc, badge: S.profile.badge, mods: ms.map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h }; }), chimney: st.chimney ? (parseFloat(st.chimH) || 1).toFixed(2) : 0, shaded: ms.filter(function (m) { return m.shaded && st.shade; }).length, notes: notes });
+      }
+      function proposal(E) {
+        var P = quoteData(E), u = S.profile.unc, sent = !!S.proposal, i = FN.SECTIONS.map(function (x) { return x[0]; }).indexOf(st.qs), seen = Object.keys(st.qseen).length, N = FN.SECTIONS.length;
+        st.qseen[st.qs] = true; seen = Object.keys(st.qseen).length; st.lastOffer = P;
+        var o = '<div style="position:absolute;inset:48px 0 0 0;background:var(--c-ground);z-index:8;padding:16px 20px;display:grid;grid-template-columns:220px minmax(0,1fr) 270px;gap:14px">';
+        // the sections, as a checklist: where you are, what you have reviewed
+        o += '<div style="' + FN.card + ';padding:12px;display:flex;flex-direction:column;gap:3px"><span style="' + FN.kick + '">Quote Q-2026-0148</span><span style="font-size:12px;color:var(--c-ink2);margin-bottom:6px">Reviewed ' + seen + ' of ' + N + '</span><span style="height:4px;border-radius:2px;background:var(--c-line2);margin-bottom:8px"><span style="display:block;height:4px;border-radius:2px;width:' + (seen / N * 100) + '%;background:var(--c-sel)"></span></span>' +
+          FN.SECTIONS.map(function (x, k) { var on = x[0] === st.qs, ok = st.qseen[x[0]]; return '<button type="button" data-a="qs" data-v="' + x[0] + '" style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 8px;border:none;border-radius:8px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12.5px;font-weight:' + (on ? 600 : 400) + ';text-align:left;cursor:pointer"><span style="width:18px;height:18px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10.5px;' + (ok ? 'background:var(--c-sel);color:var(--c-paper)' : 'border:1px solid var(--c-line);color:var(--c-muted)') + '">' + (ok ? '✓' : k + 1) + '</span>' + x[1] + '</button>'; }).join('') + '</div>';
+        // one section at a time: its line first, its detail under it
+        o += '<div style="' + FN.card + ';padding:14px 18px;display:flex;flex-direction:column;gap:6px;min-height:0"><span style="' + FN.kick + '">' + (i + 1) + ' of ' + N + ' · ' + FN.SECTIONS[i][1] + '</span><b style="font-size:16px;font-weight:600;line-height:1.35">' + FN.quoteLead(st.qs, P) + '</b>' +
+          '<div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;padding-right:4px">' + FN.quoteSection(st.qs, P) +
+          (st.qs === 'notes' ? '<span style="font-size:12px;color:var(--c-muted);margin-top:10px">Add what the household should know:</span><span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + QNOTES.map(function (n, k) { var on = st.qnotes.indexOf(k) >= 0; return '<button type="button" data-a="qnote" data-v="' + k + '" style="min-height:30px;padding:0 10px;border-radius:15px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + (on ? '✓ ' : '+ ') + n[0] + '</button>'; }).join('') + '</span>' : '') + '</div>' +
+          '<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--c-line2)"><button type="button" data-a="qprev"' + (i ? '' : ' disabled') + ' style="min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer;opacity:' + (i ? 1 : 0.4) + '">‹ Back</button>' + (i < N - 1 ? '<button type="button" data-a="qnext" style="min-height:36px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-weight:600;cursor:pointer">Next: ' + FN.SECTIONS[i + 1][1] + ' ›</button>' : '<span style="font-size:12.5px;color:var(--c-gain);align-self:center">Last section ✓</span>') + '</div></div>';
+        // what matters to send it: the number, the state, the files
+        o += '<div style="display:flex;flex-direction:column;gap:12px"><div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:var(--c-muted)">The household pays</span><b style="font-size:24px;font-weight:600">' + FN.money(P.total) + '</b><span style="font-size:12px;color:var(--c-gain);font-weight:600">saves ' + FN.money(E.save * (1 - u / 100)) + '–' + FN.money(E.save * (1 + u / 100)) + ' a year</span><span style="font-size:11.5px;color:var(--c-muted)">' + P.kwp.toFixed(2) + ' kWp' + (st.bat ? ' + ' + st.bat + ' kWh' : '') + ' · valid 7 days</span></div>' +
+          (function (g) { var ok = (g.k === 'go' && seen === N) || g.k === 'done', l = S.signed ? 'Signed by the household ✓' : sent ? 'Sent · on the household’s site' : g.k !== 'go' ? g.l : seen < N ? 'Review every section · ' + seen + ' of ' + N : 'Send to the household'; return '<button type="button" data-a="' + (ok ? 'send' : g.k !== 'go' ? 'mode' : 'qnext') + '" data-v="' + g.v + '" style="min-height:46px;border-radius:10px;' + gateStyle(ok || g.k === 'done' ? g : { k: 'todo' }) + ';font:inherit;font-size:14px;font-weight:600;cursor:pointer">' + l + '</button>' + (ok || sent ? '' : '<span style="font-size:11.5px;color:var(--c-muted);text-align:center;line-height:1.4">' + (g.v === 2 ? 'The household sees every line: check the equipment first.' : g.v === 1 ? 'Fill a face to price the modules.' : 'The household reads it section by section; so do you, once, before it goes.') + '</span>'); })(gate(E)) +
+          FN.exportsCard('installer') + '</div></div>';
         return o;
       }
       function place3d() {
@@ -1354,7 +1200,7 @@
       el.addEventListener('pointerover', function (e) { var b = e.target.closest('[data-tip]'); if (!b) return; var p = b.getAttribute('data-tip').split('|'), base = st.pos[p[1]], nx = p[1] === 'notes' ? base[0] - 272 : base[0] + 70; if (!st.hover || st.hover.k !== p[0]) { st.hover = { k: p[0], x: nx, y: base[1] + 16 + (+p[2]) * 50 }; q('.sd-ui').innerHTML = ui(); } });
       el.addEventListener('pointerout', function (e) { var b = e.target.closest('[data-tip]'); if (b && !b.contains(e.relatedTarget)) { st.hover = null; q('.sd-ui').innerHTML = ui(); } });
       FN.wire(el, function (a, v) {
-        if (a === 'tool') { touch(); if (v === 'layers') st.settings = !st.settings; else { st.tool = v; st.preview = false; st.selFace = false; st.pad = false; } st.hover = null; check(); }
+        if (a === 'tool') { touch(); if (v === 'layers') { st.layers = !st.layers; st.settings = false; st.notif = false; } else { st.tool = v; st.preview = false; st.selFace = false; st.pad = false; } st.hover = null; check(); }
         else if (a === 'face') { if (v !== 'N') return; if (st.tool === 'chimney' && !st.chimney) { commit({ chimney: true, pad: true, fresh: true }, 'Chimney added', { t: 'Chimney added', b: 'Type its height on the pad', c: 'var(--c-ink)', x: 560, y: 250 }); return; } touch(); if (st.tool === 'fill') st.preview = true; else if (st.tool === 'select') st.selFace = !st.selFace; check(); }
         else if (a === 'variant') { touch(); st.variant = v; }
         else if (a === 'keep') { commit({ filled: true, preview: false }, 'Zone filled · ' + st.variant, { t: 'Zone filled', b: 'Setbacks 0.40 m from eaves and hips', c: 'var(--c-gain)', x: 420, y: 250 }); return; }
@@ -1362,14 +1208,22 @@
           var m = FN.layout(st.variant).filter(function (x) { return x.id === v; })[0]; commit({ removed: r }, was ? 'Module added' : 'Module removed', { t: was ? '+1 module' : '−1 module', b: (was ? '+' : '−') + '0.44 kWp', c: was ? 'var(--c-gain)' : 'var(--c-loss)', x: Math.round(m.x + 30 + m.w + 8), y: m.y + 148 }); return; }
         else if (a === 'pad') { touch(); st.pad = true; st.fresh = true; }
         else if (a === 'key') { if (v === '✓') { var hv = (parseFloat(st.chimH) || 1).toFixed(2); commit({ pad: false, chimH: hv }, 'Chimney height ' + hv + ' m', { t: 'Chimney ' + hv + ' m', b: 'Winter shade recomputed', c: 'var(--c-loss)', x: 560, y: 250 }); return; } touch(); st.chimH = ((st.fresh ? '' : st.chimH) + v).slice(0, 4); st.fresh = false; }
-        else if (a === 'sheet') { touch(); st.sheet = !st.sheet; st.mode = 2; }
+        else if (a === 'sheet') { touch(); st.sheet = !st.sheet; st.mode = 2; st.eqSeen = true; }
+        else if (a === 'qs') st.qs = v;
+        else if (a === 'qnext' || a === 'qprev') { var ks = FN.SECTIONS.map(function (x) { return x[0]; }), qi = ks.indexOf(st.qs); if (a === 'qnext') { var nx = ks.filter(function (k) { return !st.qseen[k]; })[0]; st.qs = qi < ks.length - 1 ? ks[qi + 1] : nx || st.qs; } else if (qi > 0) st.qs = ks[qi - 1]; }
+        else if (a === 'qnote') { var ni = st.qnotes.indexOf(+v); if (ni >= 0) st.qnotes.splice(ni, 1); else st.qnotes.push(+v); }
+        else if (a === 'export') { if (st.lastOffer) FN.exportQuote(v, st.lastOffer); return; }
         else if (a === 'bat') { commit({ bat: +v }, 'Battery ' + (+v ? v + ' kWh' : 'removed')); return; }
-        else if (a === 'mode') { st.mode = +v; st.sheet = +v === 2; }
+        else if (a === 'modw') { commit({ modW: +v }, 'Modules ' + v + ' W'); return; }
+        else if (a === 'inv') { commit({ inv: +v }, 'Inverter ' + v + ' kW'); return; }
+        else if (a === 'mode') { if (J && !S.shared && +v !== -1) return; st.mode = +v; st.present = false; if (+v === 2) st.eqSeen = true; st.sheet = +v === 2; if (J && +v === 1) S.opened = true; }
+        else if (a === 'open') { if (S.proposal) { st.mode = 3; } else { st.mode = 1; if (!S.opened) st.bat = S.measures.bat ? 13.5 : 0; S.opened = true; } if (opts.onChange) opts.onChange(); }
+        else if (a === 'send') { if (!S.proposal && st.lastOffer) { S.proposal = st.lastOffer; if (opts.onChange) opts.onChange(); } }
         else if (a === 'present') { touch(); st.present = true; st.sheet = false; st.notif = false; st.settings = false; check(); }
         else if (a === 'unpresent') st.present = false;
         else if (a === 'pvariant') { st.variant = v; st.removed = []; }
-        else if (a === 'notif') { st.notif = !st.notif; st.settings = false; }
-        else if (a === 'settings') { st.settings = !st.settings; st.notif = false; }
+        else if (a === 'notif') { st.notif = !st.notif; st.settings = false; st.layers = false; }
+        else if (a === 'settings') { st.settings = !st.settings; st.notif = false; st.layers = false; }
         else if (a === 'level') st.level = +v;
         else if (a === 'layer') st[v] = !st[v];
         else if (a === 'reset') st.pos = JSON.parse(JSON.stringify(HOME));
@@ -1380,8 +1234,560 @@
       });
       render();
       FN.three(q('.sd-canvas'), function (h3) { H = h3; render(); });
+      if (opts.api) opts.api.render = function () { if (J && !S.shared) st.mode = -1; render(); };
+    })();
+  };
+  all('figure.bk-widget[data-widget="studio"]').forEach(function (fig) {
+    FN.when(fig, function () { FN.studio(FN.frame(fig, 1180, 820), {}); });
+  });
+  /* ---------- widget: the journey, two screens and one site (design/funnels) ---------- */
+  // The household's screen and the installer's screen, one above the other, joined by the site
+  // they share: the household moves step by step (plan, profile, roof, next move, share), the
+  // site lands in the installer's inbox, the installer designs and sends a proposal, and the
+  // proposal comes back to the household, who compares and signs. Intention prototype.
+
+  // two screens in one figure, with the hand-over between them
+  FN.frames = function (fig) {
+    var svg = fig.querySelector('svg'), out = fig.querySelector('.bk-widget-out'), fr = FN.isFr(fig), focus = -1;
+    if (svg) svg.style.display = 'none';
+    var lab = fr ? ['Écran du ménage', 'Écran de l’installateur'] : ['The household’s screen', 'The installer’s screen'];
+    var pane = function (i) { return '<div class="bk-jn-pane"><p class="bk-jn-lab"><span>' + lab[i] + '</span><button type="button" class="bk-jn-focus" data-i="' + i + '">' + (fr ? 'Seul' : 'Focus') + '</button></p><div class="bk-fw"><div class="bk-fw-screen"></div></div></div>'; };
+    out.innerHTML = '<div class="bk-fw-bar"><span>' + (fr ? 'Prototype d’intention · deux écrans du produit australien, reliés par le site' : 'Intention prototype · two screens of the Australian product, joined by the site') + '</span><span class="bk-fw-act">' + FN.paletteBar(fr) + '<button type="button" class="bk-fw-big">' + (fr ? 'Agrandir' : 'Enlarge') + '</button></span></div>' +
+      '<div class="bk-jn-row">' + pane(0) + '<div class="bk-jn-band"></div>' + pane(1) + '</div>';
+    var row = out.querySelector('.bk-jn-row'), panes = all('.bk-jn-pane', out), boxes = all('.bk-fw', out), screens = all('.bk-fw-screen', out), big = out.querySelector('.bk-fw-big'), focusBtns = all('.bk-jn-focus', out);
+    screens.forEach(function (s) { s.style.width = '1180px'; s.style.height = '820px'; });
+    FN.wirePalette(out);
+    // enlarged: side by side when the window is wide, stacked otherwise, or one screen alone (Focus)
+    function fit() {
+      var open = fig.classList.contains('bk-fw-open'), W = window.innerWidth - 48, Hh = window.innerHeight - 120;
+      var stacked = Math.min(W / 1180, (Hh - 70) / 2 / 820), side = Math.min((W - 24) / 2 / 1180, Hh / 820), alone = Math.min(W / 1180, Hh / 820);
+      var mode = !open ? 'page' : focus >= 0 ? 'alone' : side > stacked ? 'side' : 'stacked';
+      row.className = 'bk-jn-row' + (mode === 'side' ? ' side' : '');
+      panes.forEach(function (p, i) { p.style.display = mode === 'alone' && i !== focus ? 'none' : ''; });
+      out.querySelector('.bk-jn-band').style.display = mode === 'alone' ? 'none' : '';
+      focusBtns.forEach(function (b, i) { b.style.display = open ? '' : 'none'; b.textContent = focus === i ? (fr ? 'Les deux' : 'Both') : (fr ? 'Seul' : 'Focus'); });
+      var sc = { page: 0, alone: alone, side: side, stacked: stacked }[mode];
+      boxes.forEach(function (box, i) {
+        var s2 = mode === 'page' ? Math.min(1, box.clientWidth / 1180) : Math.min(1.25, sc);
+        screens[i].style.transform = 'scale(' + s2 + ')'; box.style.height = (820 * s2) + 'px'; box.style.width = mode === 'page' ? '' : (1180 * s2) + 'px';
+      });
+    }
+    big.addEventListener('click', function () { var open = fig.classList.toggle('bk-fw-open'); if (!open) focus = -1; big.textContent = open ? (fr ? 'Réduire' : 'Close') : (fr ? 'Agrandir' : 'Enlarge'); fit(); });
+    focusBtns.forEach(function (b) { b.addEventListener('click', function () { var i = +b.getAttribute('data-i'); focus = focus === i ? -1 : i; fit(); }); });
+    window.addEventListener('resize', fit);
+    function paint() { screens.forEach(function (s) { s.setAttribute('style', s.getAttribute('style').replace(/--c-[^;]*;?/g, '') + ';' + FN.vars(FN.tokens())); }); fit(); }
+    window.addEventListener('sd-palette', paint); paint();
+    if (window.ResizeObserver) boxes.forEach(function (b) { new ResizeObserver(function () { if (!fig.classList.contains('bk-fw-open')) fit(); }).observe(b); });
+    return { a: screens[0], b: screens[1], band: out.querySelector('.bk-jn-band'), fr: fr };
+  };
+
+  /* the household's screen: one app, six steps that carry their data forward */
+  FN.household = function (el, S, changed) {
+    var STEPS = ['Your plan', 'Your profile', 'Your roof', 'Next move', 'Share', 'Proposal'];
+    var st = { qs: 'cover', qseen: {}, qopen: false, step: 0, chosen: '', prof: { meter: false, bill: false, ans: {}, q: false, consent: false, busy: '' }, conf: { N: false, W: false, E: false }, tool: 'confirm', preview: false, hour: 15, top: false, next: 1, max: 0, seen: false, bell: false }, H = null, timer = null, tBusy = null;
+    el.innerHTML = '<div style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden"><div class="hh-top"></div><div class="hh-body" style="position:absolute;left:0;right:0;top:48px;bottom:64px"></div>' +
+      '<div class="hh-3d" style="position:absolute;left:384px;top:190px;width:784px;height:486px;display:none;overflow:hidden;border-radius:14px 14px 0 0;background:var(--c-canvas)"><canvas class="hh-canvas" width="784" height="486" aria-label="Your home in 3D: drag to turn around it" style="width:784px;height:486px;display:block;touch-action:none;cursor:grab"></canvas></div>' +
+      '<div class="hh-note"></div><div class="hh-foot" style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c-paper);border-top:1px solid var(--c-line);display:flex;align-items:center;gap:12px;padding:0 16px"></div></div>';
+    var q = function (c) { return el.querySelector(c); };
+    var cost = function (name) { var p = FN.PLANS.filter(function (x) { return x.name === name; })[0], d = FN.base(15), e = 0; for (var h = 0; h < 24; h++) e += d[h] * p.rate(h); return (e + p.supply) * 365; };
+    function unc() { var P = st.prof, u = 30; [['people', 6], ['home', 4], ['hvac', 4], ['hw', 4], ['cook', 1], ['pool', 2], ['have', 1]].forEach(function (k) { if (P.ans[k[0]] !== undefined) u -= k[1]; }); if (P.bill) u = Math.min(u, 12); if (P.meter) u = 5; return u; }
+    function badge() { return st.prof.meter ? 'Measured' : st.prof.bill ? 'From your bills' : 'Estimated'; }
+    function filled() { return S.measures.solar; }
+    function opt(m) { return { plan: m.plan ? 'best' : 'flat', kwp: m.solar ? 7.04 : 0, cap: m.bat ? 13.5 : 0, ev: m.ev, hp: m.hp }; }
+    function done(i) { return [!!st.chosen, st.prof.meter || st.prof.bill || Object.keys(st.prof.ans).length >= 3, filled(), st.max > 3, S.shared, S.signed][i]; }
+    function reach(i) { for (var k = 0; k < i; k++) if (!done(k)) return false; return i < 5 || !!S.proposal; }
+    function P0() { var P = S.proposal; return P ? P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + ' · ' + FN.money(P.total) : ''; }
+    function sync() { S.profile = { badge: badge(), unc: unc() }; S.plan = st.chosen; }
+    // step 1 · plan: the horizon of the whole journey, the household's day on each plan, its bill read back, its roof already seen
+    var OFFERS = {
+      'Flat Rate': { who: 'Retailer A · your retailer', chips: ['36 c/kWh all day', '110 c/day supply'], line: 'Your plan today: every kWh at the same price.', terms: 'no exit fee' },
+      'Simple Saver': { who: 'Retailer B', chips: ['31 c/kWh all day', '115 c/day supply'], line: 'Same habits, 5 c less on every kWh.', terms: 'no exit fee · price held 12 months' },
+      'Time of Use Saver': { who: 'Retailer C', chips: ['52 c 3–9 pm', '30 c day', '22 c night', '105 c/day supply'], line: 'Your 5–9 pm peak falls in the 52 c hours: it costs more unless you shift it.', terms: 'no exit fee · smart meter needed' }
+    };
+    // the way ahead: today's spend as one bar, the plan's saving solid (now), the later moves hatched (possible), what is left at the end
+    function horizon(cur, best) {
+      var M = [['Solar', 'pv', { kwp: 7.04 }], ['Battery', 'battery', { cap: 13.5 }], ['Electric car', 'car', { ev: true }], ['Heat pump', 'heat', { hp: true }]];
+      var T = FN.TODAY(), first = cur - (st.chosen ? cost(st.chosen) : best), o = { plan: 'best' }, prev = T - first, segs = [], k;
+      M.forEach(function (m) { for (k in m[2]) o[k] = m[2][k]; var t = FN.sim(o).total; segs.push({ l: m[0], i: m[1], d: prev - t }); prev = t; });
+      var pct = function (v) { return (Math.max(v, 0) / T * 100).toFixed(2) + '%'; }, hatch = 'repeating-linear-gradient(135deg,var(--c-selSoft) 0 7px,var(--c-paper2) 7px 12px)';
+      var bar = '<div title="Switching plan, today" style="width:' + pct(first) + ';background:' + (first < 0 ? 'var(--c-loss)' : 'var(--c-gain)') + ';color:var(--c-paper);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;white-space:nowrap">' + (first < 0 ? '' : '−' + FN.money(first)) + '</div>' +
+        segs.map(function (s) { return '<div title="' + s.l + ': about −' + FN.money(s.d) + ' a year" style="width:' + pct(s.d) + ';background:' + hatch + ';border-left:2px solid var(--c-paper);display:flex;align-items:center;justify-content:center;gap:5px;font-size:11.5px;color:var(--c-ink2);white-space:nowrap;overflow:hidden">' + (s.d / T > 0.12 ? FN.icon(s.i, 'var(--c-sel)') + s.l + ' −' + FN.money(s.d) : s.d / T > 0.06 ? FN.icon(s.i, 'var(--c-sel)') + '−' + FN.money(s.d) : FN.icon(s.i, 'var(--c-sel)')) + '</div>'; }).join('') +
+        '<div style="flex:1;min-width:58px;background:var(--c-line);border-left:2px solid var(--c-paper);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--c-ink)">' + FN.money(prev) + '</div>';
+      return '<div style="grid-column:1 / -1;' + FN.card + ';padding:10px 14px;display:flex;flex-direction:column;gap:6px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:13.5px"><span>Today you spend <b>' + FN.money(T) + '</b> a year on power, gas and fuel.' + (first < 0 ? ' <span style="color:var(--c-loss)">This plan costs you ' + FN.money(-first) + ' more.</span>' : '') + '</span><span style="color:var(--c-ink2)">It could drop to <b style="color:var(--c-gain)">' + FN.money(prev) + '</b> a year, ±' + unc() + ' % for now</span></div>' +
+        '<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid var(--c-line)">' + bar + '</div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--c-muted)"><span>↑ <b style="color:var(--c-gain)">now</b>, by switching plan: 2 minutes, nothing to install</span><span>hatched: possible next, with your roof and your choices (steps 3 and 4)</span><span>what is left ↑</span></div></div>';
+    }
+    function dayOn(name) {
+      var p = FN.PLANS.filter(function (x) { return x.name === name; })[0], d = FN.base(15), W = 560, X0 = 34, base = 168, sc = 120 / 2.6, bw = W / 24 - 3, h, o = '';
+      var band = function (r) { return r < 0.25 ? 'var(--c-gain)' : r < 0.4 ? 'var(--c-muted)' : 'var(--c-loss)'; };
+      var peak = 0, all = 0, peakCost = 0; for (h = 0; h < 24; h++) { all += d[h]; if (h >= 17 && h < 21) { peak += d[h]; peakCost += d[h] * p.rate(h) * 365; } }
+      o += '<svg width="100%" height="214" viewBox="0 0 600 214" preserveAspectRatio="xMinYMid meet" role="img" aria-label="Your day hour by hour, coloured by the price of each hour on ' + name + '">';
+      o += '<rect x="' + (X0 + 17 * W / 24 - 1.5) + '" y="22" width="' + (4 * W / 24) + '" height="' + (base - 20) + '" rx="6" fill="var(--c-sunSoft)" opacity=".8"></rect><text x="' + (X0 + 19 * W / 24) + '" y="36" font-size="11" font-weight="600" text-anchor="middle" fill="var(--c-sunText)">your peak</text>';
+      for (h = 0; h < 24; h++) { var r = p.rate(h), hgt = d[h] * sc; o += '<rect x="' + (X0 + h * W / 24).toFixed(1) + '" y="' + (base - hgt).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hgt.toFixed(1) + '" rx="2" fill="' + band(r) + '" opacity=".85"><title>' + h + ':00 · ' + d[h].toFixed(2) + ' kWh at ' + Math.round(r * 100) + ' c</title></rect>'; }
+      // the price strip: one segment per run of the same rate
+      var s = 0; for (h = 1; h <= 24; h++) if (h === 24 || p.rate(h) !== p.rate(s)) { var x1 = X0 + s * W / 24, x2 = X0 + h * W / 24 - 3; o += '<rect x="' + x1.toFixed(1) + '" y="' + (base + 6) + '" width="' + (x2 - x1).toFixed(1) + '" height="18" rx="4" fill="' + band(p.rate(s)) + '" opacity=".16"></rect>' + (x2 - x1 > 30 ? '<text x="' + ((x1 + x2) / 2).toFixed(1) + '" y="' + (base + 19) + '" font-size="11" font-weight="600" text-anchor="middle" fill="var(--c-ink)">' + Math.round(p.rate(s) * 100) + ' c</text>' : ''); s = h; }
+      ['0h', '6h', '12h', '18h', '24h'].forEach(function (l, i) { o += '<text x="' + (X0 + i * W / 4 - (i === 4 ? 18 : 0)) + '" y="' + (base + 40) + '" font-size="10" fill="var(--c-muted)">' + l + '</text>'; });
+      o += '<text x="0" y="' + (base - 2 * sc + 4) + '" font-size="10" fill="var(--c-muted)">2 kWh</text><path d="M' + X0 + ' ' + (base - 2 * sc) + ' H' + (X0 + W) + '" stroke="var(--c-line2)"></path></svg>';
+      var legend = [['var(--c-gain)', 'cheap hours'], ['var(--c-muted)', 'standard'], ['var(--c-loss)', 'dear hours']].map(function (l) { return '<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:' + l[0] + ';opacity:.85"></span>' + l[1] + '</span>'; }).join('');
+      return { svg: o, legend: legend, share: Math.round(peak / all * 100), peakCost: peakCost };
+    }
+    function stepPlan() {
+      var cur = cost('Flat Rate'), plans = ['Flat Rate', 'Simple Saver', 'Time of Use Saver'].map(function (n) { return { n: n, c: cost(n) }; }).sort(function (a, b) { return a.c - b.c; });
+      var show = st.chosen || plans[0].n, D = dayOn(show), sc = cost(show);
+      var o = '<div style="position:absolute;inset:12px;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px">' + horizon(cur, plans[0].c);
+      // left: the day on the plan shown, then the bill read back and the roof already seen
+      o += '<div style="display:flex;flex-direction:column;gap:12px;min-height:0"><div style="' + FN.card + ';padding:14px 16px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:15px;font-weight:600">Your day on ' + show + '</b><span style="font-size:13px;color:var(--c-ink2)"><b style="color:var(--c-ink)">' + FN.money(sc) + '</b> a year</span></div>' +
+        D.svg + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--c-ink2)"><span style="display:flex;gap:12px">' + D.legend + '</span><span>tap a plan to see your day on it</span></div>' +
+        '<span style="font-size:13px;line-height:1.45;color:var(--c-ink2)"><b style="color:var(--c-ink)">' + D.share + ' % of your use falls between 5 and 9 pm</b>: on this plan those hours cost you ' + FN.money(D.peakCost) + ' a year. That is the part a battery will carry later.</span></div>';
+      o += '<div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px;flex:1;min-height:0">' +
+        '<div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:4px;font-size:12.5px"><span style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px;font-weight:600">Your bill, read</b>' + FN.icon('bill', 'var(--c-sel)') + '</span>' +
+        [['Plan', 'Flat Rate · Retailer A'], ['Usage', '1,380 kWh in 92 days'], ['Energy rate', '36 c/kWh'], ['Supply', '110 c/day'], ['Quarter, GST incl.', '$598']].map(function (r) { return '<span style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;background:var(--c-selSoft);border-radius:4px;padding:0 5px">' + r[1] + '</b></span>'; }).join('') +
+        '<span style="font-size:11px;color:var(--c-muted);margin-top:auto;line-height:1.4">Highlighted: read from your bill, Jul–Sep 2026. Saved to My home as needs; the raw bill stays only if you attach it.</span></div>' +
+        '<div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:4px"><b style="font-size:13px;font-weight:600">We already see your roof</b>' +
+        '<svg width="100%" height="96" viewBox="0 0 200 110" role="img" aria-label="The outline of your hip roof, the north face highlighted"><g transform="translate(25 8)"><path d="M0 0 H150 L100 47 H50 Z" fill="var(--c-sun)" opacity=".55" stroke="var(--c-ink)" stroke-width="1.2"></path><path d="M0 0 L50 47 L0 94 Z M150 0 L100 47 L150 94 Z M0 94 L50 47 H100 L150 94 Z" fill="var(--c-paper2)" stroke="var(--c-ink)" stroke-width="1.2"></path><text x="75" y="26" font-size="11" font-weight="600" text-anchor="middle" fill="var(--c-ink)">N · 54 m²</text></g><text x="186" y="18" font-size="10" fill="var(--c-muted)" text-anchor="middle">N ↑</text></svg>' +
+        '<span style="font-size:12px;color:var(--c-ink2);line-height:1.4">4 faces from LiDAR, 3 that can take panels; north face 54 m² at 22°. You confirm them at step 3.</span></div></div></div>';
+      // right: the promise, then the plans ranked on the household's own yearly cost
+      o += '<div style="' + FN.card + ';padding:16px 18px;display:flex;flex-direction:column;gap:9px;min-height:0"><b style="font-size:24px;font-weight:600;line-height:1.15">Pay less, from this month.</b><span style="font-size:13.5px;color:var(--c-ink2);line-height:1.45">You pay <b style="color:var(--c-ink)">' + FN.money(cur) + '</b> a year for 15 kWh a day. Switching takes 2 minutes and nothing changes at home.</span><span style="' + FN.kick + ';margin-top:4px">Plans you can take · ranked on your own yearly cost</span>' +
+        plans.map(function (p, i) {
+          var d = cur - p.c, on = st.chosen === p.n, O = OFFERS[p.n], u = unc() / 100;
+          return '<button type="button" data-a="plan" data-v="' + p.n + '" aria-pressed="' + on + '" style="border-radius:12px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:10px 14px;text-align:left;display:flex;flex-direction:column;gap:5px;font:inherit;cursor:pointer">' +
+            '<span style="width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="display:flex;align-items:baseline;gap:8px"><b style="font-size:15.5px;font-weight:600">' + p.n + '</b><span style="font-size:11.5px;color:var(--c-muted)">' + O.who + '</span></span><b style="font-size:17px;font-weight:600">' + FN.money(p.c) + '</b></span>' +
+            '<span style="display:flex;gap:5px;flex-wrap:wrap">' + O.chips.map(function (c) { return '<span style="font-size:11px;padding:2px 7px;border-radius:999px;background:var(--c-paper);border:1px solid var(--c-line2)">' + c + '</span>'; }).join('') + '</span>' +
+            '<span style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font-size:12px;color:var(--c-ink2);line-height:1.35">' + O.line + ' <span style="color:var(--c-muted)">' + O.terms + '</span></span><span style="flex:none;font-size:12.5px;font-weight:600;color:' + (d > 1 ? 'var(--c-gain)' : d < -1 ? 'var(--c-loss)' : 'var(--c-muted)') + '">' + (d > 1 ? 'saves ' + FN.money(d * (1 - u)) + '–' + FN.money(d * (1 + u)) : d < -1 ? 'costs ' + FN.money(-d) + ' more' : 'your plan today') + '</span></span>' +
+            (on && d > 1 ? '<span style="align-self:flex-start;font-size:12px;font-weight:600;color:var(--c-sel)">Chosen ✓ · we switch it when you say, at no cost</span>' : '') + '</button>';
+        }).join('') +
+        '<div style="border:1px dashed var(--c-line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--c-muted);display:flex;gap:8px;align-items:center">' + FN.icon('pv', 'var(--c-muted)') + FN.icon('battery', 'var(--c-muted)') + FN.icon('car', 'var(--c-muted)') + '<span>3 plans hidden: they need solar, a battery or an electric car. They come back when your home changes.</span></div>' +
+        '<span style="font-size:11.5px;color:var(--c-muted);line-height:1.45;margin-top:auto">No email before your first number. Nobody calls you unless you ask. A $40 commission is shown on every plan, the same for all, and never changes the order.</span></div></div>';
+      return o;
+    }
+    // step 2 · profile: the sources, a home composed with icons, and a day explained by its uses
+    var GROUPS = [
+      ['people', 'Who lives here', 6, [['1', 1, 'person'], ['2', 2, 'person'], ['3', 3, 'person'], ['4', 4, 'person'], ['5+', 5, 'person']]],
+      ['home', 'Daytime at home', 4, [['Away weekdays', 'away', 'away'], ['Some days', 'some', 'some'], ['Most days', 'most', 'home']]],
+      ['hvac', 'Heating and cooling', 4, [['Split AC', 'split', 'split'], ['Ducted AC', 'ducted', 'ducted'], ['Gas heater', 'gas', 'flame'], ['None', 'none', 'none']]],
+      ['hw', 'Hot water', 4, [['Gas', 'gas', 'flame'], ['Electric tank', 'elec', 'tank'], ['Heat pump', 'hp', 'heat'], ['Solar', 'solar', 'solarhw']]],
+      ['cook', 'Cooking', 1, [['Gas', 'gas', 'gasstove'], ['Electric', 'elec', 'stove'], ['Induction', 'ind', 'induction']]],
+      ['pool', 'Pool', 2, [['No pool', 'no', 'none'], ['Pump', 'pump', 'pump'], ['Heated', 'heated', 'pool']]],
+      ['have', 'Already installed', 1, [['Nothing yet', 'none', 'none'], ['Solar PV', 'pv', 'pv'], ['Battery', 'bat', 'battery'], ['Electric car', 'ev', 'car']]]
+    ];
+    var USES = [['base', 'Always on', '#8C8F96', 'fridge, standby, network'], ['living', 'Living', '#B9A88F', 'lights, screens, appliances'], ['cook', 'Cooking', '#D9822B', 'oven and cooktop'], ['hw', 'Hot water', '#4F86C6', 'tank or heat pump'], ['hvac', 'Heating and cooling', '#3FA796', 'air conditioning'], ['pool', 'Pool', '#7A6BC6', 'pump, heating'], ['ev', 'Car', '#C8559A', 'charging']];
+    // the day by use, from the answers (defaults stand for an unanswered group), scaled to the bill or the meter
+    function uses(season) {
+      var A = st.prof.ans, ppl = A.people || 3, h, U = {};
+      USES.forEach(function (u) { U[u[0]] = []; for (h = 0; h < 24; h++) U[u[0]].push(0); });
+      var pres = A.home === 'most' ? 1 : A.home === 'away' ? 0.35 : 0.6;
+      for (h = 0; h < 24; h++) {
+        U.base[h] = 0.2;
+        var liv = (h >= 6 && h < 9) ? 0.35 : (h >= 17 && h < 23) ? 0.55 : (h >= 9 && h < 17) ? 0.22 * pres : 0.05;
+        U.living[h] = liv * (0.55 + 0.15 * ppl);
+        if (A.cook !== 'gas' && (h === 7 || h === 12 || h === 18)) U.cook[h] = (h === 18 ? 0.8 : 0.25) * (A.cook === 'ind' ? 0.85 : 1);
+        if (A.hw === 'elec' && h < 5) U.hw[h] = 0.8 * (0.6 + 0.13 * ppl);
+        if (A.hw === 'hp' && h >= 11 && h < 14) U.hw[h] = 0.45;
+        if (A.hw === 'solar' && h >= 17 && h < 19) U.hw[h] = 0.15;
+        var ac = A.hvac === undefined ? 'split' : A.hvac, k = ac === 'ducted' ? 1.8 : ac === 'split' ? 1 : ac === 'gas' ? 0.15 : 0;
+        if (season !== 'winter' && h >= 15 && h < 22) U.hvac[h] = 0.35 * k * (season === 'summer' ? 1.6 : 0.8);
+        if (season !== 'summer' && ((h >= 6 && h < 9) || (h >= 17 && h < 22))) U.hvac[h] += 0.3 * k * (season === 'winter' ? 1.6 : 0.6);
+        if (A.pool === 'pump' && h >= 10 && h < 16) U.pool[h] = 0.6;
+        if (A.pool === 'heated' && h >= 10 && h < 16) U.pool[h] = 1.4;
+        if (A.have === 'ev' && h < 4) U.ev[h] = 1.6;
+      }
+      var tot = 0; USES.forEach(function (u) { tot += U[u[0]].reduce(function (a, b) { return a + b; }, 0); });
+      if (st.prof.bill || st.prof.meter) { var f = 15 * (season === 'summer' ? 1.08 : season === 'winter' ? 1.2 : 1) / tot; USES.forEach(function (u) { U[u[0]] = U[u[0]].map(function (v) { return v * f; }); }); tot = 15 * f / f * (season === 'summer' ? 1.08 : season === 'winter' ? 1.2 : 1); }
+      return { U: U, tot: tot };
+    }
+    function tile(g, o) {
+      var on = st.prof.ans[g[0]] === o[1];
+      return '<button type="button" data-a="ans" data-v="' + g[0] + '|' + o[1] + '" aria-pressed="' + on + '" title="' + o[0] + '" style="width:' + (g[0] === 'people' ? 52 : 74) + 'px;height:56px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;cursor:pointer;padding:0 2px">' + FN.icon(o[2]) + '<span style="font-size:10.5px;line-height:1.1;text-align:center">' + o[0] + '</span></button>';
+    }
+    function stepProfile() {
+      var P = st.prof, u = unc(), season = st.season || 'year', D = uses(season), U = D.U, h;
+      var o = '<div style="position:absolute;left:12px;right:12px;top:12px;height:64px;' + FN.card + ';display:flex;align-items:center;gap:10px;padding:0 12px">';
+      [['meter', 'Smart meter', P.meter ? '✓ measured, 12 months' : 'best · 1 min', P.meter, !P.meter, 'Connect'], ['bill', 'Your bill', P.bill ? '✓ read: Flat Rate, 4 quarters' : 'the one you gave · 2 min', P.bill, !P.bill && !P.meter, 'Use it'], ['ask', 'Your home', Object.keys(P.ans).length + ' of 7 answered', Object.keys(P.ans).length >= 3, false, '']].forEach(function (x) {
+        o += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:' + (x[3] ? 'var(--c-gainSoft)' : 'var(--c-line2)') + '">' + FN.icon(x[0], x[3] ? 'var(--c-gain)' : 'var(--c-ink2)') + '<span style="display:flex;flex-direction:column"><b style="font-size:13px;font-weight:600">' + x[1] + '</b><span style="font-size:11px;color:var(--c-ink2)">' + x[2] + '</span></span>' + (x[4] ? '<button type="button" data-a="src" data-v="' + x[0] + '" style="min-height:32px;padding:0 10px;border-radius:8px;border:' + (x[0] === 'meter' ? 'none' : '1px solid var(--c-ink)') + ';background:' + (x[0] === 'meter' ? 'var(--c-live)' : 'var(--c-paper2)') + ';color:' + (x[0] === 'meter' ? 'var(--c-onLive)' : 'var(--c-ink)') + ';font:inherit;font-size:12px;font-weight:600;cursor:pointer">' + x[5] + '</button>' : '') + '</div>';
+      });
+      o += '<span style="flex:1"></span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="display:flex;gap:8px;align-items:center"><b style="font-size:12px;padding:3px 8px;border-radius:6px;background:' + (P.meter ? 'var(--c-gainSoft)' : P.bill ? 'var(--c-sunSoft)' : 'var(--c-line2)') + ';color:' + (P.meter ? 'var(--c-gain)' : P.bill ? 'var(--c-sunText)' : 'var(--c-ink2)') + '">' + badge() + '</b><b style="font-size:16px;font-weight:600">±' + u + ' %</b></span><span style="font-size:11px;color:var(--c-muted)">on every saving you will see: $600 shows as ' + FN.money(600 * (1 - u / 100)) + '–' + FN.money(600 * (1 + u / 100)) + '</span></span></div>';
+      // the home, composed with icons; each open group says how much it narrows the range
+      o += '<div style="position:absolute;left:12px;top:88px;width:556px;bottom:12px;' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:7px;overflow:hidden"><span style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:15px;font-weight:600">Your home</b><span style="font-size:11px;color:var(--c-muted)">tap what is true · no kWh to type</span></span>';
+      GROUPS.forEach(function (g) {
+        var done1 = P.ans[g[0]] !== undefined, eff = '';
+        if (done1 && !P.meter) { var tot0 = D.tot; eff = ''; }
+        o += '<div style="display:flex;align-items:center;gap:10px"><span style="width:118px;display:flex;flex-direction:column;gap:1px"><b style="font-size:12px;font-weight:600">' + g[1] + '</b><span style="font-size:10.5px;color:' + (done1 ? 'var(--c-gain)' : 'var(--c-sel)') + '">' + (done1 ? '✓ answered' : P.meter ? 'optional' : 'narrows ' + g[2] + ' pts') + '</span></span><span style="display:flex;gap:6px;flex-wrap:wrap">' + g[3].map(function (op) { return tile(g, op); }).join('') + '</span></div>';
+      });
+      o += '</div>';
+      // the day, explained: stacked uses, the sunny hours, the confidence band, two callouts
+      var W = 540, X0 = 30, base = 300, max = 0; for (h = 0; h < 24; h++) max = Math.max(max, USES.reduce(function (t, us) { return t + U[us[0]][h]; }, 0) * (1 + u / 100)); max = Math.max(2.2, max * 1.25); var sc = 250 / max, acc = []; for (h = 0; h < 24; h++) acc.push(0);
+      var x = function (hh) { return X0 + hh / 23 * W; }, layers = '';
+      USES.forEach(function (us) {
+        var arr = U[us[0]], top = [], bot = [];
+        if (arr.reduce(function (a, b) { return a + b; }, 0) < 0.01) return;
+        for (h = 0; h < 24; h++) { bot.unshift(x(h).toFixed(1) + ' ' + (base - acc[h] * sc).toFixed(1)); acc[h] += arr[h]; top.push(x(h).toFixed(1) + ' ' + (base - acc[h] * sc).toFixed(1)); }
+        layers += '<path d="M' + top.join(' L') + ' L' + bot.join(' L') + ' Z" fill="' + us[2] + '" opacity=".82"></path>';
+      });
+      var up = [], lo = []; for (h = 0; h < 24; h++) { up.push(x(h).toFixed(1) + ' ' + (base - acc[h] * (1 + u / 100) * sc).toFixed(1)); lo.push(x(h).toFixed(1) + ' ' + (base - acc[h] * (1 - u / 100) * sc).toFixed(1)); }
+      var tot = acc.reduce(function (a, b) { return a + b; }, 0), sun = 0; for (h = 7; h < 17; h++) sun += acc[h];
+      var pk = 0; for (h = 1; h < 24; h++) if (acc[h] > acc[pk]) pk = h;
+      var top2 = USES.map(function (us) { return [us[1], U[us[0]][pk]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 3).filter(function (z) { return z[1] > 0.05; }).map(function (z) { return z[0].toLowerCase(); });
+      var night = 0; for (h = 0; h < 6; h++) night += acc[h];
+      o += '<div style="position:absolute;left:580px;top:88px;right:12px;bottom:12px;' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px;font-weight:600">Your day, explained</b><span style="display:flex;gap:4px">' +
+        [['year', 'Year'], ['summer', 'Summer'], ['winter', 'Winter']].map(function (v) { var on = season === v[0]; return '<button type="button" data-a="season" data-v="' + v[0] + '" style="min-height:30px;padding:0 10px;border-radius:8px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + v[1] + '</button>'; }).join('') + '</span></div>' +
+        '<svg width="570" height="320" viewBox="0 0 570 320" role="img" aria-label="Your average day stacked by use, with the sunny hours and the confidence band">' +
+        '<rect x="' + x(7) + '" y="40" width="' + (x(17) - x(7)) + '" height="260" fill="var(--c-sunSoft)" opacity=".7"></rect><text x="' + ((x(7) + x(17)) / 2) + '" y="54" font-size="11" fill="var(--c-sunText)" text-anchor="middle" font-weight="600">when the sun shines · ' + Math.round(sun / tot * 100) + ' % of your use</text>' +
+        '<path d="M' + X0 + ' ' + base + ' H' + (X0 + W) + '" stroke="var(--c-line)"></path>' + layers +
+        '<path d="M' + up.join(' L') + '" fill="none" stroke="var(--c-ink)" stroke-dasharray="3 3" opacity=".55"></path><path d="M' + lo.join(' L') + '" fill="none" stroke="var(--c-ink)" stroke-dasharray="3 3" opacity=".55"></path>' +
+        '<path d="M' + x(pk) + ' ' + (base - acc[pk] * sc - 4) + ' V' + (base - acc[pk] * sc - 26) + '" stroke="var(--c-ink)"></path><text x="' + (x(pk) + 6) + '" y="' + (base - acc[pk] * sc - 30) + '" font-size="11" fill="var(--c-ink)" text-anchor="end" font-weight="600">' + pk + ':00 peak · ' + acc[pk].toFixed(1) + ' kW · ' + top2.join(' + ') + '</text>' +
+        (night > 2.5 ? '<text x="' + x(2.5) + '" y="' + (base - 30) + '" font-size="10.5" fill="var(--c-ink2)" text-anchor="middle">night: ' + night.toFixed(1) + ' kWh</text>' : '') +
+        ['0h', '6h', '12h', '18h', '24h'].map(function (l, i) { return '<text x="' + (X0 + i * W / 4 - (i === 4 ? 16 : 0)) + '" y="316" font-size="10" fill="var(--c-muted)">' + l + '</text>'; }).join('') + '<text x="0" y="' + (base - 2 * sc + 4) + '" font-size="10" fill="var(--c-muted)">2 kW</text><path d="M' + X0 + ' ' + (base - 2 * sc) + ' H' + (X0 + W) + '" stroke="var(--c-line2)"></path></svg>';
+      o += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 14px">' + USES.map(function (us) { var v = U[us[0]].reduce(function (a, b) { return a + b; }, 0); if (v < 0.01) return ''; var src = P.meter ? 'split estimated' : (us[0] === 'base' || us[0] === 'living') ? (P.bill ? 'scaled to bill' : 'estimated') : (P.ans[{ cook: 'cook', hw: 'hw', hvac: 'hvac', pool: 'pool', ev: 'have' }[us[0]]] !== undefined ? 'answered' : 'assumed'); return '<span style="display:flex;align-items:center;gap:6px;font-size:12px;padding:2px 0"><span style="width:10px;height:10px;border-radius:2px;background:' + us[2] + '"></span><span style="flex:1">' + us[1] + '</span><b style="font-weight:600">' + v.toFixed(1) + ' kWh</b><span style="font-size:10px;color:var(--c-muted);width:78px;text-align:right">' + src + '</span></span>'; }).join('') + '</div>';
+      var eve = 0; for (h = 17; h < 23; h++) eve += acc[h];
+      o += '<span style="font-size:12.5px;color:var(--c-ink2);line-height:1.5;margin-top:auto"><b style="color:var(--c-ink)">What it means</b> · ' + Math.round(sun / tot * 100) + ' % of your ' + tot.toFixed(1) + ' kWh a day falls when panels produce; ' + eve.toFixed(1) + ' kWh fall between 5 and 11 pm, the part a battery can carry.' + (st.prof.ans.have === 'pv' ? ' You already have solar: your next move starts from a battery.' : '') + '</span></div>';
+      if (P.consent) o += '<div style="position:absolute;inset:0;background:rgba(29,32,38,.32);display:flex;align-items:center;justify-content:center"><div style="width:460px;' + FN.card + ';padding:20px;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px;font-weight:600">Connect your meter</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">With your consent, open-energy reads 12 months of half-hourly readings for the meter on your bill. Solar Designer receives totals and an average day only.</span><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" data-a="noconsent" style="min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">Not now</button><button type="button" data-a="consent" style="min-height:42px;padding:0 16px;border-radius:10px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-weight:600;cursor:pointer">Allow 12 months</button></div></div></div>';
+      if (P.busy) o += '<div style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:var(--c-tip);color:var(--c-paper);font-size:13px;padding:9px 14px;border-radius:10px">' + P.busy + '</div>';
+      return o;
+    }
+    // step 3 · roof
+    function stepRoof() {
+      var all3 = st.conf.N && st.conf.W && st.conf.E, mods = FN.layout('portrait'), f = filled();
+      var o = '<div style="position:absolute;left:12px;top:12px;bottom:12px;width:80px;' + FN.card + ';display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px" role="toolbar">' + [['confirm', 'Confirm', false], ['fill', 'Fill zone', !all3]].map(function (t) { var on = st.tool === t[0]; return '<button type="button" data-a="tool" data-v="' + t[0] + '"' + (t[2] ? ' disabled' : '') + ' style="width:64px;min-height:64px;border:none;border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (t[2] ? 'var(--c-faint)' : on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;font:inherit;cursor:pointer">' + FN.icon(t[0]) + '<span style="font-size:11px">' + t[1] + '</span></button>'; }).join('') + '</div>';
+      o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 480" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + ['S', 'W', 'E', 'N'].map(function (k) { var c = k !== 'S' && st.conf[k], hi = k !== 'S' && !c; return '<path data-a="face" data-v="' + k + '" d="' + FN.FACES[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') : k === 'S' ? 'var(--c-roofS)' : 'var(--c-selSoft)') + '" stroke="' + (hi ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (hi ? 2.5 : 1) + '" style="cursor:pointer"></path>'; }).join('') +
+        ((f || st.preview) ? mods.map(function (m) { var g = !f; return '<rect x="' + m.x.toFixed(1) + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="1.5" fill="' + (g ? 'var(--c-selSoft)' : '#2B3A4A') + '" stroke="' + (g ? 'var(--c-sel)' : '#55667A') + '" stroke-dasharray="' + (g ? '4 3' : 'none') + '"></rect>'; }).join('') : '') + '<path d="M368 356 L668 356" stroke="var(--c-ridge)" stroke-width="1.5"></path></svg>' +
+        '<span style="position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">LiDAR-measured · 0.91 · our drawing, not a photo</span>' +
+        (st.preview && !f ? '<div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);' + FN.card + ';padding:6px;display:flex;gap:6px;align-items:center"><span style="font-size:13px;color:var(--c-muted);padding:0 8px">16 modules · 7.04 kWp · ' + FN.n(16 * 0.44 * 1460) + ' kWh/yr</span><button type="button" data-a="keep" style="min-height:42px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-size:13px;font-weight:600;cursor:pointer">✓ Keep</button></div>' : '') + '</div>';
+      o += '<div style="position:absolute;right:12px;top:12px;bottom:12px;width:328px;' + FN.card + ';padding:16px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px;font-weight:600">' + (!all3 ? 'Is this your roof?' : !f ? 'Fill your roof' : 'Your roof is ready') + '</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">' + (!all3 ? 'Tap each face to confirm it: north, west and east. The south face gets no panels.' : !f ? 'Fill zone, the north face, then ✓ Keep: three touches.' : '16 modules on the north face after 0.40 m setbacks from the edges. Next: what solar, a battery, a car or a heat pump would change.') + '</span>' +
+        ['N', 'W', 'E'].map(function (k) { return '<span style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span>' + { N: 'North', W: 'West', E: 'East' }[k] + ' · 22°</span><b style="color:' + (st.conf[k] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st.conf[k] ? 'confirmed' : 'to confirm') + '</b></span>'; }).join('') + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">Faces fitted from open LiDAR by our API when the site was created; your confirmation goes into the place layer of your site.</span></div>';
+      return o;
+    }
+    // what the household gets, and the incentives that come with it (design/markets/incentives)
+    function equipment(M) {
+      var r = [];
+      if (M.solar) r.push(['pv', 'Solar panels', '16 × 440 W monocrystalline · 7.04 kWp', '25-year warranty', 'fits the north face after 0.40 m setbacks']);
+      if (M.solar || M.bat) r.push(['plan', 'Hybrid inverter', '6 kW, battery-ready', '10 years', 'panels at 117 % of the inverter, under the 133 % limit']);
+      if (M.bat) r.push(['battery', 'Home battery', '13.5 kWh lithium iron phosphate, VPP-ready', '10 years', 'carries most of your evening']);
+      if (M.ev) r.push(['car', 'Car charger', '7 kW single phase, charges on solar', '3 years', '40 km a day, charged at noon']);
+      if (M.hp) r.push(['heat', 'Heat-pump water heater', '270 L', '7 years', 'replaces gas; runs at midday']);
+      return r;
+    }
+    function incentives(M) {
+      var r = [];
+      if (M.solar) { var n = FN.stcSolar(7.04); r.push(['Solar certificates (STCs)', 'floor(7.04 kW × 1.382 zone × 5 years) = ' + n + ' STCs × $39.90', n * FN.STC, 'deeming years fall each year: 5 in 2026', true]); }
+      if (M.bat) { var b = FN.batteryCerts(13.5, 6.8), b2 = FN.batteryCerts(13.5, 5.7); r.push(['Cheaper Home Batteries', '13.5 kWh × 6.8 STC/kWh = ' + b + ' STCs × $39.90', b * FN.STC, '6.8 until 31 Dec 2026, then 5.7: −' + FN.money((b - b2) * FN.STC), true]); }
+      if (M.hp) r.push(['Heat-pump water heater', 'certificates may apply', 0, 'amount to check with the installer', false]);
+      if (M.ev) r.push(['Solar Sharer', 'three free midday hours to charge', 0, 'NSW, from 1 Jul 2026, if your retailer offers it', false]);
+      return r;
+    }
+    // step 4 · next move (the 3D home)
+    var ORDER = ['plan', 'solar', 'hp', 'ev', 'bat'], INFO = { plan: ['plan', 'Plan switch', 0], solar: ['fill', 'Solar 7.04 kWp', 7.04 * 900], hp: ['heat', 'Heat-pump hot water', 3200], ev: ['car', 'Electric car charger', 1400], bat: ['battery', 'Battery 13.5 kWh', 11500 - FN.rebate(13.5)] };
+    function stepNext() {
+      var M = S.measures, today = FN.TODAY(), acc = {}, prev = today, delta = {}, u = unc();
+      ORDER.forEach(function (k) { acc[k] = false; }); ORDER.forEach(function (k) { if (M[k]) { acc[k] = true; var t = FN.sim(opt(acc)).total; delta[k] = t - prev; prev = t; } });
+      var fin = prev, save = today - fin, steps = [['Today', today, 1]];
+      ORDER.forEach(function (k) { if (M[k]) steps.push([{ plan: 'Plan', solar: 'Solar', hp: 'Heat pump', ev: 'Car', bat: 'Battery' }[k], delta[k], 0]); }); steps.push(['New', fin, 1]);
+      var mx = today * 1.05, run = today, bars = steps.map(function (s, i) {
+        var x, y, hh, fill, val;
+        x = 8 + i * 106;
+        if (s[2]) { y = 16 + 30 - s[1] / mx * 30; hh = Math.max(2, s[1] / mx * 30); fill = 'var(--c-ink)'; val = FN.money(s[1]); }
+        else { var a2 = run, b2 = run + s[1]; run = b2; y = 16 + 30 - Math.max(a2, b2) / mx * 30; hh = Math.max(2, Math.abs(s[1]) / mx * 30); fill = s[1] <= 0 ? 'var(--c-gain)' : 'var(--c-loss)'; val = (s[1] <= 0 ? '−' : '+') + FN.money(s[1]); }
+        return '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="70" height="' + hh.toFixed(1) + '" rx="2" fill="' + fill + '" opacity="' + (i === 0 ? 0.3 : 0.75) + '"></rect><text x="' + (x + 35) + '" y="11" font-size="10.5" fill="' + (s[2] ? 'var(--c-ink2)' : fill) + '" text-anchor="middle" font-weight="600">' + val + '</text><text x="' + (x + 35) + '" y="58" font-size="10" fill="var(--c-muted)" text-anchor="middle">' + s[0] + '</text>';
+      }).join('');
+      var solo = function (k) { var a3 = {}, b3 = {}; ORDER.forEach(function (x) { a3[x] = M[x]; b3[x] = M[x]; }); a3[k] = true; b3[k] = false; return FN.sim(opt(b3)).total - FN.sim(opt(a3)).total; };
+      var rank = ['hp', 'ev', 'bat'].map(function (k) { var s = solo(k); return { k: k, s: s, pay: s > 0 ? INFO[k][2] / s : 99 }; }).sort(function (a, b) { return a.pay - b.pay; });
+      var o = '<div style="position:absolute;left:12px;right:12px;top:12px;height:68px;' + FN.card + ';display:flex;align-items:center;gap:18px;padding:0 16px"><span style="display:flex;flex-direction:column;gap:1px;min-width:250px"><span style="' + FN.kick + '">Energy spend a year · power, gas, fuel</span><span style="display:flex;align-items:baseline;gap:8px"><span style="font-size:13px;color:var(--c-muted)">' + FN.money(today) + ' →</span><b style="font-size:20px;font-weight:600;color:var(--c-gain)">' + FN.money(fin) + '</b></span><span style="font-size:11px;color:var(--c-ink2)">saves ' + FN.money(save * (1 - u / 100)) + '–' + FN.money(save * (1 + u / 100)) + ' · ±' + u + ' % (' + badge().toLowerCase() + ')</span></span><svg width="' + (steps.length * 106) + '" height="62" viewBox="0 0 ' + (steps.length * 106) + ' 62" role="img" aria-label="Waterfall from today’s spend to the new one">' + bars + '</svg></div>';
+      o += '<div style="position:absolute;left:12px;top:92px;width:360px;bottom:12px;display:flex;flex-direction:column;gap:8px"><span style="' + FN.kick + ';padding:0 4px">Your moves · ranked by payback</span>' + [{ k: 'plan', s: 0, pay: 0 }, { k: 'solar', s: 0, pay: 0 }].concat(rank).map(function (m) {
+        var on = M[m.k], I = INFO[m.k], fixed = m.k === 'plan' || m.k === 'solar', e = on && delta[m.k] !== undefined ? -delta[m.k] : m.s;
+        return '<div style="' + FN.card + ';border-color:' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';padding:9px 12px;display:flex;gap:10px;align-items:center">' + FN.icon(I[0], on ? 'var(--c-sel)' : 'var(--c-ink2)') + '<div style="display:flex;flex-direction:column;gap:2px;flex:1"><b style="font-size:14px;font-weight:600">' + I[1] + '</b><span style="font-size:12px;color:var(--c-ink2)">' + (m.k === 'plan' ? (S.plan || 'Flat Rate') + ' · step 1' : m.k === 'solar' ? '16 × 440 W · 6 kW inverter · ' + FN.money(I[2]) : { hp: '270 L', ev: '7 kW', bat: '13.5 kWh LFP' }[m.k] + ' · ' + FN.money(I[2]) + ' · ' + (m.pay < 99 ? 'pays back ~' + m.pay.toFixed(1) + ' yrs' : 'needs solar')) + '</span>' + (m.k === 'solar' ? '<span style="font-size:11px;color:var(--c-sel)">after −' + FN.money(FN.stcSolar(7.04) * FN.STC) + ' certificates</span>' : m.k === 'bat' ? '<span style="font-size:11px;color:var(--c-sel)">after −' + FN.money(FN.rebate(13.5)) + ' rebate · factor drops 1 Jan</span>' : '') + '<b style="font-size:12px;font-weight:600;color:' + (e >= 0 ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (e >= 0 ? 'saves ' : 'costs ') + FN.money(e) + ' a year' + (on ? '' : ' if added') + '</b></div>' +
+          (fixed ? '<b style="font-size:12px;color:var(--c-sel)">in</b>' : '<button type="button" data-a="move" data-v="' + m.k + '" style="min-width:62px;min-height:38px;border-radius:19px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-live)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-live)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-onLive)') + ';font:inherit;font-size:13px;font-weight:600;cursor:pointer">' + (on ? 'Added' : 'Add') + '</button>') + '</div>';
+      }).join('') + '</div>';
+      var R = FN.sim(opt(M)), h = st.hour;
+      var EQ = st.view4 === 'eq';
+      o += '<div style="position:absolute;left:384px;top:92px;right:12px;bottom:12px;' + FN.card + ';overflow:hidden"><div style="position:absolute;left:12px;top:12px;z-index:2;display:flex;background:var(--c-paper);border:1px solid var(--c-line);border-radius:9px;padding:3px">' + [['3d', 'Your home in 3D'], ['eq', 'Equipment & incentives']].map(function (c) { var on = (c[0] === 'eq') === EQ; return '<button type="button" data-a="view4" data-v="' + c[0] + '" style="min-height:32px;padding:0 12px;border:none;border-radius:7px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12px;font-weight:' + (on ? 600 : 400) + ';cursor:pointer">' + c[1] + '</button>'; }).join('') + '</div>' +
+        (EQ ? eqPanel(M) : '<div style="position:absolute;right:12px;top:12px;z-index:2;display:flex;background:var(--c-paper);border:1px solid var(--c-line);border-radius:9px;padding:3px">' + [['3d', '3D · show'], ['top', 'Top · plan']].map(function (c) { var on = (c[0] === 'top') === st.top; return '<button type="button" data-a="cam" data-v="' + c[0] + '" style="min-height:32px;padding:0 10px;border:none;border-radius:7px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + c[1] + '</button>'; }).join('') + '</div>') +
+'<div style="position:absolute;left:0;right:0;bottom:0;height:60px;border-top:1px solid var(--c-line2);display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--c-paper)"><button type="button" data-a="play" aria-label="Play the day" style="min-width:40px;min-height:40px;border-radius:20px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);cursor:pointer">' + (timer ? '❚❚' : '▶') + '</button><b style="font-size:13px;min-width:44px">' + (h < 10 ? '0' : '') + h + ':00</b><input type="range" min="0" max="23" value="' + h + '" data-in="hour" aria-label="Hour of the day" style="width:180px;accent-color:var(--c-sel)"><span style="font-size:13px">Panels <b style="color:var(--c-sunText)">' + R.pv[h].toFixed(1) + ' kW</b></span><span style="font-size:13px">Home <b>' + R.load[h].toFixed(1) + ' kW</b></span><span style="font-size:13px">Battery <b style="color:var(--c-battery)">' + (M.bat ? Math.round(R.socs[h] * 100) + '%' : '—') + '</b></span></div>' + (H ? '' : '<div style="position:absolute;inset:0 0 60px 0;display:flex;align-items:center;justify-content:center;color:var(--c-ink2);font-size:14px">3D loading…</div>') + '</div>';
+      return o;
+    }
+    function eqPanel(M) {
+      var E = equipment(M), I = incentives(M), tot = I.reduce(function (a, r) { return a + r[2]; }, 0);
+      var o = '<div style="position:absolute;inset:56px 14px 70px 14px;display:flex;flex-direction:column;gap:8px;overflow:auto">';
+      o += '<b style="font-size:13px;font-weight:600">What goes on and in your home</b>' + (E.length ? E.map(function (r) { return '<div style="display:grid;grid-template-columns:28px 160px minmax(0,1fr) 110px;gap:10px;align-items:center;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--c-line2)">' + FN.icon(r[0], 'var(--c-sel)') + '<b style="font-weight:600">' + r[1] + '</b><span>' + r[2] + '<br><span style="color:var(--c-muted);font-size:11.5px">' + r[4] + '</span></span><span style="color:var(--c-ink2);text-align:right">' + r[3] + '</span></div>'; }).join('') : '<span style="font-size:12px;color:var(--c-muted)">Add a move to see its equipment.</span>');
+      o += '<b style="font-size:13px;font-weight:600;margin-top:6px;display:flex;justify-content:space-between"><span>Incentives you can get</span><span style="color:var(--c-gain)">−' + FN.money(tot) + ' off the price</span></b>' + (I.length ? I.map(function (r) { return '<div style="display:grid;grid-template-columns:170px minmax(0,1fr) 90px;gap:10px;align-items:center;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--c-line2)"><b style="font-weight:600">' + r[0] + '</b><span>' + r[1] + '<br><span style="color:' + (r[4] ? 'var(--c-sunText)' : 'var(--c-muted)') + ';font-size:11.5px">' + r[3] + '</span></span><b style="text-align:right;font-weight:600;color:' + (r[2] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (r[2] ? '−' + FN.money(r[2]) : 'to check') + '</b></div>'; }).join('') : '<span style="font-size:12px;color:var(--c-muted)">None yet.</span>');
+      if (M.bat) o += '<div style="background:var(--c-sunSoft);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45"><b>Timing matters.</b> The battery factor steps down every 1 January and 1 July: installed after 31 Dec 2026, this battery gets ' + FN.batteryCerts(13.5, 5.7) + ' certificates instead of ' + FN.batteryCerts(13.5, 6.8) + '. Eligible: 5–100 kWh, VPP-capable, one per meter.</div>';
+      return o + '<span style="font-size:11px;color:var(--c-muted)">Certificates are usually deducted from the price by the installer. Australian rules of October 2026, spot price $39.90; illustrative.</span></div>';
+    }
+    // step 5 · share
+    function stepShare() {
+      var M = S.measures, w = ['solar 7.04 kWp']; if (M.bat) w.push('battery'); if (M.ev) w.push('car charger'); if (M.hp) w.push('heat pump');
+      var o = '<div style="position:absolute;inset:12px;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px"><div style="' + FN.card + ';padding:20px;display:flex;flex-direction:column;gap:12px"><b style="font-size:22px;font-weight:600">Who installs it?</b>' +
+        [['An installer I choose', 'You pick; they receive your home after you consent.'], ['Let Solar Designer propose', 'Matched on area and skills. You see who before they see you.'], ['Keep it for now', 'Saved in My home.']].map(function (n, i) { return '<button type="button" data-a="who" data-v="' + i + '" style="min-height:68px;border-radius:12px;border:1px solid ' + (st.next === i ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (st.next === i ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);text-align:left;padding:10px 14px;display:flex;flex-direction:column;gap:3px;font:inherit;cursor:pointer"><b style="font-size:15px;font-weight:600">' + n[0] + '</b><span style="font-size:13px;color:var(--c-muted)">' + n[1] + '</span></button>'; }).join('') + '</div>';
+      o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:18px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px;font-weight:600">Before anyone sees your home</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5"><b>Installer 1</b> (9 km, batteries) would receive:</span>' +
+        [['Your roof', '3 faces confirmed, our drawing'], ['Your needs', '15 kWh a day, as totals · ' + badge()], ['Your draft', w.join(' · ')], ['Never', 'your meter readings, another installer’s proposal, a phone call you did not ask for']].map(function (r) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;text-align:right">' + r[1] + '</b></span>'; }).join('') +
+        '<button type="button" data-a="share" style="margin-top:auto;min-height:48px;border-radius:10px;border:none;background:' + (S.shared ? 'var(--c-selSoft)' : 'var(--c-live)') + ';color:' + (S.shared ? 'var(--c-sel)' : 'var(--c-onLive)') + ';font:inherit;font-size:15px;font-weight:600;cursor:pointer">' + (S.shared ? 'Shared with Installer 1 ✓ · see the installer’s screen' : 'Share my home with Installer 1') + '</button></div></div>';
+      return o;
+    }
+    // step 6 · the proposal, compared with our estimate
+    // what the household can check in the proposal, against the same rules
+    function checks(P) {
+      var stc = FN.stcSolar(P.kwp), bc = P.bat ? FN.batteryCerts(P.bat) : 0, bc2 = P.bat ? FN.batteryCerts(P.bat, 5.7) : 0;
+      var row = function (ok, k, v) { return '<div style="display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;font-size:12.5px;line-height:1.45;padding:5px 0;border-bottom:1px solid var(--c-line2)"><b style="color:' + (ok ? 'var(--c-gain)' : 'var(--c-sunText)') + '">' + (ok ? '✓' : '!') + '</b><span><b style="font-weight:600">' + k + '</b> · ' + v + '</span></div>'; };
+      var r = '<b style="font-size:13px;font-weight:600;margin-top:6px">What we checked</b>';
+      r += row(P.stc === stc, 'Solar certificates', P.stc + ' deducted; the rule gives floor(' + P.kwp.toFixed(2) + ' kWp × 1.382 × 5) = ' + stc + '.');
+      if (P.bat) r += row(P.bc === bc, 'Battery certificates', P.bc + ' deducted, for ' + P.bat + ' kWh at factor 6.8.') + row(false, 'Install before 31 Dec 2026', 'from 1 January the factor drops to 5.7: ' + bc2 + ' certificates, ' + FN.money((bc - bc2) * FN.STC) + ' more to pay.');
+      r += row(true, 'Equipment', (P.modW || 440) + ' W modules ' + ((P.modW || 440) === 440 ? 'as in your draft' : 'instead of 440 W in your draft') + '; ' + (P.inv || 6) + ' kW hybrid inverter, panels at ' + Math.round(P.kwp / (P.inv || 6) * 100) + ' % of it (limit 133 %); all CEC-listed.');
+      return r;
+    }
+    function stepProposal() {
+      var P = S.proposal, u = unc(), ours = FN.TODAY() - FN.sim(opt(S.measures)).total;
+      if (!P) return '<div style="position:absolute;inset:12px;' + FN.card + ';border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--c-muted);font-size:15px">Waiting for Installer 1’s proposal: it designs on the installer’s screen.</div>';
+      var gap = P.save - ours;
+      var o = '<div style="position:absolute;inset:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">';
+      // first the three numbers and the right to cancel; the quote itself one short section at a time; signing at the end
+      var N = FN.SECTIONS.length, ks = FN.SECTIONS.map(function (x) { return x[0]; }), qi = ks.indexOf(st.qs);
+      if (st.qopen) st.qseen[st.qs] = true;
+      var seenN = Object.keys(st.qseen).length, allRead = seenN === N;
+      var signBtn = '<button type="button" data-a="' + (allRead || S.signed ? 'sign' : 'qopen') + '" style="min-height:46px;border-radius:10px;border:' + (allRead || S.signed ? 'none' : '1px solid var(--c-line)') + ';background:' + (S.signed ? 'var(--c-selSoft)' : allRead ? 'var(--c-live)' : 'var(--c-paper2)') + ';color:' + (S.signed ? 'var(--c-sel)' : allRead ? 'var(--c-onLive)' : 'var(--c-ink)') + ';font:inherit;font-size:15px;font-weight:600;cursor:pointer">' + (S.signed ? 'Signed ✓ · frozen with its engine version' : allRead ? 'Sign' : seenN ? 'Read on to sign · ' + seenN + ' of ' + N : 'Read the quote: ' + N + ' short sections ›') + '</button>';
+      o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-height:0">';
+      if (!st.qopen) {
+        o += '<span style="font-size:13px;color:var(--c-sel);font-weight:600">Installer 1 · proposal · Q-2026-0148</span><b style="font-size:22px;font-weight:600">' + P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + '</b>' +
+          [['You pay, after certificates', FN.money(P.total)], ['Savings, on your bill', FN.money(P.save * (1 - u / 100)) + '–' + FN.money(P.save * (1 + u / 100)) + ' a year'], ['Valid until', '7 Nov 2026']].map(function (r) { return '<span style="display:flex;justify-content:space-between;font-size:14px;padding:7px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600">' + r[1] + '</b></span>'; }).join('') +
+          '<div style="border:2px solid var(--c-sel);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;background:var(--c-selSoft);margin-top:4px"><b>Your right to cancel.</b> If you did not ask to be contacted, you can cancel within 10 business days of signing, without penalty. No payment and no work in that time.</div>' +
+          '<span style="font-size:12.5px;color:var(--c-ink2);line-height:1.5;margin-top:4px">The quote holds ' + N + ' short sections: ' + FN.SECTIONS.map(function (x) { return x[1].toLowerCase(); }).join(', ') + '. Each opens with one line; the detail is under it.</span>' +
+          '<div style="margin-top:auto;display:flex;flex-direction:column;gap:6px">' + signBtn + '</div>';
+      } else {
+        o += '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--c-sel);font-weight:600">Installer 1 · Q-2026-0148</span><button type="button" data-a="qclose" style="border:none;background:transparent;color:var(--c-muted);font:inherit;font-size:12px;cursor:pointer">Summary ›</button></div>' +
+          '<div style="display:flex;gap:3px" role="list" aria-label="Sections read">' + ks.map(function (k, j) { return '<button type="button" data-a="qs" data-v="' + k + '" title="' + FN.SECTIONS[j][1] + '" aria-label="' + FN.SECTIONS[j][1] + '" style="flex:1;height:6px;border:none;border-radius:3px;padding:0;cursor:pointer;background:' + (j === qi ? 'var(--c-sel)' : st.qseen[k] ? 'var(--c-gain)' : 'var(--c-line2)') + ';opacity:' + (j === qi ? 1 : st.qseen[k] ? 0.55 : 1) + '"></button>'; }).join('') + '</div>' +
+          '<span style="' + FN.kick + '">' + (qi + 1) + ' of ' + N + ' · ' + FN.SECTIONS[qi][1] + '</span><b style="font-size:15px;font-weight:600;line-height:1.35">' + FN.quoteLead(st.qs, P) + '</b>' +
+          '<div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;padding-right:4px">' + FN.quoteSection(st.qs, P) + '</div>' +
+          '<div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--c-line2)"><button type="button" data-a="qprev" style="min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">‹</button>' +
+          (qi < N - 1 ? '<button type="button" data-a="qnext" style="flex:1;min-height:42px;border-radius:10px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-weight:600;cursor:pointer">Next: ' + FN.SECTIONS[qi + 1][1] + ' ›</button>' : '<div style="flex:1;display:flex;flex-direction:column">' + signBtn + '</div>') + '</div>';
+      }
+      o += '</div>';
+      o += '<div style="' + FN.card + ';padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:var(--c-gain);font-weight:600">Our independent estimate</span><b style="font-size:22px;font-weight:600">' + FN.money(ours * (1 - u / 100)) + '–' + FN.money(ours * (1 + u / 100)) + ' a year</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">Same engine, same bill, same roof as the proposal. ' + (Math.abs(gap) < 60 ? 'The proposal matches it.' : gap > 0 ? 'The proposal saves ' + FN.money(gap) + ' more a year: it changed the system (' + (P.bat ? P.bat + ' kWh battery' : 'no battery') + ', ' + P.n + ' modules).' : 'The proposal saves ' + FN.money(gap) + ' less a year: ' + (P.n < 16 ? 'fewer modules (' + P.n + '), shade from the chimney' : 'a smaller battery or none') + '.') + '</span>' + checks(P) + FN.exportsCard('household') + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">If another installer had sent a proposal, it would sit here too; installers never see each other’s.</span></div></div>';
+      return o;
+    }
+    function render() {
+      sync();
+      var s = st.step;
+      q('.hh-top').innerHTML = FN.topbar(['My home', '14 Wattle Lane'], STEPS.map(function (l, i) { var ok = done(i) && i !== s, can = reach(i); return '<button type="button" data-a="go" data-v="' + i + '"' + (can ? '' : ' disabled') + ' style="min-height:36px;padding:0 12px;border:none;border-radius:7px;background:' + (i === s ? 'var(--c-paper)' : 'transparent') + ';color:' + (i === s ? 'var(--c-ink)' : can ? (ok ? 'var(--c-gain)' : 'var(--c-ink2)') : 'var(--c-faint)') + ';font:inherit;font-size:13px;font-weight:500;cursor:' + (can ? 'pointer' : 'default') + ';' + (i === s ? 'box-shadow:0 1px 2px rgba(29,32,38,.12)' : '') + '">' + (ok ? '✓ ' : (i + 1) + ' ') + l + (i === 5 && S.proposal && !S.signed ? ' · 1' : '') + '</button>'; }).join(''), '<span style="font-size:12px;color:var(--c-muted)">' + badge() + ' profile · ±' + unc() + ' %</span>' +
+        '<button type="button" data-a="bell" aria-label="Notifications' + (S.proposal && !st.seen ? ', 1 new' : '') + '" style="width:40px;height:40px;border:none;border-radius:8px;background:' + (st.bell ? 'var(--c-line2)' : 'transparent') + ';color:var(--c-ink);cursor:pointer;position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"></path></svg>' + (S.proposal && !st.seen ? '<span style="position:absolute;top:7px;right:7px;width:15px;height:15px;border-radius:8px;background:var(--c-loss);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">1</span>' : '') + '</button>');
+      // the proposal arrives: a banner until the household opens it, and the bell's list
+      var note = '';
+      if (S.proposal && !st.seen && st.step !== 5) note = '<div style="position:absolute;left:50%;top:58px;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:12px;background:var(--c-tip);color:var(--c-paper);border-radius:12px;padding:10px 10px 10px 16px;box-shadow:0 10px 28px rgba(29,32,38,.25);font-size:14px"><span><b>Installer 1 sent you a proposal</b> · ' + P0() + '</span><button type="button" data-a="go" data-v="5" style="min-height:36px;padding:0 14px;border-radius:8px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:13px;font-weight:600;cursor:pointer">See it</button></div>';
+      if (st.bell) note += '<div style="position:absolute;right:12px;top:52px;width:320px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:9;overflow:hidden"><b style="display:block;padding:10px 12px;font-size:12px;font-weight:600;border-bottom:1px solid var(--c-line2)">Notifications</b>' +
+        (S.proposal ? '<button type="button" data-a="go" data-v="5" style="display:flex;gap:10px;width:100%;text-align:left;padding:10px 12px;border:none;border-bottom:1px solid var(--c-line2);background:' + (st.seen ? 'transparent' : 'var(--c-selSoft)') + ';color:var(--c-ink);font:inherit;font-size:12px;line-height:1.45;cursor:pointer"><span style="width:3px;border-radius:2px;background:var(--c-live)"></span><span><b style="font-weight:600">Installer 1 sent you a proposal</b><br><span style="color:var(--c-ink2)">' + P0() + ' · compare it with our estimate</span></span></button>' : '') +
+        (S.shared ? '<div style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-line2);font-size:12px;line-height:1.45"><span style="width:3px;border-radius:2px;background:var(--c-sel)"></span><span><b style="font-weight:600">Installer 1 received your home</b><br><span style="color:var(--c-ink2)">roof, needs as totals and your draft</span></span></div>' : '') +
+        (!S.proposal && !S.shared ? '<span style="display:block;padding:12px;font-size:12px;color:var(--c-muted)">Nothing yet. You will hear here when an installer answers.</span>' : '') + '</div>';
+      q('.hh-note').innerHTML = note;
+      q('.hh-body').innerHTML = [stepPlan, stepProfile, stepRoof, stepNext, stepShare, stepProposal][s]();
+      var canNext = (s === 3 ? filled() : done(s)) && s < 5 && (s === 3 || reach(s + 1));
+      var hint = ['Pick the plan you take: it stays in your scenario.', 'Connect your meter, use your bill, or tap at least three things about your home.', 'Confirm the three faces, then fill the north face.', 'Add what you want; each move shows its effect on top of the others.', 'Name who receives your home, then share.', S.proposal ? 'Compare, then sign.' : 'The installer works on its own screen.'][s];
+      q('.hh-foot').innerHTML = '<button type="button" data-a="back"' + (s ? '' : ' disabled') + ' style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:' + (s ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;cursor:pointer">Back</button><span style="flex:1;font-size:13px;color:var(--c-ink2)">' + hint + '</span>' +
+        (s < 5 ? '<button type="button" data-a="next"' + (canNext ? '' : ' disabled') + ' style="min-height:44px;padding:0 18px;border-radius:10px;border:none;background:' + (canNext ? 'var(--c-live)' : 'var(--c-line)') + ';color:' + (canNext ? 'var(--c-onLive)' : 'var(--c-faint)') + ';font:inherit;font-size:14px;font-weight:600;cursor:' + (canNext ? 'pointer' : 'default') + '">Next · ' + STEPS[s + 1] + '</button>' : '');
+      var box = q('.hh-3d'); box.style.display = s === 3 && st.view4 !== 'eq' ? 'block' : 'none'; box.style.top = '141px'; box.style.left = '385px'; box.style.width = '782px'; box.style.height = '542px';
+      if (H) { H.size(782, 542); H.setPanels(S.measures.solar ? FN.layout('portrait') : []); H.bat.visible = S.measures.bat; H.car.visible = S.measures.ev; H.hp.visible = S.measures.hp; H.setHour(st.hour); H.useTop = st.top; }
+    }
+    FN.wire(el, function (a, v) {
+      var P = st.prof;
+      if (a === 'bell') { st.bell = !st.bell; render(); return; }
+      if (a === 'go') { st.step = +v; st.bell = false; if (+v === 5 && S.proposal) st.seen = true; }
+      else if (a === 'next') { st.step++; st.max = Math.max(st.max, st.step); }
+      else if (a === 'back') st.step = Math.max(0, st.step - 1);
+      else if (a === 'plan') { st.chosen = v; S.measures.plan = v !== 'Flat Rate'; }
+      else if (a === 'src') { if (v === 'meter') P.consent = true; else if (v === 'bill') { P.busy = 'Reading your bill…'; clearTimeout(tBusy); tBusy = setTimeout(function () { P.busy = ''; P.bill = true; render(); changed(); }, 700); } else P.q = true; }
+      else if (a === 'consent') { P.consent = false; P.busy = 'open-energy is reading 12 months of your meter…'; clearTimeout(tBusy); tBusy = setTimeout(function () { P.busy = ''; P.meter = true; render(); changed(); }, 900); }
+      else if (a === 'noconsent') P.consent = false;
+      else if (a === 'ans') { var p = v.split('|'); P.ans[p[0]] = isNaN(+p[1]) ? p[1] : +p[1]; }
+      else if (a === 'season') st.season = v;
+      else if (a === 'face') { if (v !== 'S' && !st.conf[v]) st.conf[v] = true; else if (st.tool === 'fill' && v === 'N' && !filled()) st.preview = true; }
+      else if (a === 'tool') { st.tool = v; st.preview = false; }
+      else if (a === 'keep') { S.measures.solar = true; st.preview = false; }
+      else if (a === 'move') S.measures[v] = !S.measures[v];
+      else if (a === 'cam') st.top = v === 'top';
+      else if (a === 'view4') st.view4 = v;
+      else if (a === 'hour') st.hour = +v;
+      else if (a === 'play') { if (timer) { clearInterval(timer); timer = null; } else timer = setInterval(function () { st.hour = (st.hour + 1) % 24; render(); }, 650); }
+      else if (a === 'who') st.next = +v;
+      else if (a === 'share') { if (!S.shared) { S.shared = true; S.sharedAt = 'today'; } }
+      else if (a === 'sign') { if (S.proposal) S.signed = true; }
+      else if (a === 'qopen') { st.qopen = true; var ks = FN.SECTIONS.map(function (x) { return x[0]; }); st.qs = ks.filter(function (k) { return !st.qseen[k]; })[0] || st.qs; }
+      else if (a === 'qclose') st.qopen = false;
+      else if (a === 'qs') { st.qopen = true; st.qs = v; }
+      else if (a === 'qnext' || a === 'qprev') { var ks2 = FN.SECTIONS.map(function (x) { return x[0]; }), j = ks2.indexOf(st.qs); st.qs = ks2[Math.max(0, Math.min(ks2.length - 1, j + (a === 'qnext' ? 1 : -1)))]; }
+      else if (a === 'export') { if (S.proposal) FN.exportQuote(v, S.proposal); return; }
+      render(); changed();
+    });
+    render();
+    FN.three(q('.hh-canvas'), function (h3) { H = h3; H.radius = 40; H.place(); render(); });
+    return { render: render };
+  };
+
+  all('figure.bk-widget[data-widget="journey"]').forEach(function (fig) {
+    FN.when(fig, function () {
+      var F = FN.frames(fig), S = { plan: '', profile: { badge: 'Estimated', unc: 30 }, measures: { plan: false, solar: false, hp: false, ev: false, bat: false }, shared: false, opened: false, sharedAt: '', proposal: null, signed: false };
+      var hh = null, ins = {};
+      function band() {
+        var fr = F.fr, t = S.signed ? (fr ? '↑ Proposition signée · le site garde la trace du système à poser' : '↑ Proposal signed · the site keeps a record of the system to install')
+          : S.proposal ? (fr ? '↑ Proposition envoyée · elle arrive sur le site du ménage, étape 6' : '↑ Proposal sent · it lands on the household’s site, step 6')
+          : S.shared ? (fr ? '↓ Site partagé · il arrive dans la boîte de l’installateur' : '↓ Site shared · it lands in the installer’s inbox')
+          : (fr ? 'Le ménage avance étape par étape ; à l’étape 5, il partage son site avec l’installateur.' : 'The household moves step by step; at step 5 it shares its site with the installer.');
+        F.band.innerHTML = '<span class="' + (S.shared ? 'on' : '') + '">' + t + '</span>';
+      }
+      function changed() { band(); if (ins.render) ins.render(); if (hh) hh.render(); }
+      hh = FN.household(F.a, S, function () { band(); if (ins.render) ins.render(); });
+      FN.studio(F.b, { site: S, api: ins, onChange: function () { band(); hh.render(); } });
+      band();
     });
   });
+  /* ---------- the quote: one document, read by both screens of the journey (design/funnels) ---------- */
+  // The installer builds it in the studio's Proposal tab, the household reads and signs it at step 6.
+  // Its sections follow what an Australian quote must carry (design/funnels, the quote): the
+  // cooling-off rights on the front page, itemised products with their specifications and
+  // warranties, the layout, the single-line diagram, the expected output and its limits, the
+  // certificate deductions and separate solar and battery paybacks. Parties, numbers and products
+  // are placeholders. The exports are real files built from the same data.
+
+  // illustrative datasheets, keyed by the catalogue's wattages
+  FN.SPEC = {
+    400: { model: 'MONO-400 · 108 half-cells', voc: 37.1, vmp: 31.0, isc: 13.7, eff: '20.5 %', warranty: '12-year product, 25-year performance (84 %)' },
+    440: { model: 'MONO-440 · 108 half-cells', voc: 39.6, vmp: 33.2, isc: 14.0, eff: '22.0 %', warranty: '25-year product, 30-year performance (87 %)' },
+    475: { model: 'NTYPE-475 · 120 half-cells', voc: 42.4, vmp: 35.5, isc: 14.2, eff: '23.0 %', warranty: '25-year product, 30-year performance (89 %)' }
+  };
+  FN.SECTIONS = [['cover', 'Cover and your rights'], ['system', 'System and layout'], ['measures', 'Roof plan and measurements'], ['notes', 'Installer’s notes'], ['equipment', 'Equipment'], ['wiring', 'Wiring'], ['savings', 'Performance and savings'], ['price', 'Price and incentives'], ['terms', 'Warranties and terms']];
+  var MONTH = [1.24, 1.14, 1.02, 0.86, 0.72, 0.64, 0.70, 0.86, 1.02, 1.14, 1.22, 1.27];
+
+  // the offer from a design: lines, costs, certificates and the figures every section needs
+  FN.offer = function (d) {
+    var mod = FN.CAT.modules.filter(function (m) { return m.w === d.modW; })[0], inv = FN.CAT.inverters.filter(function (x) { return x.kw === d.inv; })[0];
+    var c = { modules: d.n * mod.price * 1.18, inverter: inv.price * 1.18, battery: d.bat ? (1100 + 790 * d.bat) * 1.18 : 0, charger: d.ev ? 1400 * 1.18 : 0, install: (1800 + 60 * d.n) * 1.18 };
+    var stc = FN.stcSolar(d.kwp), bc = d.bat ? FN.batteryCerts(d.bat) : 0;
+    var lines = [[d.n + ' × ' + mod.name, 'price list', c.modules], [inv.name + ' inverter', 'price list', c.inverter]];
+    if (d.bat) lines.push([d.bat + ' kWh battery, LFP, VPP-ready', 'price list', c.battery]);
+    if (d.ev) lines.push(['Car charger, 7 kW', 'price list', c.charger]);
+    lines.push(['Installation and design', 'price list', c.install], [stc + ' solar certificates (STC)', 'open-energy', -stc * FN.STC]);
+    if (d.bat) lines.push([bc + ' battery certificates', 'open-energy', -FN.rebate(d.bat)]);
+    var o = { plan: 'best', kwp: d.eff, ev: d.ev, hp: d.hp }, solo = FN.sim(o), withB = d.bat ? FN.sim({ plan: 'best', kwp: d.eff, ev: d.ev, hp: d.hp, cap: d.bat }) : solo;
+    var self = function (r) { var pv = 0, ex = 0; for (var h = 0; h < 24; h++) { pv += r.pv[h]; ex += r.exp[h]; } return pv ? (pv - ex) / pv : 0; };
+    var solarSave = FN.TODAY() - solo.total - (d.ev ? 2044 : 0) - (d.hp ? 520 : 0), batSave = d.bat ? solo.total - withB.total : 0;
+    var p = {}; for (var k in d) p[k] = d[k];
+    p.mod = mod; p.invP = inv; p.cost = c; p.stc = stc; p.bc = bc; p.lines = lines; p.total = lines.reduce(function (a, l) { return a + l[2]; }, 0);
+    p.self0 = self(solo); p.self1 = self(withB); p.solarSave = solarSave; p.batSave = batSave;
+    p.payS = (c.modules + c.inverter + c.install - stc * FN.STC) / Math.max(solarSave, 1); p.payB = d.bat ? (c.battery - FN.rebate(d.bat)) / Math.max(batSave, 1) : 0;
+    return p;
+  };
+
+  // strings: the north face split over the inverter's two MPPT inputs, checked hot and cold
+  FN.strings = function (P) {
+    var s = FN.SPEC[P.modW], a = Math.ceil(P.n / 2), b = P.n - a, cold = s.voc * (1 + 0.0026 * 25), hot = s.vmp * (1 - 0.0034 * 45);
+    return { a: a, b: b, vocA: a * cold, vmpB: b * hot, isc: s.isc * 1.25, ok: a * cold < 600 && b * hot > 80 };
+  };
+
+  // the single-line diagram, AS/NZS 5033 on the DC side, AS/NZS 4777.1 at the grid, AS/NZS 5139 for the battery
+  FN.sld = function (P, ink, line, soft) {
+    ink = ink || '#1D2026'; line = line || '#9C958A'; soft = soft || '#F3F1EC';
+    var S = FN.strings(P), box = function (x, y, w, h, t, sub) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="6" fill="' + soft + '" stroke="' + ink + '"></rect><text x="' + (x + w / 2) + '" y="' + (y + h / 2 - (sub ? 3 : -4)) + '" font-size="12" font-weight="600" text-anchor="middle" fill="' + ink + '">' + t + '</text>' + (sub ? '<text x="' + (x + w / 2) + '" y="' + (y + h / 2 + 12) + '" font-size="10" text-anchor="middle" fill="' + ink + '" opacity=".75">' + sub + '</text>' : ''); };
+    var wire = function (d, lab, lx, ly) { return '<path d="' + d + '" fill="none" stroke="' + ink + '" stroke-width="1.6"></path>' + (lab ? '<text x="' + lx + '" y="' + ly + '" font-size="9.5" fill="' + ink + '" opacity=".7">' + lab + '</text>' : ''); };
+    var o = '<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 640 300" font-family="Inter, system-ui, sans-serif" role="img" aria-label="Single-line diagram of the system">';
+    o += box(10, 20, 130, 46, 'String 1', S.a + ' × ' + P.modW + ' W · Voc ' + Math.round(S.vocA) + ' V') + box(10, 84, 130, 46, 'String 2', S.b + ' × ' + P.modW + ' W');
+    o += wire('M140 43 H190 V64 H210', 'DC 4 mm²', 146, 37) + wire('M140 107 H190 V86 H210');
+    o += box(210, 52, 80, 46, 'DC isolator', '2-pole · 600 V') + wire('M290 75 H330', '', 0, 0);
+    o += box(330, 40, 120, 70, P.inv + ' kW hybrid', '2 MPPT · AS/NZS 4777.2') + (P.bat ? wire('M390 110 V160', 'DC battery cable', 396, 140) + box(330, 160, 120, 46, P.bat + ' kWh battery', 'LFP · AS/NZS 5139') : '');
+    o += wire('M450 75 H480', 'AC 6 mm²', 452, 69) + box(480, 52, 70, 46, 'AC isolator', '') + wire('M550 75 H570 V150', '', 0, 0);
+    o += box(500, 150, 130, 50, 'Main switchboard', 'solar main switch · RCBO') + (P.ev ? wire('M500 190 H470 V250', '', 0, 0) + box(400, 250, 120, 40, 'Car charger', '7 kW · own RCBO') : '');
+    o += wire('M565 200 V230', '', 0, 0) + box(530, 230, 70, 34, 'Meter', 'import / export') + wire('M565 264 V284 H620', 'grid · export limit 5 kW', 540, 296);
+    o += '<text x="10" y="170" font-size="10" fill="' + ink + '" opacity=".75">Cold Voc ' + Math.round(S.vocA) + ' V &lt; 600 V · hot Vmp ' + Math.round(S.vmpB) + ' V &gt; 80 V · ' + (S.ok ? 'strings fit' : 'check the strings') + '</text>';
+    o += '<text x="10" y="186" font-size="10" fill="' + ink + '" opacity=".75">Voltage rise 0.9 % · earthing per AS/NZS 3000 · labels per AS/NZS 5033</text>';
+    return o + '</svg>';
+  };
+
+  // what each section says in one line: read first, the detail under it
+  FN.quoteLead = function (key, P) {
+    var u = (P.unc || 12) / 100;
+    return { cover: 'You can cancel within 10 business days. ' + P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + ' for ' + FN.money(P.total) + '.',
+      system: P.n + ' modules on the north face, ' + Math.round(P.kwp / P.inv * 100) + ' % of a ' + P.inv + ' kW inverter.',
+      measures: 'Measured on site: a 15.00 × 10.00 m hip roof at 22°; the array takes ' + FN.arrayBox(P).w.toFixed(2) + ' × ' + FN.arrayBox(P).h.toFixed(2) + ' m.',
+      notes: (P.notes || []).length + ' things the installer saw on site and what was done about them.',
+      equipment: 'Every product itemised, CEC-listed, with its warranty.',
+      wiring: 'Two strings, inside the inverter\'s voltage window, hot and cold.',
+      savings: Math.round(P.kwh).toLocaleString('en-AU') + ' kWh a year; ' + FN.money(P.save * (1 - u)) + '–' + FN.money(P.save * (1 + u)) + ' off your bills.',
+      price: FN.money(P.total) + ' after ' + FN.money(P.stc * FN.STC + (P.bat ? FN.rebate(P.bat) : 0)) + ' of certificates, GST included.',
+      terms: 'Warranties, timeline, paperwork, and who to call.' }[key];
+  };
+  // the array's extent on the plan, in metres (the plan draws 40 px a metre)
+  FN.arrayBox = function (P) {
+    var m = P.mods || []; if (!m.length) return { w: 0, h: 0, x0: 0, y0: 0, x1: 0, y1: 0 };
+    var x0 = Math.min.apply(null, m.map(function (r) { return r.x; })), x1 = Math.max.apply(null, m.map(function (r) { return r.x + r.w; })), y0 = Math.min.apply(null, m.map(function (r) { return r.y; })), y1 = Math.max.apply(null, m.map(function (r) { return r.y + r.h; }));
+    return { w: (x1 - x0) / 40, h: (y1 - y0) / 40 / Math.cos(22 * Math.PI / 180), x0: x0, y0: y0, x1: x1, y1: y1 };
+  };
+  // the measurement plan: the roof as measured, with its dimension lines and the array
+  FN.measurePlan = function (P) {
+    var A = FN.arrayBox(P), dim = function (x1, y1, x2, y2, t, tx, ty, rot) { return '<path d="M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2 + '" stroke="var(--c-ink)" stroke-width="1.2" marker-start="url(#qa)" marker-end="url(#qa)"></path><text x="' + tx + '" y="' + ty + '" font-size="15" text-anchor="middle" fill="var(--c-ink)"' + (rot ? ' transform="rotate(-90 ' + tx + ' ' + ty + ')"' : '') + '>' + t + '</text>'; };
+    var o = '<svg width="100%" height="230" viewBox="120 90 800 540" role="img" aria-label="Roof plan with its measurements"><defs><marker id="qa" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="var(--c-ink)"></path></marker></defs>';
+    o += ['S', 'W', 'E', 'N'].map(function (k) { return '<path d="' + FN.FACES[k] + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') + '" stroke="var(--c-roofLine)"></path>'; }).join('');
+    o += '<path d="M234 172 L802 172 L656 340 L380 340 Z" fill="none" stroke="var(--c-sel)" stroke-dasharray="6 5"></path>';
+    o += (P.mods || []).map(function (m) { return '<rect x="' + m.x + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" fill="#2B3A4A" opacity=".55"></rect>'; }).join('');
+    if (P.chimney) o += '<rect x="508" y="186" width="24" height="24" fill="#8C7462" stroke="#5E4B3E"></rect><text x="560" y="203" font-size="14" fill="var(--c-ink)">chimney 0.60 m, ' + P.chimney + ' m high</text>';
+    o += dim(218, 120, 818, 120, '15.00 m eave', 518, 110) + dim(368, 380, 668, 380, 'ridge 7.50 m', 518, 400) + dim(860, 156, 860, 356, '5.00 m plan · 5.39 m on the slope', 885, 256, true) + dim(150, 156, 150, 556, '10.00 m', 135, 356, true);
+    if (A.w) o += dim(A.x0, A.y1 + 30, A.x1, A.y1 + 30, 'array ' + A.w.toFixed(2) + ' m', (A.x0 + A.x1) / 2, A.y1 + 52);
+    o += '<text x="234" y="166" font-size="13" fill="var(--c-sel)">0.40 m setback</text><text x="518" y="610" font-size="14" text-anchor="middle" fill="var(--c-muted)">N ↑ · eave height 3.0 m · pitch 22° · tape and inclinometer, 30 Oct 2026</text>';
+    return o + '</svg>';
+  };
+
+  // one section of the quote, as HTML in the screen's colours
+  FN.quoteSection = function (key, P) {
+    var row = function (k, v, strong) { return '<div style="display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);gap:12px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + k + '</span><span style="' + (strong ? 'font-weight:600' : '') + '">' + v + '</span></div>'; };
+    var h = function (t) { return '<b style="font-size:13px;font-weight:600;margin-top:8px">' + t + '</b>'; };
+    var spec = FN.SPEC[P.modW], u = (P.unc || 12) / 100, o = '';
+    if (key === 'cover') {
+      o += '<div style="border:2px solid var(--c-sel);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;background:var(--c-selSoft)"><b>Your right to cancel.</b> If you did not ask us to contact you, this is an unsolicited agreement: you can cancel it within 10 business days of signing, for any reason and without penalty. We will not take payment or start work in that time.</div>';
+      o += h('Quote') + row('Number', 'Q-2026-0148 · 31 Oct 2026') + row('Valid until', '7 Nov 2026 · prices and certificate values of the day') + row('For', 'The household · 14 Wattle Lane, Marrickville NSW 2204') + row('Meter', 'NMI 4103 •••• ••• · network Ausgrid');
+      o += h('Who you deal with') + row('Retailer', 'Installer 1 Pty Ltd · ABN 00 000 000 000 · NETCC Approved Seller') + row('Designer', 'SAA-accredited · accreditation S-0000000 · signs the design statement') + row('Installer', 'SAA-accredited · licensed electrician · issues the safety certificate') + row('Contact', 'one named person for the whole job · 1300 000 000');
+      o += h('In one line') + row('System', P.kwp.toFixed(2) + ' kWp solar' + (P.bat ? ' + ' + P.bat + ' kWh battery' : '') + (P.ev ? ' + car charger' : ''), true) + row('Price after certificates', FN.money(P.total) + ', GST included', true) + row('Savings, on your bill', FN.money(P.save * (1 - u)) + '–' + FN.money(P.save * (1 + u)) + ' a year');
+    } else if (key === 'system') {
+      o += '<svg width="100%" height="200" viewBox="150 120 740 470" role="img" aria-label="Layout of the modules on your roof">' + ['S', 'W', 'E', 'N'].map(function (k) { return '<path d="' + FN.FACES[k] + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') + '" stroke="var(--c-roofLine)"></path>'; }).join('') + (P.mods || []).map(function (m) { return '<rect x="' + m.x + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="1.5" fill="#2B3A4A" stroke="#55667A"></rect>'; }).join('') + '<text x="518" y="580" font-size="16" text-anchor="middle" fill="var(--c-muted)">N ↑ · our drawing from LiDAR, checked on site 30 Oct 2026</text></svg>';
+      o += row('Array', P.n + ' × ' + P.modW + ' W = ' + P.kwp.toFixed(2) + ' kWp, north face, 22° tilt, azimuth 0°', true) + row('Roof', 'concrete tile, single storey · setbacks 0.40 m from every edge') + row('Mounting', 'rail kit for wind region A, terrain category 3, per AS/NZS 1170.2') + row('Shade', P.shaded ? P.shaded + ' modules shaded by the chimney in winter mornings' : 'no shading object on the north face') + row('Inverter sizing', 'panels at ' + Math.round(P.kwp / P.inv * 100) + ' % of the inverter (limit 133 %)') + row('Export limit', '5 kW, set by the network at pre-approval');
+    } else if (key === 'measures') {
+      var A = FN.arrayBox(P);
+      o += FN.measurePlan(P) + row('Roof', 'hip roof, 15.00 × 10.00 m outside the gutters, ridge 7.50 m, eave 3.0 m above the ground') + row('North face', 'trapezoid 15.00 m at the eave, 7.50 m at the ridge, 5.39 m along the slope at 22°') + row('Array', A.w.toFixed(2) + ' × ' + A.h.toFixed(2) + ' m on the slope, inside the 0.40 m setbacks') + row('Checked against', 'the LiDAR faces (fit 0.91): within 6 cm on every edge');
+    } else if (key === 'notes') {
+      o += (P.notes || []).map(function (n) { return '<div style="display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--c-line2)"><b style="color:' + (n[2] ? 'var(--c-sunText)' : 'var(--c-sel)') + '">' + (n[2] ? '!' : '•') + '</b><span><b style="font-weight:600">' + n[0] + '</b> · ' + n[1] + '</span></div>'; }).join('') || '<span style="font-size:12.5px;color:var(--c-muted)">No note yet.</span>';
+    } else if (key === 'equipment') {
+      var it = [['Solar modules', P.n + ' × ' + spec.model, P.modW + ' W, ' + spec.eff + ' efficient, Voc ' + spec.voc + ' V, Isc ' + spec.isc + ' A', spec.warranty],
+        ['Inverter', P.invP.name + ' · HYB-' + P.inv + 'K', '2 MPPT inputs, 80–550 V, max 600 V DC; AS/NZS 4777.2, CSIP-AUS ready', '10-year product'],
+        P.bat ? ['Battery', 'LFP ' + P.bat + ' kWh · BAT-' + P.bat, 'usable ' + P.bat + ' kWh, 5 kW, AS/NZS 5139, VPP-capable', '10 years or 70 % capacity'] : null,
+        P.ev ? ['Car charger', 'EVC-7 · single phase', '7 kW, solar-follow mode, own RCBO', '3-year product'] : null,
+        ['Mounting', 'RAIL-A tile kit', 'certified for wind region A, AS/NZS 1170.2', '15-year product'],
+        ['Protection', 'DC isolator, AC isolator, solar main switch', 'per AS/NZS 5033 and AS/NZS 3000', 'covered by workmanship']].filter(Boolean);
+      o += it.map(function (r) { return '<div style="display:grid;grid-template-columns:120px minmax(0,1fr) 150px;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--c-line2)"><b style="font-weight:600">' + r[0] + '</b><span>' + r[1] + '<br><span style="color:var(--c-muted);font-size:11.5px">' + r[2] + '</span></span><span style="font-size:11.5px;color:var(--c-ink2)">' + r[3] + '<br><span style="color:var(--c-gain)">✓ CEC-listed, not expired</span></span></div>'; }).join('');
+      o += '<span style="font-size:11.5px;color:var(--c-muted);margin-top:6px">Brands and models are placeholders in this prototype; the real quote names each manufacturer and its Australian warranty contact.</span>';
+    } else if (key === 'wiring') {
+      var s = FN.strings(P);
+      o += FN.sld(P, 'var(--c-ink)', 'var(--c-line)', 'var(--c-paper2)');
+      o += row('Strings', s.a + ' + ' + s.b + ' modules on two MPPT inputs') + row('Cold open-circuit voltage', Math.round(s.vocA) + ' V at 0 °C, under the 600 V maximum ✓') + row('Hot operating voltage', Math.round(s.vmpB) + ' V at 70 °C cell, above the 80 V start ✓') + row('DC current', s.isc.toFixed(1) + ' A design current per string; 4 mm² solar cable') + row('AC side', '6 mm² to the switchboard, voltage rise 0.9 % (limit 2 %)') + row('Standards', 'AS/NZS 5033 (DC), AS/NZS 4777.1 (grid connection), AS/NZS 5139 (battery), AS/NZS 3000 (wiring rules)');
+    } else if (key === 'savings') {
+      var max = 1.3, bars = MONTH.map(function (f, i) { var v = P.kwh / 365 * f, hh = f / max * 80; return '<rect x="' + (30 + i * 46) + '" y="' + (96 - hh) + '" width="30" height="' + hh + '" rx="3" fill="var(--c-sun)" opacity=".8"></rect><text x="' + (45 + i * 46) + '" y="' + (90 - hh) + '" font-size="10" text-anchor="middle" fill="var(--c-ink)">' + v.toFixed(0) + '</text><text x="' + (45 + i * 46) + '" y="112" font-size="10" text-anchor="middle" fill="var(--c-muted)">' + 'JFMAMJJASOND'[i] + '</text>'; }).join('');
+      o += '<span style="font-size:12px;color:var(--c-muted)">Average daily kWh by month, as the SAA design gives it</span><svg width="100%" height="118" viewBox="0 0 590 118">' + bars + '</svg>';
+      o += row('Yearly output', Math.round(P.kwh).toLocaleString('en-AU') + ' kWh, after losses', true) + row('Used in your home', Math.round(P.self0 * 100) + ' % of the solar without battery' + (P.bat ? ', ' + Math.round(P.self1 * 100) + ' % with it' : '')) + row('Savings, on your bill', FN.money(P.save * (1 - u)) + '–' + FN.money(P.save * (1 + u)) + ' a year', true) + row('Solar payback', P.payS.toFixed(1) + ' years, on its own') + (P.bat ? row('Battery payback', P.payB.toFixed(1) + ' years, counted apart from the solar') : '') + row('Assumptions', 'your ' + (P.badge || 'estimated').toLowerCase() + ' profile, ±' + (P.unc || 12) + ' %; your new plan; sunshine varies ±8 % year to year; the car charger is left out of the paybacks') + row('Limitations', 'an estimate, not a guarantee: output depends on weather, shade, tariffs and how you use energy');
+    } else if (key === 'price') {
+      o += P.lines.map(function (l) { return '<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 100px;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span>' + l[0] + '</span><span style="color:var(--c-muted)">' + l[1] + '</span><b style="text-align:right;font-weight:600;color:' + (l[2] < 0 ? 'var(--c-gain)' : 'var(--c-ink)') + '">' + (l[2] < 0 ? '−' : '') + FN.money(l[2]) + '</b></div>'; }).join('');
+      o += '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;padding:8px 0">You pay, GST included<span>' + FN.money(P.total) + '</span></div>';
+      o += row('Solar certificates', 'floor(' + P.kwp.toFixed(2) + ' kWp × 1.382 zone rating × 5 deeming years) = ' + P.stc + ' STCs × $39.90') + (P.bat ? row('Battery certificates', P.bat + ' kWh by tier (full to 14 kWh, 60 % to 28) × factor 6.8 = ' + P.bc + ' × $39.90; factor 5.7 from 1 Jan 2027, so install before then') : '') + row('Who claims', 'we claim the certificates as your agent and take them off the price; you assign them when you sign') + row('Payment', '10 % deposit after the cooling-off period, the rest on commissioning; no payment before the network pre-approval') + row('Extra costs', 'none expected: the switchboard was checked on site and needs no upgrade; any change is quoted and agreed in writing before work');
+    } else if (key === 'terms') {
+      o += h('Warranties') + row('Modules', spec.warranty) + row('Inverter', '10-year product') + (P.bat ? row('Battery', '10 years or 70 % of its capacity') : '') + row('Workmanship', '10 years, from us, on top of the product warranties') + row('Claims', 'call us first; we handle the manufacturer, who has an Australian contact');
+      o += h('How it happens') + row('Network', 'we apply for pre-approval (about 5–10 business days) and arrange the meter') + row('Installation', 'one day on site, by an SAA-accredited installer') + row('Paperwork', 'electrical safety certificate, design and installer statements to the CER, handover manual') + row('Your data', 'your site and this quote stay in your account; you choose who sees them') + row('Disputes', 'NETCC complaint process, then the energy ombudsman of your state');
+    }
+    return o;
+  };
+
+  // files: built in the browser from the same data, in standard formats
+  FN.download = function (name, type, text) { var a = doc.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; doc.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); };
+  FN.exportQuote = function (kind, P) {
+    if (kind === 'bom') { var rows = [['item', 'model', 'quantity', 'unit', 'price_aud_incl_gst']], sp = FN.SPEC[P.modW]; rows.push(['solar module', sp.model, P.n, 'each', (P.cost.modules / P.n).toFixed(2)], ['hybrid inverter', 'HYB-' + P.inv + 'K', 1, 'each', P.cost.inverter.toFixed(2)]); if (P.bat) rows.push(['battery', 'BAT-' + P.bat, 1, 'each', P.cost.battery.toFixed(2)]); if (P.ev) rows.push(['car charger', 'EVC-7', 1, 'each', P.cost.charger.toFixed(2)]); rows.push(['installation and design', '', 1, 'job', P.cost.install.toFixed(2)], ['solar certificates (STC)', '', P.stc, 'certificate', (-FN.STC).toFixed(2)]); if (P.bat) rows.push(['battery certificates', '', P.bc, 'certificate', (-FN.STC).toFixed(2)]); FN.download('Q-2026-0148-bom.csv', 'text/csv', rows.map(function (r) { return r.map(function (c) { return /[",]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n') + '\n'); }
+    if (kind === 'sld') FN.download('Q-2026-0148-single-line.svg', 'image/svg+xml', FN.sld(P));
+    if (kind === 'json') FN.download('Q-2026-0148.json', 'application/json', JSON.stringify({ quote: 'Q-2026-0148', date: '2026-10-31', validUntil: '2026-11-07', site: { address: '14 Wattle Lane, Marrickville NSW 2204', network: 'Ausgrid' }, design: { modules: { count: P.n, watts: P.modW, kwp: +P.kwp.toFixed(2), tilt: 22, azimuth: 0 }, inverterKw: P.inv, batteryKwh: P.bat, carCharger: !!P.ev, strings: FN.strings(P) }, yieldKwh: Math.round(P.kwh), lines: P.lines.map(function (l) { return { item: l[0], source: l[1], aud: +l[2].toFixed(2) }; }), totalAud: +P.total.toFixed(2), certificates: { stc: P.stc, battery: P.bc, spotAud: FN.STC }, engine: 'open-energy (prototype)' }, null, 2));
+    if (kind === 'print') { var w = window.open('', '_blank'); if (!w) return; var t = FN.tokens(), css = ':root{' + FN.vars(t) + '}body{font:13px/1.45 Inter,system-ui,sans-serif;color:#1D2026;max-width:760px;margin:24px auto;padding:0 16px}h2{font-size:15px;margin:22px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px}div,span{box-sizing:border-box}'; w.document.write('<!doctype html><meta charset="utf-8"><title>Quote Q-2026-0148</title><style>' + css + '</style><h1 style="font-size:20px">Quote Q-2026-0148 · 14 Wattle Lane</h1>' + FN.SECTIONS.map(function (s) { return '<h2>' + s[1] + '</h2><div style="display:flex;flex-direction:column">' + FN.quoteSection(s[0], P) + '</div>'; }).join('')); w.document.close(); w.focus(); w.print(); }
+  };
+  // the exports card, shared by both screens
+  FN.exportsCard = function (who) {
+    var b = function (k, t, f) { return '<button type="button" data-a="export" data-v="' + k + '" style="display:flex;justify-content:space-between;align-items:center;min-height:34px;padding:0 10px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:12.5px;cursor:pointer"><span>' + t + '</span><span style="font-size:11px;color:var(--c-muted)">' + f + '</span></button>'; };
+    return '<div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:6px"><b style="font-size:13px;font-weight:600">Files</b>' + b('print', 'Quote, to print or save', 'PDF') + b('sld', 'Single-line diagram', 'SVG') + (who === 'installer' ? b('bom', 'Bill of materials', 'CSV') + b('json', 'Design and quote data', 'JSON') + '<span style="font-size:11px;color:var(--c-muted);line-height:1.4">From the API later: PDF/A with the data embedded, the diagram in DXF, the certificate claim for the REC Registry, the network application.</span>' : '') + '</div>';
+  };
   /* ---------- actions: late due dates, owner filter on the board ---------- */
   var today = new Date().toISOString().slice(0, 10);
   all('.bk-tk-due[data-due]').forEach(function (d) { if (d.getAttribute('data-due') < today) d.classList.add('bk-late'); });
