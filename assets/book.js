@@ -699,7 +699,7 @@
   });
   /* ---------- widgets: the funnel prototypes (design/funnels, design/editor-tools) ---------- */
   // Intention prototypes, not final screens. Each widget draws product screens at their real size
-  // (an 1180 × 820 tablet), scaled to the page, with an Enlarge button; the journey is in 73-journey.js.
+  // (an 1180 × 820 tablet) in their device, scaled to the page, with an Enlarge button; the journey is in 73-journey.js.
   // The screens are those of the Australian product, so they stay in English in both languages;
   // the figure's caption carries the page's language. Every number comes from FN.sim, one small
   // model of a Sydney household, so that figures stay consistent when a switch is flipped.
@@ -760,35 +760,90 @@
       b.addEventListener('click', function () { var p = FN.PRESETS[+b.getAttribute('data-pal')]; try { localStorage.setItem(FN.PAL, JSON.stringify({ ground: p.ground, accent: p.accent })); } catch (e) {} window.dispatchEvent(new Event('sd-palette')); open(false); btn.focus(); });
       b.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); } });
     });
-    menu.addEventListener('keydown', function (e) { if (e.key === 'Escape') { open(false); btn.focus(); } });
+    menu.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); open(false); btn.focus(); } });
     doc.addEventListener('click', function (e) { if (!menu.hidden && !out.querySelector('.bk-fw-pal').contains(e.target)) open(false); });
     window.addEventListener('sd-palette', mark); mark();
   };
 
-  /* the frame: a fixed-size screen scaled to the figure, with an Enlarge toggle */
+  /* the device around a screen: tablet first (D-63), the same screen on a desktop, no phone yet */
+  // The bezel keeps a fixed size in pixels and the screen scales inside it. Desktop shows the same
+  // 1180 × 820 screen on a monitor; the phone layout is not designed, so the phone shows a note
+  // and never an invented screen.
+  FN.BEZEL = 14; // the tablet's padding in 82-widgets.css, used to size the figure in the page
+  FN.DEV = [['tablet', 'Tablet', 'Tablette', '<rect x="1.5" y="3" width="15" height="11" rx="2"/><circle cx="9" cy="5.2" r=".5"/>'], ['desktop', 'Desktop', 'Ordinateur', '<rect x="1.5" y="2" width="15" height="10" rx="1.5"/><path d="M7 15.5h4M9 12v3.5"/>'], ['phone', 'Phone', 'Téléphone', '<rect x="5" y="1.5" width="8" height="15" rx="2"/><path d="M8 4h2"/>']];
+  FN.devBar = function (fr) {
+    return '<span class="bk-fw-seg bk-fw-dev" role="group" aria-label="' + (fr ? 'Appareil' : 'Device') + '">' + FN.DEV.map(function (d, i) { return '<button type="button" data-dev="' + d[0] + '" aria-pressed="' + (i ? 'false' : 'true') + '" aria-label="' + d[fr ? 2 : 1] + '" title="' + d[fr ? 2 : 1] + '"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">' + d[3] + '</svg></button>'; }).join('') + '</span>';
+  };
+  FN.devBox = function (fr) {
+    return '<div class="bk-fw-stage"><div class="bk-dv" data-dev="tablet"><div class="bk-fw"><div class="bk-fw-screen"></div></div><div class="bk-dv-note" hidden><b>' + (fr ? 'Téléphone · pas encore conçu' : 'Phone · not designed yet') + '</b><span>' +
+      (fr ? 'Cet écran est conçu d’abord pour la tablette ; sa mise en page pour téléphone n’est pas encore dessinée. Passez à Tablette ou Ordinateur pour utiliser le prototype.' : 'This screen is designed for a tablet first; its phone layout is not drawn yet. Switch to Tablet or Desktop to use the prototype.') + '</span></div></div></div>';
+  };
+  FN.wireDev = function (out, fit) {
+    var btns = all('.bk-fw-dev button', out), dvs = all('.bk-dv', out);
+    btns.forEach(function (b) { b.addEventListener('click', function () { btns.forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); dvs.forEach(function (d) { d.setAttribute('data-dev', b.getAttribute('data-dev')); }); fit(); }); });
+  };
+  // the room a device takes around its screen: padding, and the desktop's stand
+  FN.devChrome = function (dv) { var cs = getComputedStyle(dv), n = function (k) { return parseFloat(cs[k]) || 0; }; return { x: n('paddingLeft') + n('paddingRight'), y: n('paddingTop') + n('paddingBottom') + n('marginBottom') }; };
+  // the figure's height in the page for a width: the tablet at that width, never above real size
+  FN.pageH = function (W, w, h) { return h * Math.min(1, (W - 2 * FN.BEZEL) / w) + 2 * FN.BEZEL; };
+  // the largest screen that fits W × H with its device around it
+  FN.fitDev = function (dv, W, H) {
+    var c = FN.devChrome(dv), box = dv.querySelector('.bk-fw'), screen = box.firstChild, note = dv.querySelector('.bk-dv-note'), phone = dv.getAttribute('data-dev') === 'phone';
+    box.hidden = phone; note.hidden = !phone;
+    if (phone) { var ph = Math.max(0, Math.min(H - c.y, (W - c.x) / 0.47)); note.style.height = ph + 'px'; note.style.width = (ph * 0.47) + 'px'; return; }
+    var w = parseFloat(screen.style.width), h = parseFloat(screen.style.height), s = Math.max(0, Math.min((W - c.x) / w, (H - c.y) / h));
+    screen.style.transform = 'scale(' + s + ')'; box.style.width = (w * s) + 'px'; box.style.height = (h * s) + 'px';
+  };
+
+  /* Enlarge: the figure fills the screen (the Fullscreen API, or a fixed layer over the page) */
+  // A placeholder keeps the figure's place in the page; Esc or Close puts it back.
+  FN.enlarger = function (fig, big, fr, fit, onClose) {
+    var ph = null, fs = false;
+    function isOpen() { return fig.classList.contains('bk-fw-open'); }
+    function set(open) {
+      if (open === isOpen()) return;
+      if (open) {
+        var cs = getComputedStyle(fig);
+        ph = doc.createElement('div'); ph.className = 'bk-fw-ph'; ph.style.height = fig.offsetHeight + 'px'; ph.style.marginTop = cs.marginTop; ph.style.marginBottom = cs.marginBottom;
+        fig.parentNode.insertBefore(ph, fig);
+      } else if (ph) { ph.parentNode.removeChild(ph); ph = null; }
+      // the page under the layer keeps its width when its scroll bar goes
+      root.style.paddingRight = open ? (window.innerWidth - root.clientWidth) + 'px' : '';
+      fig.classList.toggle('bk-fw-open', open); root.classList.toggle('bk-fw-lock', open);
+      big.textContent = open ? (fr ? 'Fermer' : 'Close') : (fr ? 'Agrandir' : 'Enlarge'); big.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open && doc.fullscreenEnabled && fig.requestFullscreen) fig.requestFullscreen().catch(function () {});
+      if (!open && doc.fullscreenElement === fig) doc.exitFullscreen().catch(function () {});
+      if (!open && onClose) onClose();
+      fit(); if (!open) big.focus();
+    }
+    big.setAttribute('aria-expanded', 'false'); big.title = 'Esc';
+    big.addEventListener('click', function () { set(!isOpen()); });
+    doc.addEventListener('fullscreenchange', function () { if (doc.fullscreenElement === fig) fs = true; else if (fs) { fs = false; set(false); } });
+    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen() && !e.defaultPrevented) set(false); });
+    window.addEventListener('resize', fit);
+  };
+
+  /* the frame: a fixed-size screen in its device, scaled to the figure, with Enlarge */
   FN.frame = function (fig, w, h) {
     var svg = fig.querySelector('svg'), out = fig.querySelector('.bk-widget-out'), fr = FN.isFr(fig);
     if (svg) svg.style.display = 'none';
-    out.innerHTML = '<div class="bk-fw-bar"><span>' + (fr ? 'Prototype d’intention · écran du produit australien, en anglais' : 'Intention prototype · a screen of the Australian product') + '</span>' +
-      '<span class="bk-fw-act">' + FN.paletteBar(fr) + '<button type="button" class="bk-fw-big">' + (fr ? 'Agrandir' : 'Enlarge') + '</button></span></div><div class="bk-fw"><div class="bk-fw-screen"></div></div>';
-    var box = out.querySelector('.bk-fw'), screen = out.querySelector('.bk-fw-screen'), big = out.querySelector('.bk-fw-big');
+    out.innerHTML = '<div class="bk-fw-bar"><span class="bk-fw-say">' + (fr ? 'Prototype d’intention · écran du produit australien, en anglais' : 'Intention prototype · a screen of the Australian product') + '</span>' +
+      '<span class="bk-fw-act">' + FN.devBar(fr) + FN.paletteBar(fr) + '<button type="button" class="bk-fw-big">' + (fr ? 'Agrandir' : 'Enlarge') + '</button></span></div>' + FN.devBox(fr);
+    var stage = out.querySelector('.bk-fw-stage'), dv = out.querySelector('.bk-dv'), screen = out.querySelector('.bk-fw-screen');
     FN.wirePalette(out);
     screen.style.width = w + 'px'; screen.style.height = h + 'px';
     function fit() {
-      var avail = fig.classList.contains('bk-fw-open') ? Math.min(window.innerWidth - 32, (window.innerHeight - 90) * w / h) : box.clientWidth;
-      var s = Math.min(1, avail / w); screen.style.transform = 'scale(' + s + ')'; box.style.height = (h * s) + 'px';
-      if (fig.classList.contains('bk-fw-open')) box.style.width = (w * s) + 'px'; else box.style.width = '';
+      var W = stage.clientWidth; if (!W) return;
+      if (fig.classList.contains('bk-fw-open')) { stage.style.height = ''; FN.fitDev(dv, W, stage.clientHeight); }
+      else { var H = FN.pageH(W, w, h); stage.style.height = H + 'px'; FN.fitDev(dv, W, H); }
     }
-    big.addEventListener('click', function () {
-      var open = fig.classList.toggle('bk-fw-open');
-      big.textContent = open ? (fr ? 'Réduire' : 'Close') : (fr ? 'Agrandir' : 'Enlarge'); fit();
-    });
-    window.addEventListener('resize', fit);
+    FN.wireDev(out, fit);
+    FN.enlarger(fig, out.querySelector('.bk-fw-big'), fr, fit);
     function paint() { screen.setAttribute('style', screen.getAttribute('style').replace(/--c-[^;]*;?/g, '') + ';' + FN.vars(FN.tokens())); fit(); }
     window.addEventListener('sd-palette', paint);
     paint();
     // the screen keeps its scale while the frame is hidden (the other language), then refits
-    if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(stage);
     return screen;
   };
   // run a widget only once its figure is shown (both languages sit in one page)
@@ -1241,44 +1296,54 @@
     FN.when(fig, function () { FN.studio(FN.frame(fig, 1180, 820), {}); });
   });
   /* ---------- widget: the journey, two screens and one site (design/funnels) ---------- */
-  // The household's screen and the installer's screen, one above the other, joined by the site
+  // The household's screen and the installer's screen, each in its device, joined by the site
   // they share: the household moves step by step (plan, profile, roof, next move, share), the
   // site lands in the installer's inbox, the installer designs and sends a proposal, and the
   // proposal comes back to the household, who compares and signs. Intention prototype.
 
-  // two screens in one figure, with the hand-over between them
+  // two screens in one figure, each in its device, with the hand-over between them
   FN.frames = function (fig) {
     var svg = fig.querySelector('svg'), out = fig.querySelector('.bk-widget-out'), fr = FN.isFr(fig), focus = -1;
     if (svg) svg.style.display = 'none';
     var lab = fr ? ['Écran du ménage', 'Écran de l’installateur'] : ['The household’s screen', 'The installer’s screen'];
-    var pane = function (i) { return '<div class="bk-jn-pane"><p class="bk-jn-lab"><span>' + lab[i] + '</span><button type="button" class="bk-jn-focus" data-i="' + i + '">' + (fr ? 'Seul' : 'Focus') + '</button></p><div class="bk-fw"><div class="bk-fw-screen"></div></div></div>'; };
-    out.innerHTML = '<div class="bk-fw-bar"><span>' + (fr ? 'Prototype d’intention · deux écrans du produit australien, reliés par le site' : 'Intention prototype · two screens of the Australian product, joined by the site') + '</span><span class="bk-fw-act">' + FN.paletteBar(fr) + '<button type="button" class="bk-fw-big">' + (fr ? 'Agrandir' : 'Enlarge') + '</button></span></div>' +
+    var view = fr ? ['Les deux', 'Ménage', 'Installateur'] : ['Both', 'Household', 'Installer'];
+    var pane = function (i) { return '<div class="bk-jn-pane"><p class="bk-jn-lab">' + lab[i] + '</p>' + FN.devBox(fr) + '</div>'; };
+    out.innerHTML = '<div class="bk-fw-bar"><span class="bk-fw-say">' + (fr ? 'Prototype d’intention · deux écrans du produit australien, reliés par le site' : 'Intention prototype · two screens of the Australian product, joined by the site') + '</span><span class="bk-fw-act">' +
+      '<span class="bk-fw-seg bk-jn-view" role="group" aria-label="' + (fr ? 'Écrans affichés' : 'Screens shown') + '">' + view.map(function (t, i) { return '<button type="button" data-v="' + (i - 1) + '" aria-pressed="' + (i ? 'false' : 'true') + '">' + t + '</button>'; }).join('') + '</span>' +
+      FN.devBar(fr) + FN.paletteBar(fr) + '<button type="button" class="bk-fw-big">' + (fr ? 'Agrandir' : 'Enlarge') + '</button></span></div>' +
       '<div class="bk-jn-row">' + pane(0) + '<div class="bk-jn-band"></div>' + pane(1) + '</div>';
-    var row = out.querySelector('.bk-jn-row'), panes = all('.bk-jn-pane', out), boxes = all('.bk-fw', out), screens = all('.bk-fw-screen', out), big = out.querySelector('.bk-fw-big'), focusBtns = all('.bk-jn-focus', out);
+    var row = out.querySelector('.bk-jn-row'), band = out.querySelector('.bk-jn-band'), panes = all('.bk-jn-pane', out), stages = all('.bk-fw-stage', out), dvs = all('.bk-dv', out), screens = all('.bk-fw-screen', out), views = all('.bk-jn-view button', out);
     screens.forEach(function (s) { s.style.width = '1180px'; s.style.height = '820px'; });
     FN.wirePalette(out);
-    // enlarged: side by side when the window is wide, stacked otherwise, or one screen alone (Focus)
+    // each stage shrinks to its device, so that labels, screens and band stay together, centred
+    function size(i, W, H) { stages[i].style.width = W + 'px'; FN.fitDev(dvs[i], W, H); stages[i].style.height = (dvs[i].offsetHeight + (parseFloat(getComputedStyle(dvs[i]).marginBottom) || 0)) + 'px'; }
+    // enlarged: side by side when that gives the larger screens, one above the other otherwise,
+    // or one screen alone; every size fills the window without scrolling
     function fit() {
-      var open = fig.classList.contains('bk-fw-open'), W = window.innerWidth - 48, Hh = window.innerHeight - 120;
-      var stacked = Math.min(W / 1180, (Hh - 70) / 2 / 820), side = Math.min((W - 24) / 2 / 1180, Hh / 820), alone = Math.min(W / 1180, Hh / 820);
-      var mode = !open ? 'page' : focus >= 0 ? 'alone' : side > stacked ? 'side' : 'stacked';
-      row.className = 'bk-jn-row' + (mode === 'side' ? ' side' : '');
-      panes.forEach(function (p, i) { p.style.display = mode === 'alone' && i !== focus ? 'none' : ''; });
-      out.querySelector('.bk-jn-band').style.display = mode === 'alone' ? 'none' : '';
-      focusBtns.forEach(function (b, i) { b.style.display = open ? '' : 'none'; b.textContent = focus === i ? (fr ? 'Les deux' : 'Both') : (fr ? 'Seul' : 'Focus'); });
-      var sc = { page: 0, alone: alone, side: side, stacked: stacked }[mode];
-      boxes.forEach(function (box, i) {
-        var s2 = mode === 'page' ? Math.min(1, box.clientWidth / 1180) : Math.min(1.25, sc);
-        screens[i].style.transform = 'scale(' + s2 + ')'; box.style.height = (820 * s2) + 'px'; box.style.width = mode === 'page' ? '' : (1180 * s2) + 'px';
-      });
+      var open = fig.classList.contains('bk-fw-open'), alone = open && focus >= 0;
+      panes.forEach(function (p, i) { p.hidden = alone && i !== focus; });
+      band.hidden = alone;
+      views.forEach(function (b) { b.setAttribute('aria-pressed', +b.getAttribute('data-v') === focus ? 'true' : 'false'); });
+      if (!open) {
+        row.className = 'bk-jn-row';
+        panes.forEach(function (p, i) { var W = p.clientWidth; if (!W) return; var H = FN.pageH(W, 1180, 820); stages[i].style.width = ''; stages[i].style.height = H + 'px'; FN.fitDev(dvs[i], W, H); });
+        return;
+      }
+      var k = Math.max(focus, 0), W = row.clientWidth, Hh = row.clientHeight, L = stages[k].getBoundingClientRect().top - panes[k].getBoundingClientRect().top, g = 16;
+      if (!W) return;
+      if (alone) { row.className = 'bk-jn-row one'; size(focus, W, Hh - L); return; }
+      var B = band.offsetHeight + 12, c = FN.devChrome(dvs[0]);
+      var side = Math.min(((W - g) / 2 - c.x) / 1180, (Hh - B - L - c.y) / 820), stacked = Math.min((W - c.x) / 1180, ((Hh - B) / 2 - L - c.y) / 820);
+      if (side >= stacked) { row.className = 'bk-jn-row side'; size(0, (W - g) / 2, Hh - B - L); size(1, (W - g) / 2, Hh - B - L); }
+      else { row.className = 'bk-jn-row stacked'; size(0, W, (Hh - B) / 2 - L); size(1, W, (Hh - B) / 2 - L); }
     }
-    big.addEventListener('click', function () { var open = fig.classList.toggle('bk-fw-open'); if (!open) focus = -1; big.textContent = open ? (fr ? 'Réduire' : 'Close') : (fr ? 'Agrandir' : 'Enlarge'); fit(); });
-    focusBtns.forEach(function (b) { b.addEventListener('click', function () { var i = +b.getAttribute('data-i'); focus = focus === i ? -1 : i; fit(); }); });
-    window.addEventListener('resize', fit);
+    FN.wireDev(out, fit);
+    FN.enlarger(fig, out.querySelector('.bk-fw-big'), fr, fit, function () { focus = -1; });
+    views.forEach(function (b) { b.addEventListener('click', function () { focus = +b.getAttribute('data-v'); fit(); }); });
     function paint() { screens.forEach(function (s) { s.setAttribute('style', s.getAttribute('style').replace(/--c-[^;]*;?/g, '') + ';' + FN.vars(FN.tokens())); }); fit(); }
     window.addEventListener('sd-palette', paint); paint();
-    if (window.ResizeObserver) boxes.forEach(function (b) { new ResizeObserver(function () { if (!fig.classList.contains('bk-fw-open')) fit(); }).observe(b); });
-    return { a: screens[0], b: screens[1], band: out.querySelector('.bk-jn-band'), fr: fr };
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(row);
+    return { a: screens[0], b: screens[1], band: band, fr: fr };
   };
 
   /* the household's screen: one app, six steps that carry their data forward */
