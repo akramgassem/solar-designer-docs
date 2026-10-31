@@ -697,6 +697,188 @@
     all('.bk-pl-a', out).forEach(function (b) { b.addEventListener('click', function () { a = PL.accents[+b.getAttribute('data-i')]; paint(); save(); }); });
     paint();
   });
+  /* ---------- widgets: drag the chimney (concepts/05-layout §5.9) ---------- */
+  // The drawing is the reference engine's static layout (figs45.py) and carries its inputs as
+  // data-* values. When studio-draw's WebAssembly is in the site (mise run wasm), every pointer
+  // move recomputes the keep-out, the usable area and the best layout in it; otherwise the
+  // static drawing stays and a line says why. Geometry and counts only: no energy figure.
+  var DC = {
+    en: { live: 'Drag the chimney, or focus it and use the arrow keys. Hold Alt to move it without snapping.',
+      static: 'Static drawing from the reference engine: this copy of the book does not include studio-draw’s WebAssembly, so the chimney cannot be moved here.',
+      error: 'studio-draw refused the input: ', modules: 'modules', ridge: 'to the ridge', eave: 'to the eave',
+      axis: 'snapped to the ridge axis', row: 'keep-out edge snapped to a row edge',
+      frame: 'WebAssembly: {t} ms this frame, median {m} ms over the last {n}; loaded and instantiated in {l} ms.',
+      api: 'Geometry the studio would send to the API on release (counts only: the API returns every energy and money figure, ADR-001)' },
+    fr: { live: 'Faites glisser la cheminée, ou donnez-lui le focus et utilisez les flèches. Maintenez Alt pour la déplacer sans aimantation.',
+      static: 'Dessin statique du moteur de référence : cette copie du livre n’inclut pas le WebAssembly de studio-draw, la cheminée ne peut donc pas être déplacée ici.',
+      error: 'studio-draw a refusé l’entrée : ', modules: 'modules', ridge: 'jusqu’au faîtage', eave: 'jusqu’à l’égout',
+      axis: 'aimantée sur l’axe du faîtage', row: 'bord de la zone d’exclusion aimanté sur un bord de rangée',
+      frame: 'WebAssembly : {t} ms pour cette image, médiane {m} ms sur les {n} dernières ; chargé et instancié en {l} ms.',
+      api: 'Géométrie que le studio enverrait à l’API au relâchement (des comptes seulement : l’API renvoie chaque chiffre d’énergie et d’argent, ADR-001)' }
+  };
+  var dcWasm = null;
+  function dcLoad() {
+    // one load for every widget of the page (the English and the French one)
+    if (!dcWasm) {
+      var t0 = performance.now();
+      dcWasm = import(BASE + 'wasm/studio_draw_wasm.js').then(function (mod) {
+        return mod.default({ module_or_path: BASE + 'wasm/studio_draw_wasm_bg.wasm' }).then(function () {
+          return { layout: mod.layout, ms: performance.now() - t0 };
+        });
+      });
+    }
+    return dcWasm;
+  }
+  function dcNums(el, name) { return (el.getAttribute('data-' + name) || '').split(',').map(Number); }
+  all('figure.bk-widget[data-widget="drag-chimney"]').forEach(function (fig) {
+    var svg = fig.querySelector('svg'), out = fig.querySelector('.bk-widget-out'), g = svg && svg.querySelector('.dc-live');
+    if (!g || !out) return;
+    var fr = (fig.closest('[lang]') || root).getAttribute('lang') === 'fr', t = DC[fr ? 'fr' : 'en'];
+    var face = dcNums(g, 'face'), setbacks = dcNums(g, 'setbacks'), vent = dcNums(g, 'vent'), grid = dcNums(g, 'grid');
+    var ch = dcNums(g, 'chimney'), view = dcNums(g, 'view'), S = view[0], OX = view[1], OY = view[2];
+    var cu = ch[0], cv = ch[1], W = ch[2], H = ch[3], M = ch[4];
+    var us = face.filter(function (x, i) { return i % 3 === 0; }), vs = face.filter(function (x, i) { return i % 3 === 1; });
+    var umin = Math.min.apply(null, us), umax = Math.max.apply(null, us), top = Math.max.apply(null, vs);
+    // the ridge axis: the middle of the ridge edge (kind 1), else of the face
+    var axis = (umin + umax) / 2, nv = face.length / 3;
+    for (var i = 0; i < nv; i++) if (face[3 * i + 2] === 1) axis = (face[3 * i] + face[3 * ((i + 1) % nv)]) / 2;
+    var chim = g.querySelector('.dc-chim'), area = g.querySelector('.dc-area'), mods = g.querySelector('.dc-mods');
+    var guides = g.querySelector('.dc-guides'), count = g.querySelector('.dc-count');
+    var times = [], loadMs = 0, rows = [], last = null, held = false;
+    out.innerHTML = '<p class="bk-dc-say" aria-live="polite"></p><p class="bk-dc-time"></p><div class="bk-dc-api" hidden><p></p><pre></pre></div>';
+    var say = out.querySelector('.bk-dc-say'), time = out.querySelector('.bk-dc-time'), api = out.querySelector('.bk-dc-api');
+    say.textContent = '…';
+
+    function x(u) { return OX + u * S; }
+    function y(v) { return OY - v * S; }
+    function num(v, d) { var s = v.toFixed(d === undefined ? 2 : d); return fr ? s.replace('.', ',') : s; }
+    function up() { return top - (cv + H / 2); }
+    function obstacles() { return vent.concat([0, cu, cv, W, H, M]); }
+
+    function run(obs) {
+      var t0 = performance.now(), res = last && last.layout(new Float64Array(face), new Float64Array(setbacks), new Float64Array(obs), new Float64Array(grid));
+      return { res: res, ms: performance.now() - t0 };
+    }
+    function read(res) {
+      var n = res[0], r = res[2], k = 3, m = [], rings = [];
+      for (var i = 0; i < n; i++, k += 4) m.push([res[k], res[k + 1], res[k + 2], res[k + 3]]);
+      for (var j = 0; j < r; j++) { var p = res[k], ring = []; k += 1; for (var q = 0; q < p; q++, k += 2) ring.push([res[k], res[k + 1]]); rings.push(ring); }
+      return { n: n, dy: res[1], modules: m, rings: rings };
+    }
+    // where the keep-out's edges snap: the row edges of the layout without the chimney
+    function rowEdges() {
+      var base = read(run(vent).res), seen = {};
+      base.modules.forEach(function (m) { seen[m[1].toFixed(4)] = m[1]; seen[m[3].toFixed(4)] = m[3]; });
+      return Object.keys(seen).map(function (k) { return seen[k]; });
+    }
+    function snap(u, v, free) {
+      var hit = [], tol = 0.1, reach = H / 2 + M;
+      if (!free && Math.abs(u - axis) < tol) { u = axis; hit.push(t.axis); }
+      var best = null;
+      if (!free) rows.forEach(function (e) {
+        [e + reach, e - reach].forEach(function (c) { if (Math.abs(v - c) < tol && (!best || Math.abs(v - c) < Math.abs(v - best.c))) best = { c: c, e: e }; });
+      });
+      if (best) { v = best.c; hit.push(t.row); }
+      return { u: u, v: v, hit: hit, edge: best && best.e, onAxis: !free && u === axis };
+    }
+    function draw(s) {
+      var frame = run(obstacles());
+      times.push(frame.ms); if (times.length > 60) times.shift();
+      var L = read(frame.res);
+      area.innerHTML = '<path class="usable" fill-rule="evenodd" d="' + L.rings.map(function (ring) {
+        return 'M' + ring.map(function (p) { return x(p[0]).toFixed(1) + ',' + y(p[1]).toFixed(1); }).join(' L') + ' Z';
+      }).join(' ') + '"/>';
+      mods.innerHTML = L.modules.map(function (m) {
+        return '<rect class="pv" x="' + x(m[0]).toFixed(1) + '" y="' + y(m[3]).toFixed(1) + '" width="' + ((m[2] - m[0]) * S).toFixed(1) + '" height="' + ((m[3] - m[1]) * S).toFixed(1) + '"/>';
+      }).join('');
+      chim.setAttribute('x', x(cu - W / 2).toFixed(1)); chim.setAttribute('y', y(cv + H / 2).toFixed(1));
+      chim.setAttribute('aria-label', (fr ? 'Cheminée, ' : 'Chimney, ') + num(up(), 2) + ' m ' + t.ridge + ', ' + num(cv - H / 2) + ' m ' + t.eave);
+      count.textContent = L.n + ' ' + t.modules;
+      // the guides while dragging, and the distances from the chimney to the ridge and the eave
+      var dx = x(cu + W / 2 + 0.25), gl = '';
+      if (held) gl += '<line class="dc-guide' + (s && s.onAxis ? ' dc-on' : '') + '" x1="' + x(axis) + '" y1="' + y(top) + '" x2="' + x(axis) + '" y2="' + y(0) + '"/>';
+      if (held && s && s.edge !== null && s.edge !== undefined) gl += '<line class="dc-guide dc-on" x1="' + x(umin) + '" y1="' + y(s.edge) + '" x2="' + x(umax) + '" y2="' + y(s.edge) + '"/>';
+      [[cv + H / 2, top, up(), t.ridge], [0, cv - H / 2, cv - H / 2, t.eave]].forEach(function (d) {
+        if (d[2] <= 0) return;
+        var ya = y(d[0]), yb = y(d[1]), ym = (ya + yb) / 2, label = num(d[2]) + ' m ' + d[3];
+        gl += '<line class="dc-dim" x1="' + dx + '" y1="' + ya + '" x2="' + dx + '" y2="' + yb + '"/>' +
+          '<line class="dc-dim" x1="' + (dx - 4) + '" y1="' + ya + '" x2="' + (dx + 4) + '" y2="' + ya + '"/>' +
+          '<line class="dc-dim" x1="' + (dx - 4) + '" y1="' + yb + '" x2="' + (dx + 4) + '" y2="' + yb + '"/>' +
+          // a plate under the label keeps it legible over the modules
+          '<rect class="dc-dimbg" x="' + (dx + 3) + '" y="' + (ym - 9) + '" width="' + (label.length * 6.6 + 6) + '" height="17" rx="3"/>' +
+          '<text class="dc-dimtext" x="' + (dx + 6) + '" y="' + (ym + 4) + '">' + label + '</text>';
+      });
+      guides.innerHTML = gl;
+      var sorted = times.slice().sort(function (a, b) { return a - b; });
+      time.textContent = t.frame.replace('{t}', num(frame.ms, 2)).replace('{m}', num(sorted[sorted.length >> 1], 2))
+        .replace('{n}', times.length).replace('{l}', num(loadMs, 0));
+      say.textContent = s && s.hit.length ? t.live + ' · ' + s.hit.join(' · ') : t.live;
+      fig.setAttribute('data-count', L.n);
+      return L;
+    }
+    function release(L) {
+      var payload = {
+        face: { frame: 'unfolded, metres, u along the eave, v up the slope', outline: face.reduce(function (a, x, i) {
+          if (i % 3 === 0) a.push({ u: x, v: face[i + 1], edge: ['eave', 'ridge', 'hip', 'valley', 'rake'][face[i + 2]] }); return a; }, []) },
+        setbacks: { eave: setbacks[0], ridge: setbacks[1], hip: setbacks[2], valley: setbacks[3], rake: setbacks[4] },
+        obstacles: [
+          { kind: 'vent', shape: 'disc', centre: { u: vent[1], v: vent[2] }, radius: vent[3], margin: vent[5] },
+          { kind: 'chimney', shape: 'rect', centre: { u: +cu.toFixed(3), v: +cv.toFixed(3) }, width: W, height: H, margin: M }],
+        layout: { orientation: 'landscape', module: { width: grid[0], height: grid[1] }, gap: grid[2], dy: +L.dy.toFixed(3),
+          modules: L.modules.map(function (m) { return [+m[0].toFixed(3), +m[1].toFixed(3)]; }) },
+        counts: { modules: L.n, kwp: +(L.n * 0.44).toFixed(2), module_area_m2: +(L.n * grid[0] * grid[1]).toFixed(2) }
+      };
+      api.hidden = false;
+      api.querySelector('p').textContent = t.api;
+      api.querySelector('pre').textContent = JSON.stringify(payload, null, 1);
+    }
+    function moveTo(u, v, free) {
+      u = Math.max(umin, Math.min(umax, u)); v = Math.max(0, Math.min(top, v));
+      var s = snap(u, v, free);
+      cu = s.u; cv = s.v;
+      return draw(s);
+    }
+    function pointer(e) {
+      var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+      p = p.matrixTransform(svg.getScreenCTM().inverse());
+      return { u: (p.x - OX) / S, v: (OY - p.y) / S };
+    }
+
+    dcLoad().then(function (w) {
+      last = w; loadMs = w.ms;
+      try { rows = rowEdges(); draw(null); } catch (err) { say.textContent = t.error + err.message; return; }
+      fig.classList.add('bk-dc-ready');
+      chim.setAttribute('tabindex', '0');
+      chim.setAttribute('role', 'button');
+      var grab = null;
+      chim.addEventListener('pointerdown', function (e) {
+        var p = pointer(e); grab = { du: cu - p.u, dv: cv - p.v }; held = true;
+        chim.setPointerCapture(e.pointerId); chim.classList.add('dc-held'); e.preventDefault();
+      });
+      chim.addEventListener('pointermove', function (e) {
+        if (!grab) return;
+        var p = pointer(e);
+        try { moveTo(p.u + grab.du, p.v + grab.dv, e.altKey); } catch (err) { say.textContent = t.error + err.message; }
+      });
+      function drop() {
+        if (!grab) return;
+        grab = null; held = false; chim.classList.remove('dc-held');
+        release(draw(null));
+      }
+      chim.addEventListener('pointerup', drop);
+      chim.addEventListener('pointercancel', drop);
+      chim.addEventListener('keydown', function (e) {
+        var step = e.shiftKey ? 0.25 : 0.05, d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
+        if (!d) return;
+        e.preventDefault();
+        release(moveTo(cu + d[0], cv + d[1], true));
+      });
+    }, function () {
+      say.textContent = t.static;
+      time.textContent = '';
+    });
+  });
+
   /* ---------- widgets: the funnel prototypes (design/funnels, design/editor-tools) ---------- */
   // Intention prototypes, not final screens. Each widget draws product screens at their real size
   // (an 1180 × 820 tablet) in their device, scaled to the page, with an Enlarge button; the journey is in 73-journey.js.

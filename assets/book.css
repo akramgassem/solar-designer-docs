@@ -434,6 +434,12 @@ figure.bk-widget.bk-fw-open .bk-jn-lab{margin-top:0}
 .bk-fw-tb-r>*{flex:none;white-space:nowrap}
 .bk-fw-tb-l>*{flex:none}
 .bk-fw-tb-l>.sh{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* Drag the chimney (71-drag-chimney.js): the live line, the time per frame, the API payload. */
+.bk-prose .bk-dc-say{margin:8px 0 0;font-size:14px;min-height:1.5em}
+.bk-prose .bk-dc-time{margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bk-prose .bk-dc-time:empty{display:none}
+.bk-dc-api>p{margin:10px 0 4px;font-size:13px;color:var(--muted)}
+.bk-dc-api pre{max-height:240px;font-family:var(--mono);overflow:auto;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--box2);color:var(--fg);font-size:12px;line-height:1.4}
 /* Decision log as data (tools/bookgen/dlog.py) */
 .bk-filter{position:sticky;top:var(--bk-top);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 6px;padding:10px 0;background:var(--bg)}
 .bk-filter input{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);font:14px Inter,system-ui,sans-serif}
