@@ -117,7 +117,7 @@ body{margin:0;background:var(--bg);color:var(--fg)}
   :root:not([data-side="off"]) .bk-side .bk-ch.bk-cur>a{opacity:1}
   :root:not([data-side="off"]):has(.bk-ch.bk-cur) .bk-progress{display:none}
   /* wide tables grow to the right only, clear of the menu */
-  :root:not([data-side="off"]) .bk-prose .tablewrap{width:calc(var(--measure) + 110px);margin-left:0;margin-right:-110px}
+  :root:not([data-side="off"]) .bk-prose article .tablewrap{width:calc(var(--measure) + 110px);margin-left:0;margin-right:-110px}
 }
 @media (min-width:1280px) and (prefers-reduced-motion:reduce){.bk-side *{transition:none!important}}
 /* Top bar: contents on the left, the book's name in the middle, search, language and theme on
