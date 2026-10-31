@@ -14,6 +14,8 @@
   /* ---------- language ---------- */
   var nodes = all('[data-fr]');
   var arias = all('[data-fr-aria]');
+  var holders = all('[data-fr-placeholder]');
+  holders.forEach(function (n) { n.setAttribute('data-en-placeholder', n.getAttribute('placeholder') || ''); });
   var titleMeta = doc.querySelector('meta[name="title-fr"]');
   var titles = { en: doc.title, fr: titleMeta ? titleMeta.getAttribute('content') : doc.title };
   nodes.forEach(function (n) { n.setAttribute('data-en', n.innerHTML); });
@@ -45,6 +47,7 @@
     doc.title = titles[l];
     nodes.forEach(function (n) { n.innerHTML = n.getAttribute(l === 'fr' ? 'data-fr' : 'data-en'); });
     arias.forEach(function (n) { n.setAttribute('aria-label', n.getAttribute(l === 'fr' ? 'data-fr-aria' : 'data-en-aria')); });
+    holders.forEach(function (n) { n.setAttribute('placeholder', n.getAttribute(l === 'fr' ? 'data-fr-placeholder' : 'data-en-placeholder')); });
     all('.bk-lang button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-set') === l)); });
     all('a[href]').forEach(function (a) {
       var h = a.getAttribute('href');
@@ -56,36 +59,43 @@
     doc.dispatchEvent(new CustomEvent('langchange', { detail: l }));
   }
 
-  /* ---------- theme ---------- */
-  var themeBtn = doc.querySelector('.bk-theme');
-  var THEMES = ['auto', 'light', 'dark'];
-  var THEME_LABEL = {
-    en: { auto: 'Theme: automatic', light: 'Theme: light', dark: 'Theme: dark' },
-    fr: { auto: 'Thème : automatique', light: 'Thème : clair', dark: 'Thème : sombre' }
-  };
-  var ICON = {
-    auto: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg>',
-    light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>',
-    dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>'
-  };
-  function currentTheme() { var t = null; try { t = localStorage.getItem(THEME); } catch (e) {} return THEMES.indexOf(t) >= 0 ? t : 'auto'; }
-  function showTheme(t) {
+  /* ---------- appearance: style (classic, modern, sepia), theme and text size, kept in this browser ---------- */
+  var THEME = 'sd-theme', STYLE = 'sd-style', SIZE = 'sd-size';
+  var lookBtn = doc.querySelector('.bk-look'), lookPanel = doc.getElementById('bk-look');
+  function lookGet(k, d) { var v = null; try { v = localStorage.getItem(k); } catch (e) {} return v || d; }
+  function lookSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function applyLook() {
+    var t = lookGet(THEME, 'auto'), y = lookGet(STYLE, 'classic'), z = lookGet(SIZE, '1');
     if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
-    if (themeBtn) {
-      var l = window.courseLang === 'fr' ? 'fr' : 'en';
-      themeBtn.innerHTML = ICON[t];
-      themeBtn.setAttribute('aria-label', THEME_LABEL[l][t]);
-      themeBtn.setAttribute('title', THEME_LABEL[l][t]);
-    }
+    if (y === 'classic') root.removeAttribute('data-style'); else root.setAttribute('data-style', y);
+    root.style.setProperty('--bk-scale', z);
+    var now = { theme: t, style: y, size: z };
+    all('.bk-seg').forEach(function (g) {
+      all('button', g).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === now[g.getAttribute('data-look')])); });
+    });
   }
-  if (themeBtn) themeBtn.addEventListener('click', function () {
-    var t = THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length];
-    try { localStorage.setItem(THEME, t); } catch (e) {}
-    showTheme(t);
-  });
-  doc.addEventListener('langchange', function () { showTheme(currentTheme()); });
+  function closeLook() { if (lookPanel && !lookPanel.hidden) { lookPanel.hidden = true; lookBtn.setAttribute('aria-expanded', 'false'); } }
+  if (lookBtn && lookPanel) {
+    lookBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      lookPanel.hidden = !lookPanel.hidden;
+      lookBtn.setAttribute('aria-expanded', String(!lookPanel.hidden));
+    });
+    lookPanel.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var b = e.target.closest('button[data-v]');
+      if (!b) return;
+      var key = { theme: THEME, style: STYLE, size: SIZE }[b.parentNode.getAttribute('data-look')];
+      lookSet(key, b.getAttribute('data-v'));
+      applyLook();
+    });
+    doc.addEventListener('click', closeLook);
+    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLook(); });
+  }
+  applyLook();
 
-  /* ---------- drawer (narrow screens) ---------- */
+  /* ---------- the book's menu: beside the text on wide screens (Contents hides or shows it),
+     a card over the page elsewhere ---------- */
   var shell = doc.querySelector('.bk');
   var side = doc.getElementById('bk-side');
   var menuBtn = doc.querySelector('.bk-menu');
@@ -108,27 +118,207 @@
     if (scrim) { scrim.remove(); scrim = null; }
     if (focusBack !== false) menuBtn.focus();
   }
+  var wide = window.matchMedia('(min-width:1280px)');
+  function docked() { return wide.matches && root.getAttribute('data-side') !== 'off'; }
+  function syncMenuBtn() { if (wide.matches) menuBtn.setAttribute('aria-expanded', String(docked())); }
   if (menuBtn && side) {
-    menuBtn.addEventListener('click', function () { drawerOpen() ? closeDrawer() : openDrawer(); });
+    menuBtn.addEventListener('click', function () {
+      if (wide.matches) {
+        var off = docked();
+        if (off) root.setAttribute('data-side', 'off'); else root.removeAttribute('data-side');
+        try { localStorage.setItem('sd-side', off ? 'off' : 'on'); } catch (e) {}
+        closeDrawer(false); syncMenuBtn(); return;
+      }
+      drawerOpen() ? closeDrawer() : openDrawer();
+    });
+    if (wide.addEventListener) wide.addEventListener('change', function () { closeDrawer(false); syncMenuBtn(); });
+    syncMenuBtn();
+    var curCh = side.querySelector(".bk-cur > a");
+    if (docked() && curCh) side.scrollTop = Math.max(0, curCh.offsetTop - side.clientHeight / 3);
     side.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
-    window.matchMedia('(min-width: 1081px)').addEventListener('change', function (m) { if (m.matches) closeDrawer(false); });
-  }
-  if (side) {
-    var cur = side.querySelector('[aria-current="page"]');
-    if (cur && cur.scrollIntoView && window.matchMedia('(min-width: 1081px)').matches) {
-      var r = cur.getBoundingClientRect();
-      if (r.bottom > window.innerHeight - 40) side.scrollTop += r.top - window.innerHeight / 3;
-    }
+    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
   }
 
+  /* ---------- reading progress: a hairline under the top bar; the margin contents follow the reader ---------- */
+  var bar = doc.querySelector('.bk-progress span');
+  /* the menu's card for the page being read: how far the reader is */
+  var curBar = doc.querySelector('.bk-ch.bk-cur .bk-chp i');
+  var tocLinks = all('.bk-prose .toc ol a');
+  function onScroll() {
+    var h = doc.documentElement.scrollHeight - window.innerHeight;
+    var done = h > 0 ? Math.min(100, window.scrollY / h * 100) : 0;
+    if (bar) bar.style.width = done + '%';
+    if (curBar) curBar.style.width = done + '%';
+    root.classList.toggle('bk-scrolled', window.scrollY > 600);
+    var cur = null;
+    tocLinks.forEach(function (a) {
+      if (!a.offsetParent) return;
+      var t = doc.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
+      if (t && t.getBoundingClientRect().top < 140) cur = a;
+    });
+    tocLinks.forEach(function (a) { a.classList.toggle('bk-here', a === cur); });
+  }
+  /* a section chosen in the margin glides into place (unless the reader asked for less motion) */
+  var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  tocLinks.concat(all('.bk-totop')).forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var id = decodeURIComponent(a.getAttribute('href').slice(1)), t = doc.getElementById(id);
+      if (a.classList.contains('bk-totop')) {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: calm.matches ? 'auto' : 'smooth' });
+        history.replaceState(null, '', location.pathname + location.search);
+        return;
+      }
+      if (!t || calm.matches) return;
+      e.preventDefault();
+      t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.pushState(null, '', '#' + id);
+    });
+  });
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  doc.addEventListener('langchange', onScroll);
+
+  /* ---------- chapters read: the menu marks the pages this browser has opened ---------- */
+  var READ = 'sd-read', read = [];
+  try { read = JSON.parse(localStorage.getItem(READ) || '[]'); } catch (e) {}
+  var here = doc.querySelector('.bk-ch.bk-cur');
+  if (here) {
+    var p = here.getAttribute('data-page');
+    if (read.indexOf(p) < 0) { read.push(p); try { localStorage.setItem(READ, JSON.stringify(read)); } catch (e) {} }
+  }
+  all('.bk-ch[data-page]').forEach(function (li) { if (read.indexOf(li.getAttribute('data-page')) >= 0) li.classList.add('bk-read'); });
+
+  /* each part: chapters read out of its chapters, as a count and a hairline */
+  all('details.bk-part').forEach(function (part) {
+    var chs = all('.bk-chapters > .bk-ch:not(.bk-planned)', part), n = chs.filter(function (li) { return li.classList.contains('bk-read'); }).length;
+    var count = part.querySelector('.bk-pcount'), line = part.querySelector('.bk-pbar i');
+    if (!chs.length || !n) return;
+    part.classList.add('bk-begun');
+    if (count) count.textContent = ' · ' + n + '/' + chs.length;
+    if (line) line.style.width = (100 * n / chs.length) + '%';
+  });
+  /* ---------- source notes: a tag ([V], [I]…) opens a note in the margin, level with it ----------
+     The note says what the tag means and, when a link sits right next to the tag, which source it
+     is; otherwise it points to the page's sources. Without a margin (smaller screens) the note
+     opens under the tag. */
+  var SN = {
+    en: { src: 'Source', all: 'Sources of this page' },
+    fr: { src: 'Source', all: 'Sources de la page' }
+  };
+  var tags = all('sup.bk-src'), note = null, noteFor = null, noteTimer = null;
+  function gap(a, b) {
+    // the text between two nodes of the same parent, if they are close (", ", " (", "; ")
+    var t = '', n = a.nextSibling;
+    while (n && n !== b) { t += n.textContent; if (t.length > 4) return false; n = n.nextSibling; }
+    return n === b;
+  }
+  function sourceOf(sup) {
+    var p = sup.parentNode, links = all('a[href]', p).filter(function (a) { return !a.closest('.cx') && a.parentNode === p; });
+    for (var i = 0; i < links.length; i++) {
+      var a = links[i];
+      if (sup.compareDocumentPosition(a) & 4 ? gap(sup, a) : gap(a, sup)) return a;
+    }
+    return null;
+  }
+  function sourcesHeading(sup) {
+    var art = sup.closest('article') || doc;
+    return all('h2[id]', art).filter(function (h) { return /^\s*sources\s*$/i.test(h.textContent); })[0] || null;
+  }
+  tags.forEach(function (sup) {
+    var t = sup.getAttribute('title');
+    if (!t) return;
+    sup.setAttribute('data-t', t);
+    sup.removeAttribute('title');
+    sup.setAttribute('tabindex', '0');
+    sup.setAttribute('aria-label', t);
+  });
+  function hideNote() {
+    clearTimeout(noteTimer);
+    if (note) note.hidden = true;
+    if (noteFor) noteFor.removeAttribute('aria-describedby');
+    root.classList.remove('bk-noting');
+    noteFor = null;
+  }
+  function placeNote(sup) {
+    var art = sup.closest('article') || doc, margin = art.querySelector('.toc');
+    var r = sup.getBoundingClientRect(), vw = doc.documentElement.clientWidth;
+    var wide = margin && margin.offsetParent && getComputedStyle(margin).display !== 'none';
+    note.classList.toggle('bk-note-side', !!wide);
+    root.classList.toggle('bk-noting', !!wide);   // the margin's contents step aside for the note
+    if (wide) {
+      var m = margin.getBoundingClientRect();
+      note.style.width = m.width + 'px';
+      note.style.left = m.left + 'px';
+      note.style.top = Math.max(64, r.top - 8) + 'px';
+    } else {
+      var w = Math.min(300, vw - 24);
+      note.style.width = w + 'px';
+      note.style.left = Math.max(12, Math.min(r.left - 12, vw - w - 12)) + 'px';
+      note.style.top = (r.bottom + 6) + 'px';
+    }
+  }
+  function showNote(sup) {
+    clearTimeout(noteTimer);
+    if (!note) {
+      note = doc.createElement('div');
+      note.className = 'bk-sidenote';
+      note.id = 'bk-sidenote';
+      note.setAttribute('role', 'note');
+      note.addEventListener('mouseenter', function () { clearTimeout(noteTimer); });
+      note.addEventListener('mouseleave', function () { noteTimer = setTimeout(hideNote, 200); });
+      doc.body.appendChild(note);
+    }
+    var lang = (sup.closest('[lang]') || root).getAttribute('lang') === 'fr' ? 'fr' : 'en', t = SN[lang], sep = lang === 'fr' ? ' : ' : ': ';
+    var src = sourceOf(sup), h = '<p><b>' + sup.textContent + '</b> ' + esc(sup.getAttribute('data-t')) + '</p>';
+    if (src) {
+      var host = '';
+      try { host = new URL(src.href).hostname.replace(/^www\./, ''); } catch (e) {}
+      h += '<p>' + t.src + sep + '<a href="' + esc(src.href) + '">' + esc(src.textContent) + '</a>' +
+        (host && host !== location.hostname ? ' <span class="bk-sn-host">' + esc(host) + '</span>' : '') + '</p>';
+    } else {
+      var sh = sourcesHeading(sup);
+      if (sh) h += '<p><a href="#' + esc(sh.id) + '">' + t.all + ' ↓</a></p>';
+    }
+    note.innerHTML = h;
+    note.hidden = false;
+    if (noteFor && noteFor !== sup) noteFor.removeAttribute('aria-describedby');
+    noteFor = sup;
+    sup.setAttribute('aria-describedby', 'bk-sidenote');
+    placeNote(sup);
+  }
+  if (tags.length) {
+    doc.addEventListener('mouseover', function (e) {
+      var sup = e.target.closest && e.target.closest('sup.bk-src');
+      if (sup && sup !== noteFor) showNote(sup);
+    });
+    doc.addEventListener('mouseout', function (e) {
+      var sup = e.target.closest && e.target.closest('sup.bk-src');
+      if (sup && !(note && note.contains(e.relatedTarget))) noteTimer = setTimeout(hideNote, 250);
+    });
+    doc.addEventListener('focusin', function (e) {
+      var sup = e.target.closest && e.target.closest('sup.bk-src');
+      if (sup) showNote(sup); else if (note && !note.contains(e.target)) hideNote();
+    });
+    doc.addEventListener('click', function (e) {
+      var sup = e.target.closest && e.target.closest('sup.bk-src');
+      if (sup) { showNote(sup); return; }
+      if (note && !note.contains(e.target)) hideNote();
+    });
+    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && noteFor) { var s = noteFor; hideNote(); s.focus(); } });
+    window.addEventListener('scroll', function () { if (noteFor) placeNote(noteFor); }, { passive: true });
+    window.addEventListener('resize', function () { if (noteFor) placeNote(noteFor); });
+  }
   /* ---------- concept toggletips ---------- */
   var data = { concepts: {} };
   var dataEl = doc.getElementById('bk-data');
   if (dataEl) { try { data = JSON.parse(dataEl.textContent); } catch (e) {} }
   var T = {
-    en: { ref: 'Reference', also: 'Also cited in', related: 'Related', close: 'Close', glossary: 'Glossary entry', here: 'defined on this page' },
-    fr: { ref: 'Référence', also: 'Cité aussi dans', related: 'Voir aussi', close: 'Fermer', glossary: 'Entrée du glossaire', here: 'défini sur cette page' }
+    en: { kind: 'Glossary', other: 'in French', ref: 'Explained in', here: 'on this page', also: 'Also used in', related: 'Related terms', close: 'Close', glossary: 'Open in the glossary', back: 'Back to', more: ['more', 'more'] },
+    fr: { kind: 'Glossaire', other: 'en anglais', ref: 'Expliqué dans', here: 'sur cette page', also: 'Utilisé aussi dans', related: 'Termes liés', close: 'Fermer', glossary: 'Voir dans le glossaire', back: 'Retour à', more: ['autre', 'autres'] }
   };
+  /* the symbol a definition gives in brackets, such as (α) or (γs) */
+  var SYMBOL = /\(([^()\sa-zA-Z0-9]{1,2}[a-z0-9]{0,2})\)/;
   var pop = doc.createElement('div');
   pop.className = 'bk-pop';
   pop.id = 'bk-pop';
@@ -152,31 +342,57 @@
     var h = isLocalPage(href) ? withLang(href, window.courseLang || 'en') : href;
     return '<a href="' + esc(h) + '">' + text + '</a>';
   }
-  function fill(id) {
+  var trail = [];  // the concepts the reader came from, through related terms
+  function fill(id, from) {
     var c = data.concepts[id];
     if (!c) return false;
     var l = window.courseLang === 'fr' ? 'fr' : 'en', t = T[l];
     var other = l === 'fr' ? c.t.en : c.t.fr;
-    var sep = l === 'fr' ? ' : ' : ': ';
-    var h = '<button type="button" class="bk-close" aria-label="' + t.close + '">×</button>' +
-      '<h2 id="bk-pop-t">' + esc(L(c.t)) + (other && other !== L(c.t) ? ' <small style="font-weight:500;color:var(--muted)">' + esc(other) + '</small>' : '') + '</h2>' +
-      '<p id="bk-pop-d">' + L(c.d) + '</p>';
+    if (from === undefined) trail = []; else if (from) trail.push(from);
+    var def = L(c.d), sym = def.replace(/<[^>]+>/g, '').match(SYMBOL);
+    var h = '<button type="button" class="bk-close" aria-label="' + t.close + '">×</button>';
+    if (trail.length) {
+      var prev = data.concepts[trail[trail.length - 1]];
+      h += '<button type="button" class="bk-back">← ' + t.back + ' ' + esc(L(prev.t)) + '</button>';
+    }
+    h += '<p class="bk-pop-kind">' + t.kind + '</p>' +
+      '<h2 id="bk-pop-t">' + esc(L(c.t)) + (sym ? ' <span class="bk-sym">' + esc(sym[1]) + '</span>' : '') + '</h2>' +
+      (other && other !== L(c.t) ? '<p class="bk-pop-other">' + t.other + ' · <i>' + esc(other) + '</i></p>' : '') +
+      '<p class="bk-pop-def" id="bk-pop-d">' + def + '</p>';
     if (c.ref) {
-      h += '<p class="bk-ref">' + t.ref + sep +
-        (c.ref.here ? link(c.ref.href, esc(L(c.ref.title))) + ' <span class="bk-st" style="margin:0">' + t.here + '</span>'
-                    : link(c.ref.href, esc(L(c.ref.title)))) + '</p>';
+      h += '<a class="bk-pop-ref" href="' + esc(isLocalPage(c.ref.href) ? withLang(c.ref.href, l) : c.ref.href) + '">' +
+        '<span class="bk-pop-lbl">' + t.ref + (c.ref.here ? ' · ' + t.here : '') + '</span>' +
+        '<span class="bk-pop-where">' + esc(L(c.ref.title)) + '</span><span class="bk-pop-go" aria-hidden="true">' + (c.ref.here ? '↓' : '→') + '</span></a>';
+    }
+    var rel = c.rel || [];
+    if (rel.length) {
+      h += '<p class="bk-pop-lbl">' + t.related + '</p><div class="bk-chips">' + rel.map(function (r) {
+        var d = data.concepts[r.id];
+        return d ? '<button type="button" class="bk-chip" data-go="' + esc(r.id) + '" title="' + esc(L(d.d).replace(/<[^>]+>/g, '')) + '">' + esc(L(r.t)) + '</button>'
+                 : link(r.href, esc(L(r.t))).replace('<a ', '<a class="bk-chip" ');
+      }).join('') + '</div>';
     }
     if (c.cited && c.cited.length) {
-      h += '<div class="bk-also">' + t.also + '<ul>' + c.cited.slice(0, 6).map(function (p) { return '<li>' + link(p.href, esc(L(p.title))) + '</li>'; }).join('') +
-        (c.cited.length > 6 ? '<li>' + link(c.gloss, (l === 'fr' ? 'et ' : 'and ') + (c.cited.length - 6) + (l === 'fr' ? ' autres' : ' more')) + '</li>' : '') + '</ul></div>';
+      h += '<p class="bk-pop-lbl">' + t.also + '</p><ul class="bk-pop-cited">' + c.cited.slice(0, 4).map(function (p) { return '<li>' + link(p.href, esc(L(p.title))) + '</li>'; }).join('') +
+        (c.cited.length > 4 ? '<li>' + link(c.gloss, '+ ' + (c.cited.length - 4) + ' ' + t.more[c.cited.length - 4 > 1 ? 1 : 0]) + '</li>' : '') + '</ul>';
     }
-    var rel = (c.rel || []).map(function (r) { return link(r.href, esc(L(r.t))); });
-    if (rel.length) h += '<p class="bk-also">' + t.related + sep + rel.join(', ') + '</p>';
-    if (c.gloss) h += '<p class="bk-hint">' + link(c.gloss, t.glossary) + '</p>';
+    if (c.gloss) h += '<p class="bk-pop-foot">' + link(c.gloss, t.glossary + ' →') + '</p>';
     pop.innerHTML = h;
     pop.setAttribute('aria-labelledby', 'bk-pop-t');
     pop.querySelector('.bk-close').addEventListener('click', function () { closePop(true); });
+    var back = pop.querySelector('.bk-back');
+    if (back) back.addEventListener('click', function (e) { e.stopPropagation(); jump(trail.pop(), null); });
+    all('.bk-chip[data-go]', pop).forEach(function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); jump(b.getAttribute('data-go'), id); });
+    });
     return true;
+  }
+  function jump(id, from) {
+    fill(id, from);
+    pinned = true;
+    if (owner) place(owner);
+    var f = pop.querySelector('.bk-back') || pop.querySelector('.bk-close');
+    if (f) f.focus();
   }
   function place(m) {
     var rects = m.getClientRects(), r = rects.length ? rects[0] : m.getBoundingClientRect();
@@ -489,40 +705,62 @@
     box.querySelector('.bk-lb-close').focus();
   });
 
-  /* ---------- search: the index is embedded in the search page (and encrypted with it) ---------- */
-  var sIndexEl = doc.getElementById('bk-search-index');
-  var sInput = doc.getElementById('bk-search-q');
-  if (sIndexEl && sInput) {
-    var sIndex = [];
-    try { sIndex = JSON.parse(sIndexEl.textContent); } catch (e) {}
-    var sList = doc.querySelector('.bk-search-results'), sCount = doc.querySelector('.bk-search-n');
-    var sHere = location.pathname.replace(/[^/]*$/, '');
-    var fold = function (s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
-    var folded = sIndex.map(function (e) { return fold(e[3] + ' ' + e[4] + ' ' + e[5]); });
-    var sEsc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-    var snippet = function (text, word) {
-      var i = fold(text).indexOf(word), from = Math.max(0, i - 80);
-      var s = (from ? '…' : '') + text.slice(from, from + 220) + (from + 220 < text.length ? '…' : '');
-      return sEsc(s).replace(new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<mark>$1</mark>');
-    };
-    var runSearch = function () {
-      var q = fold(sInput.value.trim()), lang = window.courseLang === 'fr' ? 'fr' : 'en';
-      var words = q.split(/\s+/).filter(function (w) { return w.length > 1; });
-      sList.innerHTML = '';
-      if (!words.length) { sCount.textContent = ''; return; }
+  /* ---------- search: the index is embedded in the search page (and encrypted with it) ----------
+     Entries are [lang, path from the site's root, anchor, page title, section title, text]. The
+     search page searches its own index; every other page opens a floating bar (the search button,
+     Ctrl+K or "/") that reads the index from the search page, loaded once in a hidden frame:
+     on the published site that frame is decrypted like any page the reader opens. */
+  var sEsc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var fold = function (s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
+  var sWords = function (q) { return fold(q.trim()).split(/\s+/).filter(function (w) { return w.length > 1; }); };
+  /* a piece of text around the first word, every word marked (accents ignored) */
+  var snippet = function (text, words, n) {
+    n = n || 220;
+    var f = fold(text), i = Math.max(0, f.indexOf(words[0])), from = Math.max(0, i - Math.round(n / 3)), to = Math.min(text.length, from + n);
+    var marks = [];
+    words.forEach(function (w) { for (var j = f.indexOf(w, from); j >= 0 && j < to; j = f.indexOf(w, j + w.length)) marks.push([j, Math.min(to, j + w.length)]); });
+    marks.sort(function (a, b) { return a[0] - b[0]; });
+    var out = from ? '…' : '', at = from;
+    marks.forEach(function (m) { if (m[0] < at) return; out += sEsc(text.slice(at, m[0])) + '<mark>' + sEsc(text.slice(m[0], m[1])) + '</mark>'; at = m[1]; });
+    return out + sEsc(text.slice(at, to)) + (to < text.length ? '…' : '');
+  };
+  function searchIndex(index) {
+    var folded = index.map(function (e) { return fold(e[3] + ' ' + e[4] + ' ' + e[5]); });
+    return function (words, lang) {
       var hits = [];
-      sIndex.forEach(function (e, i) {
-        if (e[0] !== lang) return;
-        if (!words.every(function (w) { return folded[i].indexOf(w) >= 0; })) return;
-        var titles = fold(e[3] + ' ' + e[4]);
-        hits.push({ e: e, score: words.filter(function (w) { return titles.indexOf(w) >= 0; }).length });
+      index.forEach(function (e, i) {
+        if (e[0] !== lang || !words.every(function (w) { return folded[i].indexOf(w) >= 0; })) return;
+        var page = fold(e[3]), sec = fold(e[4]);
+        var score = words.reduce(function (s, w) { return s + (page.indexOf(w) >= 0 ? 3 : 0) + (sec.indexOf(w) >= 0 ? 2 : 0); }, 0) + (e[2] ? 0 : 1);
+        hits.push({ e: e, score: score });
       });
       hits.sort(function (a, b) { return b.score - a.score; });
+      return hits;
+    };
+  }
+  var sRoot = (function () {
+    var a = doc.querySelector('.bk-title');
+    return a ? new URL(a.getAttribute('href'), location.href).href.replace(/index\.html$/, '') : '';
+  })();
+  var embedded = window.top !== window;
+
+  var sIndexEl = doc.getElementById('bk-search-index');
+  var sInput = doc.getElementById('bk-search-q');
+  if (sIndexEl && sInput && !embedded) {
+    var pageIndex = [];
+    try { pageIndex = JSON.parse(sIndexEl.textContent); } catch (e) {}
+    var pageFind = searchIndex(pageIndex);
+    var sList = doc.querySelector('.bk-search-results'), sCount = doc.querySelector('.bk-search-n');
+    var runSearch = function () {
+      var lang = window.courseLang === 'fr' ? 'fr' : 'en', words = sWords(sInput.value);
+      sList.innerHTML = '';
+      if (!words.length) { sCount.textContent = ''; return; }
+      var hits = pageFind(words, lang);
       sCount.textContent = hits.length + (lang === 'fr' ? ' résultat' + (hits.length > 1 ? 's' : '') : ' result' + (hits.length > 1 ? 's' : ''));
       hits.slice(0, 60).forEach(function (h) {
-        var e = h.e, href = sHere.replace(/appendix\/$/, '') + e[1] + '?lang=' + lang + (e[2] ? '#' + e[2] : '');
+        var e = h.e, href = sRoot + e[1] + '?lang=' + lang + (e[2] ? '#' + e[2] : '');
         var li = doc.createElement('li');
-        li.innerHTML = '<a href="' + sEsc(href) + '">' + sEsc(e[3]) + (e[4] ? ' · ' + sEsc(e[4]) : '') + '</a><p>' + snippet(e[5] || e[4], words[0]) + '</p>';
+        li.innerHTML = '<a href="' + sEsc(href) + '">' + sEsc(e[3]) + (e[4] ? ' · ' + sEsc(e[4]) : '') + '</a><p>' + snippet(e[5] || e[4], words) + '</p>';
         sList.appendChild(li);
       });
     };
@@ -532,6 +770,129 @@
     setTimeout(function () { sInput.focus(); runSearch(); }, 0);
   }
 
+  /* ---------- the floating search bar ---------- */
+  var ST = {
+    en: { ph: 'Search the book', loading: 'Loading the index…', none: 'Nothing found for', hint: 'Type a word: a term, a rule, a market, a file name.', all: 'All results on the search page', nav: 'to move', open: 'to open', close: 'to close', fail: 'The index could not be loaded here.' },
+    fr: { ph: 'Chercher dans le livre', loading: 'Chargement de l’index…', none: 'Rien trouvé pour', hint: 'Tapez un mot : un terme, une règle, un marché, un nom de fichier.', all: 'Tous les résultats sur la page de recherche', nav: 'pour naviguer', open: 'pour ouvrir', close: 'pour fermer', fail: 'L’index n’a pas pu être chargé ici.' }
+  };
+  var palette = null, pInput, pList, pFoot, pFind = null, pLoading = false, pFail = false, pSel = 0, pHits = [], pBack = null;
+  function pT() { return ST[window.courseLang === 'fr' ? 'fr' : 'en']; }
+  function loadIndex(done) {
+    if (pFind) return done();
+    if (sIndexEl) { try { pFind = searchIndex(JSON.parse(sIndexEl.textContent)); } catch (e) {} return done(); }
+    if (pLoading) return;
+    pLoading = true;
+    var frame = doc.createElement('iframe'), tries = 0;
+    frame.src = sRoot + 'appendix/search.html';
+    frame.setAttribute('aria-hidden', 'true');
+    frame.tabIndex = -1;
+    frame.style.cssText = 'position:absolute;width:1px;height:1px;border:0;left:-9999px;top:0;visibility:hidden';
+    doc.body.appendChild(frame);
+    (function poll() {
+      var el = null;
+      try { el = frame.contentDocument && frame.contentDocument.getElementById('bk-search-index'); } catch (e) {}
+      if (el) {
+        try { pFind = searchIndex(JSON.parse(el.textContent)); } catch (e) {}
+        pLoading = false; frame.remove(); return done();
+      }
+      if (++tries > 100) { pLoading = false; frame.remove(); pFail = true; return done(); }
+      setTimeout(poll, 150);
+    })();
+  }
+  function buildPalette() {
+    palette = doc.createElement('div');
+    palette.className = 'bk-palette';
+    palette.hidden = true;
+    palette.innerHTML = '<div class="bk-palette-box" role="dialog" aria-modal="true" aria-label="Search">' +
+      '<div class="bk-palette-field">' + (doc.querySelector('.bk-find svg') ? doc.querySelector('.bk-find svg').outerHTML : '') +
+      '<input type="search" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="bk-palette-list" aria-autocomplete="list">' +
+      '<kbd>esc</kbd></div><ul class="bk-palette-list" id="bk-palette-list" role="listbox"></ul><div class="bk-palette-foot"></div></div>';
+    doc.body.appendChild(palette);
+    pInput = palette.querySelector('input');
+    pList = palette.querySelector('.bk-palette-list');
+    pFoot = palette.querySelector('.bk-palette-foot');
+    palette.addEventListener('mousedown', function (e) { if (e.target === palette) closePalette(); });
+    pInput.addEventListener('input', function () { pSel = 0; renderPalette(); });
+    pInput.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (pHits.length) { pSel = (pSel + (e.key === 'ArrowDown' ? 1 : pHits.length - 1)) % pHits.length; markSel(); }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        var a = pList.querySelector('[aria-selected="true"] a');
+        if (a) location.href = a.href; else if (pInput.value.trim()) location.href = allHref();
+      } else if (e.key === 'Escape') { e.preventDefault(); closePalette(); }
+      else if (e.key === 'Tab') e.preventDefault();
+    });
+    pList.addEventListener('mousemove', function (e) {
+      var li = e.target.closest('li[data-i]');
+      if (li && +li.getAttribute('data-i') !== pSel) { pSel = +li.getAttribute('data-i'); markSel(); }
+    });
+  }
+  function allHref() { return sRoot + 'appendix/search.html?q=' + encodeURIComponent(pInput.value.trim()) + '&lang=' + (window.courseLang === 'fr' ? 'fr' : 'en'); }
+  function markSel() {
+    all('li[data-i]', pList).forEach(function (li) {
+      var on = +li.getAttribute('data-i') === pSel;
+      li.setAttribute('aria-selected', String(on));
+      if (on) { pInput.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+    });
+  }
+  function renderPalette() {
+    var t = pT(), lang = window.courseLang === 'fr' ? 'fr' : 'en', q = pInput.value.trim(), words = sWords(q);
+    pInput.placeholder = t.ph;
+    pHits = [];
+    pFoot.innerHTML = '<span><kbd>↑</kbd><kbd>↓</kbd> ' + t.nav + '</span><span><kbd>↵</kbd> ' + t.open + '</span><span><kbd>esc</kbd> ' + t.close + '</span>';
+    if (!words.length) { pList.innerHTML = '<li class="bk-palette-note">' + t.hint + '</li>'; return; }
+    if (!pFind) {
+      pList.innerHTML = '<li class="bk-palette-note">' + (pFail ? t.fail + ' <a href="' + sEsc(allHref()) + '">' + t.all + ' →</a>' : t.loading) + '</li>';
+      return;
+    }
+    var hits = pFind(words, lang);
+    pHits = hits.slice(0, 8);
+    if (!pHits.length) { pList.innerHTML = '<li class="bk-palette-note">' + t.none + ' « ' + sEsc(q) + ' ».</li>'; return; }
+    pList.innerHTML = pHits.map(function (h, i) {
+      var e = h.e, href = sRoot + e[1] + '?lang=' + lang + (e[2] ? '#' + e[2] : '');
+      return '<li role="option" id="bk-pal-' + i + '" data-i="' + i + '"><a href="' + sEsc(href) + '" tabindex="-1">' +
+        '<span class="bk-pal-t">' + (e[4] ? '<span class="bk-pal-p">' + sEsc(e[3]) + '</span><span class="bk-pal-s">' + sEsc(e[4]) + '</span>' : '<span class="bk-pal-s">' + sEsc(e[3]) + '</span>') + '</span>' +
+        (e[5] ? '<span class="bk-pal-x">' + snippet(e[5], words, 140) + '</span>' : '') + '</a></li>';
+    }).join('') + (hits.length > pHits.length
+      ? '<li class="bk-palette-more"><a href="' + sEsc(allHref()) + '">' + t.all + ' (' + hits.length + ') →</a></li>' : '');
+    markSel();
+  }
+  function openPalette(q) {
+    if (sInput && !embedded) { sInput.focus(); sInput.select(); return; }
+    if (!palette) buildPalette();
+    pBack = doc.activeElement;
+    palette.hidden = false;
+    root.classList.add('bk-palette-open');
+    if (typeof q === 'string') pInput.value = q;
+    pSel = 0;
+    renderPalette();
+    pInput.focus();
+    pInput.select();
+    loadIndex(function () { if (!palette.hidden) renderPalette(); });
+  }
+  function closePalette() {
+    if (!palette || palette.hidden) return;
+    palette.hidden = true;
+    root.classList.remove('bk-palette-open');
+    if (pBack && pBack.focus) pBack.focus();
+  }
+  if (!embedded) {
+    all('.bk-find').forEach(function (a) { a.addEventListener('click', function (e) { if (sInput) return; e.preventDefault(); openPalette(); }); });
+    all('.bk-toc-find').forEach(function (f) {
+      var i = f.querySelector('input');
+      var go = function (e) { if (e) e.preventDefault(); var q = i ? i.value : ''; if (i) { i.value = ''; i.blur(); } closeDrawer(false); openPalette(q); };
+      f.addEventListener('submit', go);
+      if (i) i.addEventListener('focus', function () { go(); });
+    });
+    doc.addEventListener('keydown', function (e) {
+      var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+      if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); palette && !palette.hidden ? closePalette() : openPalette(); }
+      else if (e.key === '/' && !typing && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); openPalette(); }
+    });
+    doc.addEventListener('langchange', function () { if (palette && !palette.hidden) renderPalette(); });
+  }
   /* ---------- start ---------- */
   all('.bk-lang button').forEach(function (b) { b.addEventListener('click', function () { apply(b.getAttribute('data-set')); }); });
   var fromUrl = new URLSearchParams(location.search).get('lang');
