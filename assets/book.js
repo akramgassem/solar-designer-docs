@@ -1093,19 +1093,39 @@
     for (var h = 0; h < 24; h++) { var x = (x0 + h / 23 * w).toFixed(1), y = (base - arr[h] / max * hgt).toFixed(1); s += (h || close ? 'L' : 'M') + x + ' ' + y + ' '; }
     return close ? s + 'L' + (x0 + w) + ' ' + base + ' Z' : s;
   };
-  // icons: a line path and a 14 % fill, 1.25 stroke on a 24 grid
+  // the 28 editor icons from tools/figures/editor_icons.py (24-unit grid, 1.5 stroke, .dot solid marks, .dash dashed lines), plus household funnel icons
+  FN.ED_ICON = {
+    select: '<path d="M6 3.5v15.5l4.2-4 2.8 6 2.6-1.2-2.8-5.9 5.7-.2z"/>',
+    vertex: '<path d="M5.5 17.5 9 6.5l9.5 4"/><rect x="3.5" y="15.5" width="4" height="4" rx=".5"/><rect x="7" y="4.5" width="4" height="4" rx=".5"/><rect x="16.5" y="8.5" width="4" height="4" rx=".5" fill="currentColor" stroke="none"/>',
+    trace: '<path d="M4.5 19 8.5 8.5l7 4.5 4-8.5"/><circle cx="4.5" cy="19" r="1.75"/><circle cx="8.5" cy="8.5" r="1.75"/><circle cx="15.5" cy="13" r="1.75"/><circle cx="19.5" cy="4.5" r="2" fill="currentColor" stroke="none"/>',
+    rect3: '<path d="M4 13.5 12.5 5l6.5 6.5"/><path d="M19 11.5 10.5 20 4 13.5" stroke-dasharray="2 2.5"/><circle cx="4" cy="13.5" r="1.75" fill="currentColor" stroke="none"/><circle cx="12.5" cy="5" r="1.75" fill="currentColor" stroke="none"/><circle cx="19" cy="11.5" r="1.75" fill="currentColor" stroke="none"/>',
+    fill: '<rect x="3.5" y="3.5" width="17" height="17" rx="1"/><rect x="6.5" y="6.5" width="4.75" height="4.75" rx=".5"/><rect x="12.75" y="6.5" width="4.75" height="4.75" rx=".5"/><rect x="6.5" y="12.75" width="4.75" height="4.75" rx=".5"/><path d="M15.1 13v4.2M13 15.1h4.2"/>',
+    panel: '<rect x="5.5" y="3" width="13" height="18" rx="1"/><path d="M5.5 9h13M5.5 15h13M12 3v18"/>',
+    snap: '<path d="M5 3.5h4.5V12a2.5 2.5 0 0 0 5 0V3.5H19V12a7 7 0 0 1-14 0z"/><path d="M5 7.5h4.5M14.5 7.5H19"/>',
+    dyninput: '<path d="M3.5 20.5 11 13"/><circle cx="3.5" cy="20.5" r="1.5"/><rect x="11.5" y="3.5" width="9" height="7" rx="1"/><path d="M14.5 5.5v3"/>',
+    chimney: '<path d="M2.5 19.5 12 11l9.5 8.5"/><path d="M14.5 13.2V5.5h4v11.3"/><path d="M13.5 5.5h6"/>',
+    skylight: '<rect x="4.5" y="3.5" width="15" height="17" rx="1"/><rect x="7.5" y="6.5" width="9" height="11" rx=".5"/><path d="m9.5 14 5-5"/>',
+    antenna: '<path d="M12 21V5M6.5 5h11M8 8.5h8M9.5 12h5M9 21h6"/>',
+    box: '<path d="M4 9.5h11v11H4z"/><path d="M4 9.5 8.5 5h11v11L15 20.5M15 9.5 19.5 5"/>',
+    cylinder: '<ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v11a7 3 0 0 0 14 0v-11"/>',
+    prism: '<path d="M4 9 12 3.5 20 9l-3 11.5H7z"/><path d="M12 3.5v6.5L7 20.5M12 10l5 10.5" stroke-width="1"/>',
+    height: '<path d="M12 18V4.5M8.5 8 12 4.5 15.5 8"/><path d="M4.5 20.5h15"/>',
+    pan: '<path d="M8.5 13V6.5a1.5 1.5 0 0 1 3 0v4.5M11.5 10.5V4.5a1.5 1.5 0 0 1 3 0v6M14.5 10.5V6.5a1.5 1.5 0 0 1 3 0v6.5a7.5 7.5 0 0 1-7.5 7.5 6.5 6.5 0 0 1-5.4-2.9L3.6 15a1.6 1.6 0 0 1 2.6-1.9L8.5 15"/>',
+    zoom: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.3 15.3 5.2 5.2M10.5 8v5M8 10.5h5"/>',
+    fit: '<path d="M3.5 8.5v-5h5M15.5 3.5h5v5M20.5 15.5v5h-5M8.5 20.5h-5v-5"/><rect x="8" y="9" width="8" height="6" rx=".5"/>',
+    north: '<circle cx="12" cy="12" r="8.5"/><path d="M12 5.5 14.2 12 12 18.5 9.8 12z"/><path d="M12 5.5 14.2 12H9.8z" fill="currentColor" stroke="none"/>',
+    dimension: '<path d="M4 6v12M20 6v12M4 12h16"/><path d="M7 9.5 4.5 12 7 14.5M17 9.5l2.5 2.5-2.5 2.5"/>',
+    note: '<path d="M12 21s-6.5-5.9-6.5-11a6.5 6.5 0 0 1 13 0c0 5.1-6.5 11-6.5 11z"/><path d="M9.5 8.5h5M9.5 11.5h3.5"/>',
+    photo: '<rect x="3" y="7" width="18" height="12.5" rx="1.5"/><path d="m8.5 7 1.5-2.5h4L15.5 7"/><circle cx="12" cy="13.25" r="3.25"/>',
+    measure: '<path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="m7 12.5 2 2M10 9.5l2 2M13 6.5l2 2"/>',
+    layers: '<path d="M12 3.5 20.5 8 12 12.5 3.5 8z"/><path d="M3.5 12 12 16.5 20.5 12M3.5 16 12 20.5l8.5-4.5"/>',
+    eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+    undo: '<path d="M9 4.5 4.5 9 9 13.5"/><path d="M4.5 9H14a5.5 5.5 0 0 1 0 11h-3"/>',
+    redo: '<path d="m15 4.5 4.5 4.5-4.5 4.5"/><path d="M19.5 9H10a5.5 5.5 0 0 0 0 11h3"/>',
+    delete: '<path d="M4.5 6.5h15M9.5 6.5v-2h5v2M6.5 6.5l1 14h9l1-14M10 10.5v6.5M14 10.5v6.5"/>'
+  };
+  // household funnel icons: a line path and a 14 % fill, 1.25 stroke on a 24 grid
   FN.ICON = {
-    select: ['M6.5 3.5l10.5 7-4.6 1.2 2.6 5.4-2 .9-2.6-5.4-3.9 3z', 'M6.5 3.5l10.5 7-4.6 1.2-2.6.9-3.9 3z'],
-    trace: ['M5 18.5l3.5-10 6.5 5 4-8', 'M5 18.5l3.5-10 6.5 5z'],
-    rect3: ['M5 15.5l9-9 5 5-9 9z', 'M5 15.5l9-9 5 5-9 9z'],
-    fill: ['M3.5 18.5h17l-4-12h-9zM8.8 10.5h6.4M7.5 14.5h9M10.5 6.5l-1 12M13.5 6.5l1 12', 'M3.5 18.5h17l-4-12h-9z'],
-    panel: ['M7 3.5h10v17H7zM7 9.2h10M7 14.8h10M12 3.5v17', 'M7 3.5h10v17H7z'],
-    chimney: ['M3 19.5l9-6.5 9 6.5M14.5 7.5h3v8.2M14.5 7.5v6.3M13.8 7.5h4.4', 'M14.5 7.5h3v8.2l-3-2.2z'],
-    measure: ['M4 16.5L16.5 4 20 7.5 7.5 20zM8 12.5l1.6 1.6M10.5 10l1 1M13 7.5l1.6 1.6', 'M4 16.5L16.5 4 20 7.5 7.5 20z'],
-    dimension: ['M4.5 7v10M19.5 7v10M4.5 12h15M7.5 10l-3 2 3 2M16.5 10l3 2-3 2', 'M4.5 9.5h15v5h-15z'],
-    note: ['M5.5 4.5h13v11l-4 4h-9zM14.5 19.5v-4h4M8.5 9h7M8.5 12.5h4', 'M5.5 4.5h13v11l-4 4h-9z'],
-    photo: ['M3.5 8h4l1.8-2.5h5.4L16.5 8h4v11h-17zM12 16.5a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z', 'M3.5 8h17v11h-17z'],
-    layers: ['M12 4.5l8.5 4.5-8.5 4.5L3.5 9zM3.5 13l8.5 4.5 8.5-4.5', 'M12 4.5l8.5 4.5-8.5 4.5L3.5 9z'],
     confirm: ['M5 12.5l4.5 4.5L19 7.5', 'M5 12.5l4.5 4.5L19 7.5z'],
     meter: ['M4.5 16a7.5 7.5 0 1 1 15 0M12 16l3.5-4.5M4.5 16h15M7 19.5h10', 'M4.5 16a7.5 7.5 0 1 1 15 0z'],
     bill: ['M6.5 3.5h8l3 3v14h-11zM14.5 3.5v3h3M9 10h6M9 13h6M9 16h4', 'M6.5 3.5h8l3 3v14h-11z'],
@@ -1131,9 +1151,13 @@
     pump: ['M4 9.5h10v8H4zM14 12h4v3h-4M18 13.5h2.5M9 9.5V6M7 6h4', 'M4 9.5h10v8H4z'],
     pv: ['M3.5 17l4-11h13l-4 11zM5.7 11.5h13M11 6l-4 11M15.5 6l-4 11', 'M3.5 17l4-11h13l-4 11z']
   };
-  FN.icon = function (k, color) {
-    var i = FN.ICON[k] || FN.ICON.select;
-    return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="color:' + (color || 'currentColor') + '"><path d="' + i[1] + '" fill="currentColor" opacity="0.14"></path><path d="' + i[0] + '" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+  FN.icon = function (k, color, sz) {
+    var s = sz || 24;
+    if (FN.ED_ICON[k]) {
+      return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" aria-hidden="true" style="color:' + (color || 'currentColor') + ';flex-shrink:0"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + FN.ED_ICON[k] + '</g></svg>';
+    }
+    var i = FN.ICON[k] || FN.ICON.confirm;
+    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" aria-hidden="true" style="color:' + (color || 'currentColor') + ';flex-shrink:0"><path d="' + i[1] + '" fill="currentColor" opacity="0.14"></path><path d="' + i[0] + '" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
   };
   FN.SUN = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="var(--c-sun)"></circle><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="var(--c-sun)" stroke-width="1.25" stroke-linecap="round"></path></svg>';
 
@@ -1151,88 +1175,409 @@
   };
 
   /* the 3D house, shared by the household's next move and the studio's 3D card */
+  FN.threeWait = [];
+  FN.loadThree = function (done) {
+    if (window.THREE) { done(); return; }
+    FN.threeWait.push(done);
+    if (FN.threeWait.length > 1) return;
+    loadScript('vendor/three-0.186.1.min.js', function () {
+      var w = FN.threeWait.slice(); FN.threeWait = [];
+      w.forEach(function (f) { f(); });
+    });
+  };
+  FN.panelTex = function (T, shaded) {
+    var cv = doc.createElement('canvas'); cv.width = 128; cv.height = 192;
+    var c = cv.getContext('2d'), g = c.createLinearGradient(0, 0, 128, 192);
+    g.addColorStop(0, shaded ? '#323E4B' : '#1A2736');
+    g.addColorStop(0.55, shaded ? '#3B4856' : '#233447');
+    g.addColorStop(1, shaded ? '#2B3642' : '#16212E');
+    c.fillStyle = g; c.fillRect(0, 0, 128, 192);
+    c.strokeStyle = shaded ? 'rgba(180,195,210,0.18)' : 'rgba(140,175,210,0.22)'; c.lineWidth = 1;
+    var i;
+    for (i = 1; i < 6; i++) { var x = Math.round(i * 128 / 6) + 0.5; c.beginPath(); c.moveTo(x, 4); c.lineTo(x, 188); c.stroke(); }
+    for (i = 1; i < 12; i++) { var y = Math.round(i * 192 / 12) + 0.5; c.beginPath(); c.moveTo(4, y); c.lineTo(124, y); c.stroke(); }
+    c.strokeStyle = shaded ? 'rgba(200,212,224,0.28)' : 'rgba(175,205,235,0.34)'; c.lineWidth = 1.6;
+    c.beginPath(); c.moveTo(4, 96); c.lineTo(124, 96); c.stroke();
+    var tx = new T.CanvasTexture(cv); tx.colorSpace = T.SRGBColorSpace;
+    return tx;
+  };
+  FN.groundAlphaTex = function (T) {
+    var cv = doc.createElement('canvas'); cv.width = 256; cv.height = 256;
+    var c = cv.getContext('2d'), g = c.createRadialGradient(128, 128, 56, 128, 128, 126);
+    g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.45, '#E6E6E6'); g.addColorStop(0.78, '#666666'); g.addColorStop(1, '#000000');
+    c.fillStyle = '#000000'; c.fillRect(0, 0, 256, 256);
+    c.fillStyle = g; c.fillRect(0, 0, 256, 256);
+    return new T.CanvasTexture(cv);
+  };
+  FN.contactAoTex = function (T) {
+    var cv = doc.createElement('canvas'); cv.width = 256; cv.height = 256;
+    var c = cv.getContext('2d'), px = function (x) { return (x + 20) / 40 * 256; }, pz = function (z) { return (z + 16) / 32 * 256; };
+    // Multi-pass soft rect for house base + roof overhang ambient occlusion
+    var i, pad, a;
+    for (i = 0; i < 8; i++) {
+      pad = (8 - i) * 0.22; a = 0.026;
+      c.fillStyle = 'rgba(29,32,38,' + a + ')';
+      c.fillRect(px(-7.6 - pad), pz(-5.1 - pad), (15.2 + pad * 2) / 40 * 256, (10.2 + pad * 2) / 32 * 256);
+    }
+    // Soft radial contact shadow under the tree (-12, -9)
+    var tx = px(-12), tz = pz(-9), tr = 2.8 / 40 * 256, tg = c.createRadialGradient(tx, tz, 1, tx, tz, tr);
+    tg.addColorStop(0, 'rgba(29,32,38,0.22)'); tg.addColorStop(0.55, 'rgba(29,32,38,0.10)'); tg.addColorStop(1, 'rgba(29,32,38,0)');
+    c.fillStyle = tg; c.beginPath(); c.arc(tx, tz, tr, 0, Math.PI * 2); c.fill();
+    var tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace;
+    return tex;
+  };
   FN.three = function (canvas, done) {
     var go = function () {
       var T = window.THREE, r = new T.WebGLRenderer({ canvas: canvas, antialias: true });
-      r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap; r.outputEncoding = T.sRGBEncoding;
+      r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
+      r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.NeutralToneMapping; r.toneMappingExposure = 1.02;
       var C = FN.tokens(), sc = new T.Scene(); sc.background = new T.Color(C.sky);
       var mat = function (c, o) { var m = { color: c, roughness: 0.85 }; for (var k in (o || {})) m[k] = o[k]; return new T.MeshStandardMaterial(m); };
-      var gnd = new T.Mesh(new T.PlaneGeometry(80, 80), mat(C.earth)); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; sc.add(gnd);
-      var drive = new T.Mesh(new T.PlaneGeometry(6, 14), mat(C.drive)); drive.rotation.x = -Math.PI / 2; drive.position.set(11, 0.01, 4); drive.receiveShadow = true; sc.add(drive);
-      var walls = new T.Mesh(new T.BoxGeometry(15, 3, 10), mat(C.walls)); walls.position.y = 1.5; walls.castShadow = true; walls.receiveShadow = true; sc.add(walls);
-      var ry = 3 + 5 * Math.tan(22 * Math.PI / 180), v = [[-7.5, 3, -5], [7.5, 3, -5], [3.75, ry, 0], [-3.75, ry, 0], [-7.5, 3, 5], [7.5, 3, 5]];
-      var tri = function (a, b, d) { return v[a].concat(v[b], v[d]); };
-      var g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute([].concat(tri(0, 2, 1), tri(0, 3, 2), tri(4, 5, 2), tri(4, 2, 3), tri(0, 4, 3), tri(1, 2, 5)), 3)); g.computeVertexNormals();
-      var roof = new T.Mesh(g, mat(C.roof3, { side: T.DoubleSide })); roof.castShadow = true; roof.receiveShadow = true; sc.add(roof);
-      var trunk = new T.Mesh(new T.CylinderGeometry(0.25, 0.35, 3, 8), mat('#6B5543')); trunk.position.set(-12, 1.5, -9); trunk.castShadow = true; sc.add(trunk);
-      var crown = new T.Mesh(new T.SphereGeometry(2.6, 16, 12), mat('#7A9374')); crown.position.set(-12, 4.6, -9); crown.castShadow = true; sc.add(crown);
-      var bat = new T.Mesh(new T.BoxGeometry(0.25, 1.1, 0.75), mat('#5B5F97')); bat.position.set(7.65, 0.8, 2.2); bat.castShadow = true; sc.add(bat);
-      var car = new T.Group(), body = new T.Mesh(new T.BoxGeometry(1.8, 0.8, 4.4), mat('#6E737B', { roughness: 0.4, metalness: 0.4 })), cab = new T.Mesh(new T.BoxGeometry(1.6, 0.6, 2.2), mat('#4A4F57', { roughness: 0.3 }));
-      body.position.y = 0.6; cab.position.set(0, 1.25, -0.2); car.add(body); car.add(cab); car.position.set(11, 0, 5); car.traverse(function (o) { o.castShadow = true; }); sc.add(car);
-      var hp = new T.Mesh(new T.BoxGeometry(0.9, 0.8, 0.4), mat('#CFC9BE')); hp.position.set(-7.9, 0.4, 1.5); hp.castShadow = true; sc.add(hp);
-      var chim = new T.Mesh(new T.BoxGeometry(0.6, 1, 0.6), mat('#8C7462')); chim.castShadow = true; sc.add(chim);
-      var panels = new T.Group(); sc.add(panels);
-      var hemi = new T.HemisphereLight('#FFFFFF', '#B9B2A6', 0.55); sc.add(hemi);
-      var sun = new T.DirectionalLight('#FFF4DF', 1.1); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
-      var shc = sun.shadow.camera; shc.left = -25; shc.right = 25; shc.top = 25; shc.bottom = -25; shc.near = 1; shc.far = 120; sun.shadow.bias = -0.0005; sc.add(sun); sc.add(sun.target);
-      var cam = new T.PerspectiveCamera(36, 1, 0.5, 300), top = new T.OrthographicCamera(-20, 20, 13.3, -13.3, 0.5, 200);
-      top.position.set(0, 60, 0); top.up.set(0, 0, -1); top.lookAt(0, 0, 0);
-      var pm = mat('#22303D', { roughness: 0.35, metalness: 0.3 }), pmShade = mat('#3A4552', { roughness: 0.4, metalness: 0.2 });
-      var H = { gnd: gnd, drive: drive, walls: walls, roof: roof, hr: 15, T: T, r: r, scene: sc, cam: cam, top: top, useTop: false, theta: 0.75, radius: 40, panels: panels, bat: bat, car: car, hp: hp, chim: chim, sun: sun, hemi: hemi, w: 0, h: 0, dead: false };
-      // set the panels from plan rectangles (FN.layout coordinates) or the default 16
-      // the roof type: the roof mesh is rebuilt; panels and obstacles follow its pitch (FN.ROOFS)
-      H.pitch = 22; H.type = 'hip'; var obsG = new T.Group(); sc.add(obsG);
-      H.yAt = function (z) { return 3 + (z + 5) * Math.tan(H.pitch * Math.PI / 180); };
-      H.setRoof = function (type) {
-        if (type === H.type || !FN.ROOFS || !FN.ROOFS[type]) return; H.type = type; H.pitch = FN.ROOFS[type].pitch;
-        var t = Math.tan(H.pitch * Math.PI / 180), pos;
-        if (type === 'gable') { var rg = 3 + 5 * t; pos = [-7.5, 3, -5, 7.5, rg, 0, 7.5, 3, -5, -7.5, 3, -5, -7.5, rg, 0, 7.5, rg, 0, -7.5, 3, 5, 7.5, 3, 5, 7.5, rg, 0, -7.5, 3, 5, 7.5, rg, 0, -7.5, rg, 0, -7.5, 3, -5, -7.5, 3, 5, -7.5, rg, 0, 7.5, 3, -5, 7.5, rg, 0, 7.5, 3, 5]; }
-        else if (type === 'skillion') { var rs = 3 + 10 * t; pos = [-7.5, 3, -5, 7.5, rs, 5, 7.5, 3, -5, -7.5, 3, -5, -7.5, rs, 5, 7.5, rs, 5, -7.5, 3, -5, -7.5, 3, 5, -7.5, rs, 5, 7.5, 3, -5, 7.5, rs, 5, 7.5, 3, 5, -7.5, 3, 5, 7.5, 3, 5, 7.5, rs, 5, -7.5, 3, 5, 7.5, rs, 5, -7.5, rs, 5]; }
-        else { var rh = 3 + 5 * t, w = [[-7.5, 3, -5], [7.5, 3, -5], [3.75, rh, 0], [-3.75, rh, 0], [-7.5, 3, 5], [7.5, 3, 5]], tr = function (a, b, d) { return w[a].concat(w[b], w[d]); }; pos = [].concat(tr(0, 2, 1), tr(0, 3, 2), tr(4, 5, 2), tr(4, 2, 3), tr(0, 4, 3), tr(1, 2, 5)); }
-        var ng = new T.BufferGeometry(); ng.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); ng.computeVertexNormals();
-        roof.geometry.dispose(); roof.geometry = ng; chim.visible = false;
+      var mEdge = new T.LineBasicMaterial({ color: C.roofLine, transparent: true, opacity: 0.55 });
+      var mRidge = mat(C.ridge, { roughness: 0.7 });
+      var addEdges = function (parent, geom, thresh) {
+        var ln = new T.LineSegments(new T.EdgesGeometry(geom, thresh || 22), mEdge);
+        parent.add(ln); return ln;
       };
-      // obstacles from plan px ({ type, x, y, h }): a box, a pipe or a flat glazed panel on the roof plane
+      // Extrude a convex 3D polygon (CCW seen from +y) downwards by vertical thickness th
+      var prism = function (pts, th) {
+        var out = [], n = pts.length, i, a, b, c;
+        for (i = 1; i < n - 1; i++) {
+          a = pts[0]; b = pts[i]; c = pts[i + 1];
+          out.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+          out.push(a[0], a[1] - th, a[2], c[0], c[1] - th, c[2], b[0], b[1] - th, b[2]);
+        }
+        for (i = 0; i < n; i++) {
+          a = pts[i]; b = pts[(i + 1) % n];
+          out.push(a[0], a[1], a[2], a[0], a[1] - th, a[2], b[0], b[1] - th, b[2]);
+          out.push(a[0], a[1], a[2], b[0], b[1] - th, b[2], b[0], b[1], b[2]);
+        }
+        return out;
+      };
+      var beam = function (p1, p2, w, h, material) {
+        var dx = p2[0] - p1[0], dy = p2[1] - p1[1], dz = p2[2] - p1[2], len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        var m = new T.Mesh(new T.BoxGeometry(w, h, len + 0.04), material);
+        m.position.set((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, (p1[2] + p2[2]) / 2);
+        m.lookAt(p2[0], p2[1], p2[2]); m.castShadow = true; m.receiveShadow = true;
+        return m;
+      };
+      var gnd = new T.Mesh(new T.PlaneGeometry(96, 96), mat(C.earth, { alphaMap: FN.groundAlphaTex(T), transparent: true, roughness: 0.95 }));
+      gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; sc.add(gnd);
+      var drive = new T.Mesh(new T.PlaneGeometry(6, 14), mat(C.drive, { roughness: 0.9 })); drive.rotation.x = -Math.PI / 2; drive.position.set(11, 0.01, 4); drive.receiveShadow = true; sc.add(drive);
+      var aoPlane = new T.Mesh(new T.PlaneGeometry(40, 32), new T.MeshBasicMaterial({ map: FN.contactAoTex(T), transparent: true, depthWrite: false }));
+      aoPlane.rotation.x = -Math.PI / 2; aoPlane.position.y = 0.018; sc.add(aoPlane);
+      // House: plinth, main walls, recessed openings, gable/skillion wall extensions, roof slabs with overhang + fascia, ridge caps
+      var plinth = new T.Mesh(new T.BoxGeometry(15.12, 0.28, 10.12), mat(C.drive, { roughness: 0.9 }));
+      plinth.position.y = 0.14; plinth.castShadow = true; plinth.receiveShadow = true; sc.add(plinth);
+      var mWall = mat(C.walls, { roughness: 0.88 });
+      var walls = new T.Mesh(new T.BoxGeometry(15, 2.72, 10), mWall);
+      walls.position.y = 1.64; walls.castShadow = true; walls.receiveShadow = true; addEdges(walls, walls.geometry); sc.add(walls);
+      // Subtle architectural window/door recesses
+      var mWin = mat('#4A525D', { roughness: 0.3, metalness: 0.2 }), mSill = mat(C.drive, { roughness: 0.85 });
+      [[-4.2, 1.55, -5.01, 1.8, 1.2, 0.06], [0, 1.55, -5.01, 2.2, 1.2, 0.06], [4.2, 1.55, -5.01, 1.8, 1.2, 0.06],
+       [-3.5, 1.35, 5.01, 2.8, 1.9, 0.06], [2.8, 1.55, 5.01, 2.0, 1.2, 0.06],
+       [-7.51, 1.55, -1.6, 0.06, 1.1, 1.4], [-7.51, 1.55, 1.8, 0.06, 1.1, 1.4],
+       [7.51, 1.55, -1.5, 0.06, 1.1, 1.5]].forEach(function (w) {
+        var wm = new T.Mesh(new T.BoxGeometry(w[3], w[4], w[5]), mWin); wm.position.set(w[0], w[1], w[2]); sc.add(wm);
+        var sm = new T.Mesh(new T.BoxGeometry(w[3] + (w[3] > 0.2 ? 0.12 : 0.04), 0.06, w[5] + (w[5] > 0.2 ? 0.12 : 0.04)), mSill);
+        sm.position.set(w[0], w[1] - w[4] / 2 - 0.02, w[2]); sc.add(sm);
+      });
+      var gables = new T.Mesh(new T.BufferGeometry(), mWall); gables.castShadow = true; gables.receiveShadow = true; sc.add(gables);
+      var mRoof = mat(C.roof3, { roughness: 0.78 });
+      var roof = new T.Mesh(new T.BufferGeometry(), mRoof); roof.castShadow = true; roof.receiveShadow = true; sc.add(roof);
+      var roofEdges = null, gableEdges = null, ridges = new T.Group(); sc.add(ridges);
+      // Faceted architectural tree (polyhedral crown masses + tapered trunk + branches)
+      var tree = new T.Group(); tree.position.set(-12, 0, -9);
+      var mBark = mat('#6B5543', { roughness: 0.9, flatShading: true }), mLeaf1 = mat('#7A9374', { roughness: 0.82, flatShading: true }), mLeaf2 = mat('#6D8667', { roughness: 0.85, flatShading: true });
+      var trunk = new T.Mesh(new T.CylinderGeometry(0.14, 0.28, 2.7, 7), mBark); trunk.position.y = 1.35; trunk.castShadow = true; tree.add(trunk);
+      var br1 = new T.Mesh(new T.CylinderGeometry(0.07, 0.12, 1.2, 6), mBark); br1.position.set(0.32, 2.35, 0.15); br1.rotation.z = -0.55; br1.castShadow = true; tree.add(br1);
+      var br2 = new T.Mesh(new T.CylinderGeometry(0.06, 0.11, 1.0, 6), mBark); br2.position.set(-0.28, 2.2, -0.2); br2.rotation.z = 0.5; br2.rotation.x = -0.3; br2.castShadow = true; tree.add(br2);
+      [[0, 4.3, 0, 2.15, 0.82, 0.2, mLeaf1], [-1.05, 3.75, 0.55, 1.45, 0.85, 0.7, mLeaf2], [1.0, 3.85, -0.45, 1.5, 0.8, 1.1, mLeaf2], [0.25, 5.15, -0.2, 1.35, 0.78, 0.4, mLeaf1]].forEach(function (c) {
+        var cg = new T.IcosahedronGeometry(c[3], 1); cg.scale(1, c[4], 0.96);
+        var cm = new T.Mesh(cg, c[6]); cm.position.set(c[0], c[1], c[2]); cm.rotation.set(c[5] * 0.4, c[5], c[5] * 0.2);
+        cm.castShadow = true; cm.receiveShadow = true; tree.add(cm);
+      });
+      sc.add(tree);
+      // Equipment models: wall battery, car in driveway, heat-pump outdoor unit
+      var bat = new T.Group(); bat.position.set(7.64, 0.95, 2.2);
+      var batBody = new T.Mesh(T.RoundedBoxGeometry ? new T.RoundedBoxGeometry(0.24, 1.12, 0.74, 2, 0.04) : new T.BoxGeometry(0.24, 1.12, 0.74), mat('#EAE6DF', { roughness: 0.4, metalness: 0.1 }));
+      var batSide = new T.Mesh(new T.BoxGeometry(0.20, 1.04, 0.68), mat('#3F4654', { roughness: 0.5 })); batSide.position.x = -0.01;
+      var batLed = new T.Mesh(new T.BoxGeometry(0.02, 0.42, 0.04), mat('#2E7D4F', { emissive: '#2E7D4F', emissiveIntensity: 0.6 })); batLed.position.set(0.125, 0.15, -0.22);
+      bat.add(batBody); bat.add(batSide); bat.add(batLed); bat.traverse(function (o) { if (o.isMesh) o.castShadow = true; }); sc.add(bat);
+      var car = new T.Group(), mCar = mat('#5E6670', { roughness: 0.35, metalness: 0.35 }), mGlass = mat('#2B333D', { roughness: 0.2, metalness: 0.4 }), mWheel = mat('#22252A', { roughness: 0.8 });
+      var cLow = new T.Mesh(T.RoundedBoxGeometry ? new T.RoundedBoxGeometry(1.82, 0.62, 4.35, 2, 0.12) : new T.BoxGeometry(1.82, 0.62, 4.35), mCar); cLow.position.y = 0.56; car.add(cLow);
+      var cCab = new T.Mesh(T.RoundedBoxGeometry ? new T.RoundedBoxGeometry(1.56, 0.54, 2.25, 2, 0.14) : new T.BoxGeometry(1.56, 0.54, 2.25), mGlass); cCab.position.set(0, 1.06, -0.15); car.add(cCab);
+      [[-0.86, 0.32, -1.32], [0.86, 0.32, -1.32], [-0.86, 0.32, 1.32], [0.86, 0.32, 1.32]].forEach(function (w) {
+        var wh = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.22, 14), mWheel); wh.rotation.z = Math.PI / 2; wh.position.set(w[0], w[1], w[2]); car.add(wh);
+      });
+      car.position.set(11, 0, 5); car.traverse(function (o) { if (o.isMesh) o.castShadow = true; }); sc.add(car);
+      var hp = new T.Group(); hp.position.set(-7.88, 0.48, 1.5);
+      var hpBox = new T.Mesh(new T.BoxGeometry(0.42, 0.82, 0.96), mat('#D8D2C7', { roughness: 0.6 }));
+      var hpFan = new T.Mesh(new T.CylinderGeometry(0.28, 0.28, 0.04, 16), mat('#323740', { roughness: 0.7 })); hpFan.rotation.z = Math.PI / 2; hpFan.position.set(-0.20, 0.04, 0.12);
+      hp.add(hpBox); hp.add(hpFan); hp.traverse(function (o) { if (o.isMesh) o.castShadow = true; }); sc.add(hp);
+      var chim = new T.Group(); sc.add(chim);
+      var panels = new T.Group(); sc.add(panels);
+      var hemi = new T.HemisphereLight('#FFFFFF', '#B9B2A6', 0.58 * Math.PI); sc.add(hemi);
+      var sun = new T.DirectionalLight('#FFF5E4', 1.05 * Math.PI); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 2.2;
+      var shc = sun.shadow.camera; shc.left = -22; shc.right = 22; shc.top = 22; shc.bottom = -22; shc.near = 1; shc.far = 110; sun.shadow.bias = -0.0004; sc.add(sun); sc.add(sun.target);
+      var cam = new T.PerspectiveCamera(36, 1, 0.5, 300),
+          iso = new T.OrthographicCamera(-16, 16, 10, -10, -100, 300),
+          top = new T.OrthographicCamera(-20, 20, 13.3, -13.3, 0.5, 200);
+      top.position.set(0, 60, 0); top.up.set(0, 0, -1); top.lookAt(0, 0, 0);
+      var txSun = FN.panelTex(T, false), txShade = FN.panelTex(T, true);
+      var pm = mat('#FFFFFF', { map: txSun, roughness: 0.24, metalness: 0.22 }), pmShade = mat('#FFFFFF', { map: txShade, roughness: 0.35, metalness: 0.15 });
+      var mFrame = mat('#8A94A0', { roughness: 0.38, metalness: 0.55 }), mFrameShade = mat('#5F6975', { roughness: 0.45, metalness: 0.4 }), mRail = mat('#39414C', { roughness: 0.5, metalness: 0.5 });
+      var H = { gnd: gnd, drive: drive, plinth: plinth, walls: walls, gables: gables, roof: roof, hr: 15, T: T, r: r, scene: sc, cam: cam, iso: iso, top: top, useTop: false, useIso: false, theta: 0.75, radius: 40, zoom: 1, tx: 0, tz: -0.3, space: false, panels: panels, bat: bat, car: car, hp: hp, chim: chim, sun: sun, hemi: hemi, w: 0, h: 0, dead: false };
+      var raf = 0;
+      H.frame = function () {
+        if (H.dead || raf) return;
+        raf = requestAnimationFrame(function () {
+          raf = 0;
+          if (!H.dead && canvas.offsetParent !== null && H.w > 0 && H.h > 0) r.render(sc, H.useTop ? top : H.useIso ? iso : cam);
+        });
+      };
+      // the roof type: the roof slab (with 0.35 m overhang and 0.14 m fascia) and the gable/skillion walls are rebuilt
+      H.pitch = 22; H.type = ''; H.vtxKey = ''; var obsG = new T.Group(); sc.add(obsG);
+      H.yAt = function (z) { return 3 + (z + 5) * Math.tan(H.pitch * Math.PI / 180); };
+      H.setRoof = function (type, vtx) {
+        var vk = vtx ? JSON.stringify(vtx) : '';
+        if (type === H.type && vk === H.vtxKey || !FN.ROOFS || !FN.ROOFS[type]) return;
+        H.type = type; H.vtxKey = vk; H.pitch = FN.ROOFS[type].pitch;
+        var t = Math.tan(H.pitch * Math.PI / 180), ov = 0.35, th = 0.14, X = 7.5 + ov, Z = 5 + ov, ye = 3 - ov * t + 0.02, rpos = [], gpos = [];
+        var nFace = vtx && vtx.length >= 3 ? vtx.slice().reverse().map(function (p) {
+          var vx = (518 - p[0]) / 40, vz = (p[1] - 356) / 40;
+          return [vx, 3 + (vz + 5) * t + 0.02, vz];
+        }) : null;
+        while (ridges.children.length) ridges.remove(ridges.children[0]);
+        if (type === 'gable') {
+          var yr = 3 + 5 * t + 0.02, wg = 3 + 5 * t;
+          rpos = [].concat(
+            prism(nFace || [[-X, ye, -Z], [-X, yr, 0], [X, yr, 0], [X, ye, -Z]], th),
+            prism([[-X, yr, 0], [-X, ye, Z], [X, ye, Z], [X, yr, 0]], th)
+          );
+          gpos = [-7.5, 3, -5, -7.5, 3, 5, -7.5, wg, 0, 7.5, 3, -5, 7.5, wg, 0, 7.5, 3, 5];
+          ridges.add(beam([-X, yr + 0.01, 0], [X, yr + 0.01, 0], 0.16, 0.06, mRidge));
+        } else if (type === 'skillion') {
+          var ys = 3 + (10 + ov) * t + 0.02, ws = 3 + 10 * t;
+          rpos = prism(nFace || [[-X, ye, -Z], [-X, ys, Z], [X, ys, Z], [X, ye, -Z]], th);
+          gpos = [
+            -7.5, 3, -5, -7.5, 3, 5, -7.5, ws, 5,
+            7.5, 3, -5, 7.5, ws, 5, 7.5, 3, 5,
+            -7.5, 3, 5, 7.5, 3, 5, 7.5, ws, 5, -7.5, 3, 5, 7.5, ws, 5, -7.5, ws, 5
+          ];
+          ridges.add(beam([-X, ys + 0.01, Z], [X, ys + 0.01, Z], 0.15, 0.05, mRidge));
+        } else {
+          var yh = 3 + 5 * t + 0.02;
+          rpos = [].concat(
+            prism(nFace || [[-X, ye, -Z], [-3.75, yh, 0], [3.75, yh, 0], [X, ye, -Z]], th),
+            prism([[-3.75, yh, 0], [-X, ye, Z], [X, ye, Z], [3.75, yh, 0]], th),
+            prism([[-X, ye, -Z], [-X, ye, Z], [-3.75, yh, 0]], th),
+            prism([[X, ye, Z], [X, ye, -Z], [3.75, yh, 0]], th)
+          );
+          ridges.add(beam([-3.75, yh + 0.01, 0], [3.75, yh + 0.01, 0], 0.16, 0.06, mRidge));
+          ridges.add(beam([-X, ye + 0.01, -Z], [-3.75, yh + 0.01, 0], 0.14, 0.05, mRidge));
+          ridges.add(beam([X, ye + 0.01, -Z], [3.75, yh + 0.01, 0], 0.14, 0.05, mRidge));
+          ridges.add(beam([-X, ye + 0.01, Z], [-3.75, yh + 0.01, 0], 0.14, 0.05, mRidge));
+          ridges.add(beam([X, ye + 0.01, Z], [3.75, yh + 0.01, 0], 0.14, 0.05, mRidge));
+        }
+        var ng = new T.BufferGeometry(); ng.setAttribute('position', new T.Float32BufferAttribute(rpos, 3)); ng.computeVertexNormals();
+        roof.geometry.dispose(); roof.geometry = ng;
+        if (roofEdges) { roof.remove(roofEdges); roofEdges.geometry.dispose(); }
+        roofEdges = addEdges(roof, ng, 18);
+        var gg = new T.BufferGeometry();
+        if (gpos.length) { gg.setAttribute('position', new T.Float32BufferAttribute(gpos, 3)); gg.computeVertexNormals(); }
+        gables.geometry.dispose(); gables.geometry = gg; gables.visible = gpos.length > 0;
+        if (gableEdges) { gables.remove(gableEdges); gableEdges.geometry.dispose(); gableEdges = null; }
+        if (gpos.length) gableEdges = addEdges(gables, gg, 18);
+        chim.visible = false; H.frame();
+      };
+      // Build a detailed chimney mesh (brick shaft, stone crown, flue pot)
+      var makeChimney = function (a, b, hh) {
+        var g = new T.Group(), shH = hh + 0.45;
+        var shaft = new T.Mesh(new T.BoxGeometry(a, shH, b), mat('#8C7462', { roughness: 0.85 }));
+        shaft.position.y = shH / 2 - 0.25; shaft.castShadow = true; shaft.receiveShadow = true; addEdges(shaft, shaft.geometry); g.add(shaft);
+        var crown = new T.Mesh(new T.BoxGeometry(a + 0.08, 0.08, b + 0.08), mat('#6E5A4B', { roughness: 0.8 }));
+        crown.position.y = shH - 0.25 + 0.04; crown.castShadow = true; g.add(crown);
+        var pot = new T.Mesh(new T.CylinderGeometry(0.11, 0.13, 0.18, 12), mat('#755E4E', { roughness: 0.75 }));
+        pot.position.y = shH - 0.25 + 0.16; pot.castShadow = true; g.add(pot);
+        return g;
+      };
+      // obstacles from plan px ({ type, x, y, h }): all 6 trade shapes (chimney, skylight, antenna, box, vent, prism/dormer)
       H.setObstacles = function (list) {
         while (obsG.children.length) obsG.remove(obsG.children[0]);
         chim.visible = false;
         (list || []).forEach(function (o) {
-          var Ty = FN.OBST[o.type], z = (o.y - 356) / 40, x = (o.x - 518) / 40, y0 = H.yAt(z), hh = Math.max(o.h || Ty.h, 0.05), m;
-          if (Ty.shape) m = new T.Mesh(new T.CylinderGeometry(Ty.a, Ty.a, hh + 0.3, 12), mat(Ty.fill, { roughness: 0.5, metalness: 0.4 }));
-          else if (o.type === 'skylight') { m = new T.Mesh(new T.BoxGeometry(Ty.a, 0.08, Ty.b), mat(Ty.fill, { roughness: 0.15, metalness: 0.2 })); m.rotation.x = -H.pitch * Math.PI / 180; hh = 0.04; }
-          else m = new T.Mesh(new T.BoxGeometry(Ty.a, hh + 0.5, Ty.b), mat(Ty.fill));
-          m.position.set(x, y0 + (o.type === 'skylight' ? 0.05 : (hh + 0.5) / 2 - 0.25), z); m.castShadow = true; obsG.add(m);
+          var Ty = FN.OBST[o.type] || FN.OBST.chimney, z = (o.y - 356) / 40, x = (518 - o.x) / 40, y0 = H.yAt(z), hh = Math.max(o.h !== undefined ? o.h : Ty.h, 0.06), m;
+          if (o.type === 'antenna') {
+            m = new T.Group();
+            var baseA = new T.Mesh(new T.ConeGeometry(0.14, 0.12, 10), mat('#5B6068', { roughness: 0.6 }));
+            baseA.position.y = 0.04; m.add(baseA);
+            var mast = new T.Mesh(new T.CylinderGeometry(0.025, 0.035, hh + 0.3, 10), mat(Ty.fill, { roughness: 0.35, metalness: 0.65 }));
+            mast.position.y = (hh + 0.3) / 2 - 0.15; mast.castShadow = true; m.add(mast);
+            [-0.25, 0, 0.22].forEach(function (dy, idx) {
+              var arm = new T.Mesh(new T.BoxGeometry(0.55 - idx * 0.12, 0.025, 0.025), mat(Ty.line, { roughness: 0.4, metalness: 0.6 }));
+              arm.position.y = hh + dy; arm.castShadow = true; m.add(arm);
+            });
+            m.position.set(x, y0, z);
+          } else if (Ty.shape) {
+            m = new T.Group();
+            var pipe = new T.Mesh(new T.CylinderGeometry(Ty.a * 0.75, Ty.a * 0.75, hh + 0.28, 12), mat(Ty.fill, { roughness: 0.45, metalness: 0.45 }));
+            pipe.position.y = (hh + 0.28) / 2 - 0.14; pipe.castShadow = true; m.add(pipe);
+            var cap = new T.Mesh(new T.ConeGeometry(Ty.a * 1.25, 0.07, 12), mat(Ty.line, { roughness: 0.4, metalness: 0.5 }));
+            cap.position.y = hh + 0.17; cap.castShadow = true; m.add(cap);
+            var flash = new T.Mesh(new T.CylinderGeometry(Ty.a * 1.3, Ty.a * 1.6, 0.04, 12), mat('#5B6068', { roughness: 0.6 }));
+            flash.rotation.x = -H.pitch * Math.PI / 180; flash.position.y = 0.02; m.add(flash);
+            m.position.set(x, y0, z);
+          } else if (o.type === 'skylight') {
+            m = new T.Group();
+            var frm = new T.Mesh(new T.BoxGeometry(Ty.a, 0.07, Ty.b), mat('#4E5864', { roughness: 0.5, metalness: 0.3 }));
+            var glz = new T.Mesh(new T.BoxGeometry(Ty.a - 0.10, 0.03, Ty.b - 0.10), mat('#7FA4C4', { roughness: 0.12, metalness: 0.35 }));
+            glz.position.y = 0.025; frm.add(glz); addEdges(frm, frm.geometry);
+            m.add(frm); m.rotation.x = -H.pitch * Math.PI / 180; m.position.set(x, y0 + 0.04, z);
+          } else if (o.type === 'box') {
+            m = new T.Group();
+            var unit = new T.Mesh(new T.BoxGeometry(Ty.a, hh + 0.18, Ty.b), mat(Ty.fill, { roughness: 0.45, metalness: 0.25 }));
+            unit.position.y = (hh + 0.18) / 2 - 0.12; unit.castShadow = true; unit.receiveShadow = true; addEdges(unit, unit.geometry); m.add(unit);
+            var fan = new T.Mesh(new T.CylinderGeometry(Math.min(Ty.a, Ty.b) * 0.28, Math.min(Ty.a, Ty.b) * 0.28, 0.03, 16), mat('#323740', { roughness: 0.5 }));
+            fan.position.set(-Ty.a * 0.16, hh - 0.05, 0); m.add(fan);
+            m.position.set(x, y0, z);
+          } else if (o.type === 'prism') {
+            m = new T.Group();
+            var hw = Ty.a / 2, hd = Ty.b / 2, yBase = -0.22, yWall = hh * 0.45, yPeak = hh;
+            var dBody = new T.Mesh(new T.BoxGeometry(Ty.a, yWall - yBase, Ty.b), mat(C.walls, { roughness: 0.85 }));
+            dBody.position.y = (yWall + yBase) / 2; dBody.castShadow = true; dBody.receiveShadow = true; addEdges(dBody, dBody.geometry); m.add(dBody);
+            var rVerts = [
+              // left slope
+              -hw - 0.06, yWall, -hd - 0.06,  -hw - 0.06, yWall, hd + 0.06,  0, yPeak, hd + 0.06,
+              -hw - 0.06, yWall, -hd - 0.06,  0, yPeak, hd + 0.06,  0, yPeak, -hd - 0.06,
+              // right slope
+              hw + 0.06, yWall, hd + 0.06,  hw + 0.06, yWall, -hd - 0.06,  0, yPeak, -hd - 0.06,
+              hw + 0.06, yWall, hd + 0.06,  0, yPeak, -hd - 0.06,  0, yPeak, hd + 0.06,
+              // front & back gable triangles
+              -hw, yWall, -hd,  0, yPeak, -hd,  hw, yWall, -hd,
+              hw, yWall, hd,  0, yPeak, hd,  -hw, yWall, hd
+            ];
+            var dGeom = new T.BufferGeometry(); dGeom.setAttribute('position', new T.Float32BufferAttribute(rVerts, 3)); dGeom.computeVertexNormals();
+            var dRoof = new T.Mesh(dGeom, mat(Ty.fill, { roughness: 0.72, side: T.DoubleSide }));
+            dRoof.castShadow = true; dRoof.receiveShadow = true; addEdges(dRoof, dGeom); m.add(dRoof);
+            var dWin = new T.Mesh(new T.BoxGeometry(Ty.a * 0.55, Math.max(0.22, yWall * 0.65), 0.04), mat('#3E4854', { roughness: 0.25, metalness: 0.3 }));
+            dWin.position.set(0, yWall * 0.5, -hd - 0.01); m.add(dWin);
+            m.position.set(x, y0, z);
+          } else {
+            m = makeChimney(Ty.a, Ty.b, hh);
+            m.position.set(x, y0, z);
+          }
+          obsG.add(m);
         });
+        H.frame();
       };
       H.setPanels = function (mods) {
         while (panels.children.length) panels.remove(panels.children[0]);
-        var tan = Math.tan(H.pitch * Math.PI / 180), cos = Math.cos(H.pitch * Math.PI / 180);
+        var tan = Math.tan(H.pitch * Math.PI / 180), cos = Math.cos(H.pitch * Math.PI / 180), ang = -H.pitch * Math.PI / 180;
         (mods || []).forEach(function (m) {
-          var cx = m.x + m.w / 2, cy = m.y + m.h / 2, z = (cy - 356) / 40, x = (cx - 518) / 40, y = 3 + (z + 5) * tan + 0.06;
-          var p = new T.Mesh(new T.BoxGeometry(m.w / 40 - 0.02, 0.05, m.h / 40 / cos - 0.02), m.shaded ? pmShade : pm);
-          p.position.set(x, y, z); p.rotation.x = -H.pitch * Math.PI / 180; p.castShadow = true; panels.add(p);
+          var cx = m.x + m.w / 2, cy = m.y + m.h / 2, z = (cy - 356) / 40, x = (518 - cx) / 40, y = 3 + (z + 5) * tan + 0.075;
+          var W = m.w / 40 - 0.02, L = m.h / 40 / cos - 0.02, grp = new T.Group();
+          var frame = new T.Mesh(new T.BoxGeometry(W, 0.038, L), m.shaded ? mFrameShade : mFrame);
+          var glass = new T.Mesh(new T.PlaneGeometry(W - 0.05, L - 0.05), m.shaded ? pmShade : pm);
+          glass.rotation.x = -Math.PI / 2; glass.position.y = 0.020;
+          var r1 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail), r2 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail);
+          r1.position.set(0, -0.032, -L * 0.28); r2.position.set(0, -0.032, L * 0.28);
+          frame.castShadow = true; frame.receiveShadow = true;
+          grp.add(frame); grp.add(glass); grp.add(r1); grp.add(r2);
+          grp.position.set(x, y, z); grp.rotation.x = ang; panels.add(grp);
         });
+        H.frame();
       };
-      H.setChimney = function (on, hgt) { var ryc = 3 + 1.05 * Math.tan(22 * Math.PI / 180); chim.visible = !!on; chim.scale.set(1, hgt + 0.5, 1); chim.position.set(0.05, ryc - 0.25 + (hgt + 0.5) / 2, -3.95); };
+      H.setChimney = function (on, hgt) {
+        while (chim.children.length) chim.remove(chim.children[0]);
+        chim.visible = !!on;
+        if (on) {
+          var ryc = 3 + 1.05 * Math.tan(22 * Math.PI / 180), cm = makeChimney(0.6, 0.6, hgt);
+          cm.position.set(0.05, ryc, -3.95); chim.add(cm);
+        }
+        H.frame();
+      };
       H.setHour = function (hr) {
         var up = hr >= 6 && hr <= 18, t = Math.PI * (Math.min(Math.max(hr, 6), 18) - 6) / 12;
-        sun.position.set(40 * Math.cos(t), 6 + 38 * Math.sin(t), -26); sun.intensity = up ? 0.35 + 0.9 * Math.sin(t) : 0.05; hemi.intensity = up ? 0.55 : 0.25;
-        H.hr = hr; sc.background.set(up ? C.sky : '#3A3D45');
+        sun.position.set(38 * Math.cos(t), 12 + 40 * Math.sin(t), -22); sun.intensity = (up ? 0.35 + 0.85 * Math.sin(t) : 0.05) * Math.PI; hemi.intensity = (up ? 0.58 : 0.25) * Math.PI;
+        aoPlane.material.opacity = up ? 1 : 0.45;
+        H.hr = hr; sc.background.set(up ? C.sky : '#3A3D45'); H.frame();
       };
-      H.paint = function () { C = FN.tokens(); gnd.material.color.set(C.earth); drive.material.color.set(C.drive); walls.material.color.set(C.walls); roof.material.color.set(C.roof3); H.setHour(H.hr); };
+      H.paint = function () { C = FN.tokens(); gnd.material.color.set(C.earth); drive.material.color.set(C.drive); plinth.material.color.set(C.drive); mWall.color.set(C.walls); mRoof.color.set(C.roof3); mRidge.color.set(C.ridge); mEdge.color.set(C.roofLine); H.setHour(H.hr); };
       window.addEventListener('sd-palette', function () { if (!H.dead) H.paint(); });
-      H.size = function (w, h) { if (w === H.w && h === H.h) return; H.w = w; H.h = h; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
-      H.place = function () { cam.position.set(H.radius * Math.sin(H.theta), H.radius * 0.55, H.radius * Math.cos(H.theta)); cam.lookAt(0, 2.5, -0.5); };
-      var drag = null;
-      canvas.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, t: H.theta }; });
-      canvas.addEventListener('pointermove', function (e) { if (!drag || H.useTop) return; H.theta = drag.t - (e.clientX - drag.x) * 0.008; H.place(); });
-      ['pointerup', 'pointerleave'].forEach(function (n) { canvas.addEventListener(n, function () { drag = null; }); });
-      setChimneyDefault(); H.setHour(15); H.place();
+      window.addEventListener('langchange', function () { if (!H.dead) setTimeout(H.frame, 0); });
+      H.size = function (w, h) {
+        if (w !== H.w || h !== H.h) {
+          H.w = w; H.h = h; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+        }
+        H.place();
+      };
+      H.place = function () {
+        var R = H.radius / (H.zoom || 1);
+        cam.position.set(H.tx + R * Math.sin(H.theta), R * 0.55, H.tz + R * Math.cos(H.theta)); cam.lookAt(H.tx, 2.3, H.tz);
+        var d = 60, ch = d * Math.SQRT2 / Math.sqrt(3), cy = 2.2 + d / Math.sqrt(3);
+        iso.position.set(H.tx + ch * Math.sin(H.theta), cy, H.tz + ch * Math.cos(H.theta)); iso.lookAt(H.tx, 2.2, H.tz);
+        if (H.w > 0 && H.h > 0) {
+          var hh = R * 0.31, hw = hh * (H.w / H.h);
+          iso.left = -hw; iso.right = hw; iso.top = hh; iso.bottom = -hh; iso.updateProjectionMatrix();
+        }
+        H.frame();
+      };
+      var animRaf = 0;
+      H.turnTo = function (target) {
+        if (animRaf) cancelAnimationFrame(animRaf);
+        var t0 = H.theta, dt = target - t0, s0 = performance.now();
+        var step = function (now) {
+          if (H.dead) return;
+          var p = Math.min(1, (now - s0) / 220), e = 1 - Math.pow(1 - p, 3);
+          H.theta = t0 + dt * e; H.place();
+          if (p < 1) animRaf = requestAnimationFrame(step); else animRaf = 0;
+        };
+        animRaf = requestAnimationFrame(step);
+      };
+      var drag = null, ray = new T.Raycaster(), ptr = new T.Vector2();
+      canvas.addEventListener('pointerdown', function (e) {
+        if (animRaf) { cancelAnimationFrame(animRaf); animRaf = 0; }
+        var pan = H.space || e.button === 1 || e.shiftKey;
+        drag = { pan: pan, x: e.clientX, y: e.clientY, t: H.theta, tx: H.tx, tz: H.tz };
+      });
+      canvas.addEventListener('pointermove', function (e) {
+        if (!drag || H.useTop) return;
+        if (drag.pan) {
+          var dx = (e.clientX - drag.x) * 0.03 / (H.zoom || 1), dy = (e.clientY - drag.y) * 0.03 / (H.zoom || 1);
+          var c = Math.cos(H.theta), s = Math.sin(H.theta);
+          H.tx = Math.max(-18, Math.min(18, drag.tx - dx * c - dy * s));
+          H.tz = Math.max(-18, Math.min(18, drag.tz + dx * s - dy * c));
+        } else {
+          H.theta = drag.t - (e.clientX - drag.x) * 0.008;
+        }
+        H.place();
+      });
+      canvas.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        H.zoom = Math.max(0.6, Math.min(2.6, (H.zoom || 1) * (e.deltaY < 0 ? 1.1 : 0.91)));
+        H.place();
+      }, { passive: false });
+      canvas.addEventListener('pointerup', function (e) {
+        if (drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5 && H.onTap) {
+          var rect = canvas.getBoundingClientRect();
+          ptr.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          ptr.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          ray.setFromCamera(ptr, H.useTop ? top : H.useIso ? iso : cam);
+          var hits = ray.intersectObjects([roof, panels, obsG], true);
+          if (hits.length && hits[0].point.y > 2.6) {
+            var p3 = hits[0].point;
+            H.onTap([518 - p3.x * 40, 356 + p3.z * 40], e);
+          }
+        }
+        drag = null;
+      });
+      canvas.addEventListener('pointerleave', function () { drag = null; });
+      H.setRoof('hip'); setChimneyDefault(); H.setHour(15); H.place();
       function setChimneyDefault() { chim.visible = false; car.visible = false; hp.visible = false; bat.visible = false; }
-      (function loop() { if (H.dead) return; if (canvas.offsetParent !== null) r.render(sc, H.useTop ? top : cam); requestAnimationFrame(loop); })();
       done(H);
     };
-    if (window.THREE) go(); else loadScript('vendor/three-0.149.0.min.js', go);
+    FN.loadThree(go);
   };
 
   /* screen chrome shared by the tablet prototypes */
@@ -1262,22 +1607,31 @@
       var H = null, t3 = null, tChip = null, tToast = null;
       var HOME = { tools: [12, 60], notes: [1108, 60], read: [84, 60], changes: [826, 132], coach: [84, 590], v3: [768, 556] };
       var st = { level: 1, mode: 1, tool: 'select', selFace: false, preview: false, filled: false, variant: 'portrait', chimney: false, chimH: '1.00', pad: false, fresh: true, removed: [], bat: 13.5,
-        sheet: false, present: false, imagery: true, shade: true, hist: [], log: [], touches: [0, 0, 0, 0, 0], task: 0, toast: '', busy: false, chip: null, hover: null, notif: false, settings: false, layers: false, mods: true,
-        pos: JSON.parse(JSON.stringify(HOME)), swapped: false, hour3: 9, modW: 440, inv: 6, qs: 'cover', qseen: {}, qnotes: [], roof: J ? (S.roof || 'hip') : 'hip', cx: 520, cy: 198, obs: [], otype: 'chimney', selObs: '', guides: null };
+        sheet: false, present: false, imagery: true, shade: true, notesOn: true, hist: [], rhist: [], log: [], touches: [0, 0, 0, 0, 0], task: 0, toast: '', busy: false, chip: null, hover: null, notif: false, settings: false, layers: false, mods: true, mod25d: true, grid: 'dots', zoom: 1, panX: 0, panY: 0, space: false, chOpen: false, snapOn: true,
+        pos: JSON.parse(JSON.stringify(HOME)), swapped: false, iso: true, hour3: 9, modW: 440, inv: 6, qs: 'cover', qseen: {}, qnotes: [], roof: J ? (S.roof || 'hip') : 'hip', cx: 520, cy: 198, obs: [], otype: 'chimney', selObs: '', guides: null,
+        pts: [], curPt: null, zones: [], dims: [], pins: [], selPin: '', pinTxt: '', vtx: null, selVtx: 0, dynLen: '', dynAng: '', dynField: 0, lastMeas: null };
       // in the journey the studio starts on its inbox, and the household's draft (16 portrait modules) comes with the site
       if (J) { st.mode = -1; st.filled = true; st.bat = S.measures.bat ? 13.5 : 0; }
       el.innerHTML = '<div class="sd-root" style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden;user-select:none">' +
         '<div class="sd-top"></div><div class="sd-plan" style="position:absolute;left:0;top:48px;width:1180px;height:772px"></div>' +
-        '<div class="sd-3d" style="position:absolute;overflow:hidden;background:var(--c-canvas)"><canvas class="sd-canvas" width="1180" height="772" aria-label="The roof in 3D, mirroring the plan: drag to turn" style="width:100%;height:100%;display:block;touch-action:none;cursor:grab"></canvas></div>' +
+        '<div class="sd-3d" style="position:absolute;overflow:hidden;background:var(--c-canvas)"><canvas class="sd-canvas" width="1180" height="772" aria-label="The roof in 3D, mirroring the plan: drag to turn" style="width:100%;height:100%;display:block;touch-action:none;cursor:grab"></canvas><div class="sd-3d-ctrl"></div></div>' +
         '<div class="sd-ui"></div></div>';
       var q = function (c) { return el.querySelector(c); };
       function inter(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+      function vertsOf(s) { return s.vtx || FN.ROOFS[s.roof].north.map(function (p) { return p.slice(); }); }
       // the obstacles on the north face (the chimney of the demos, then vents and skylights), in plan px
       function obstaclesOf(s) { return (s.chimney ? [{ id: 'chim', type: 'chimney', x: s.cx, y: s.cy, h: parseFloat(s.chimH) || 1 }] : []).concat(s.obs); }
       // the illustrative winter-morning shade behind a tall obstacle (energy stays with the API, ADR-001)
       function shadows(s) { return obstaclesOf(s).filter(function (o) { return o.h > 0.3; }).map(function (o) { var T = FN.OBST[o.type], hw = (T.shape ? T.a : T.a / 2) * 40; return { x: o.x - hw * 0.9, y: o.y, w: hw * 1.8, h: o.h * 64 }; }); }
       // the layout, from studio-draw (or its fallback): modules, removed by hand or not, shaded or not
-      function draw(s) { return FN.draw.compute(s.roof, obstaclesOf(s).map(function (o) { return { type: o.type, x: Math.round(o.x), y: Math.round(o.y) }; }), s.variant); }
+      function draw(s) {
+        var res = FN.draw.compute(s.roof, obstaclesOf(s).map(function (o) { return { type: o.type, x: Math.round(o.x), y: Math.round(o.y) }; }), s.variant);
+        if (!s.vtx) return res;
+        var vp = s.vtx, kept = res.mods.filter(function (m) {
+          return FN.draw.inside(vp, m.x + 4, m.y + 4) && FN.draw.inside(vp, m.x + m.w - 4, m.y + 4) && FN.draw.inside(vp, m.x + m.w - 4, m.y + m.h - 4) && FN.draw.inside(vp, m.x + 4, m.y + m.h - 4);
+        });
+        return { rings: res.rings, mods: kept, n: kept.length, ms: res.ms, live: res.live };
+      }
       function mods(s) {
         var sh = shadows(s);
         return draw(s).mods.map(function (m) { return { id: m.id, x: m.x, y: m.y, w: m.w, h: m.h, blocked: false, removed: s.removed.indexOf(m.id) >= 0, shaded: sh.some(function (b) { return inter(m, b); }) }; });
@@ -1295,7 +1649,8 @@
       function commit(patch, label, chip) {
         var before = energy(st), next = {}; for (var k in st) next[k] = st[k]; for (k in patch) next[k] = patch[k];
         var after = energy(next), dk = after.kwh - before.kwh, dm = after.save - before.save;
-        st.hist.push({ snap: JSON.stringify({ filled: st.filled, variant: st.variant, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs }), label: label });
+        st.hist.push({ snap: JSON.stringify({ filled: st.filled, variant: st.variant, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx }), label: label });
+        st.rhist = [];
         st.log.unshift({ label: label, delta: (dk >= 0 ? '+' : '−') + FN.n(Math.abs(dk)) + ' kWh/yr · ' + after.n + ' modules', money: (dm >= 0 ? '+' : '−') + FN.money(dm) + '/yr', color: Math.abs(dm) < 1 ? 'var(--c-muted)' : dm > 0 ? 'var(--c-gain)' : 'var(--c-loss)' });
         st.log = st.log.slice(0, 5);
         for (k in patch) st[k] = patch[k];
@@ -1305,52 +1660,169 @@
       }
       var TIPS = {
         select: ['Select', 'V', ['Tap a face, a module or an obstacle.', 'Its card opens on the right; actions above.', 'Tap again on overlaps to cycle.'], '1 touch'],
+        vertex: ['Edit vertices', 'A', ['Select a face or tap Sommets · A.', 'Drag a square corner handle or tap mid-edge +.', 'Use the nudge pad (5 cm / 1 cm) to fine-tune.'], '2 touches'],
         trace: ['Trace', 'P', ['Tap each corner; snaps show before you touch.', 'Type a length while placing: 2.4, Tab, angle.', 'Tap the first point to close.'], 'n corners + 2'],
         rect3: ['Rectangle from three points', 'R', ['Tap corner A.', 'Tap corner B: the first edge.', 'Tap the opposite side: it closes.'], '4 touches'],
         fill: ['Fill zone', 'F', ['Tap a face: ghost modules appear.', 'Pick portrait, landscape or mixed.', 'Tap ✓ Keep.'], '3 touches'],
         panel: ['Modules', 'G', ['Tap a module to remove it.', 'Tap a free cell to add one.', 'Each change shows what it gains or costs.'], '2 touches'],
-        chimney: ['Obstacle', 'O · 1–6', ['Tap where it stands, or drag its footprint.', 'Type its height: shade and loss update.', 'The tool stays on for the next one.'], '2 touches + 1 typed'],
+        chimney: ['Obstacle', 'O · 1–6', ['Pick a shape (Chimney, Skylight, Antenna, Box, Cylinder, Polygon).', 'Tap where it stands, or drag its footprint.', 'Type its height: shade and loss update.'], '2 touches + 1 typed'],
         measure: ['Measure', 'M', ['Tap point A.', 'Tap point B.', 'Read plan and true length; keep it as a dimension.'], '3 touches'],
         dimension: ['Dimension', 'D', ['Tap a first vertex.', 'Tap a second vertex.', 'It follows when the face is corrected.'], '3 touches'],
-        note: ['Note', 'N', ['Long press a point.', 'Choose Note here.', 'Type; the note stays tied to that point.'], '2 touches + text'],
-        photo: ['Photo', 'I', ['Long press a point.', 'Photo here.', 'Shoot; time and position accuracy are kept.'], '3 touches'],
-        layers: ['Layers', 'L', ['Open the layers.', 'Tap an eye to show or hide.', 'Long press to lock a layer.'], '2 touches']
+        note: ['Note', 'N', ['Tap a point on the roof.', 'Pick or type a field note.', 'The note stays tied to that point.'], '2 touches + text'],
+        photo: ['Photo', 'I', ['Tap a point on the roof.', 'Attach a geotagged survey photo.', 'Time and GPS accuracy are kept.'], '3 touches'],
+        layers: ['Layers', 'L', ['Open the layers.', 'Tap an eye to show or hide.', 'Switch the 1 m / 5 m grid (Dots, Lines, Off).'], '2 touches']
       };
       function top() {
-        var btn = function (a, label, svg, on, color) { return '<button type="button" data-a="' + a + '" aria-label="' + label + '" style="width:40px;height:40px;border:none;border-radius:8px;background:' + (on ? 'var(--c-line2)' : 'transparent') + ';color:' + (color || 'var(--c-ink)') + ';cursor:pointer;position:relative">' + svg + '</button>'; };
-        var ico = function (d) { return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"></path></svg>'; };
+        var btn = function (a, label, svg, on, color) { return '<button type="button" data-a="' + a + '" aria-label="' + label + '" style="width:40px;height:40px;border:none;border-radius:8px;background:' + (on ? 'var(--c-line2)' : 'transparent') + ';color:' + (color || 'var(--c-ink)') + ';cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center">' + svg + '</button>'; };
+        var ico = function (d) { return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"></path></svg>'; };
         var sep = '<span style="width:1px;height:24px;background:var(--c-line);margin:0 4px"></span>';
         return FN.topbar(J && !S.shared ? ['Sites', 'Inbox'] : ['Sites', '14 Wattle Lane, Marrickville', 'Design v1'], (J ? [['Inbox', -1], ['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]] : [['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]]).map(function (x) { return FN.tab(x[0] + (x[1] === -1 && J && S.shared && !S.opened ? ' · 1' : ''), x[1] === st.mode, 'mode', x[1]); }).join(''),
           '<span style="font-size:12px;color:var(--c-gain);display:flex;align-items:center;gap:5px;padding:0 6px"><span style="width:7px;height:7px;border-radius:4px;background:var(--c-gain)"></span>Synced 14:02</span>' + sep +
-          btn('undo', 'Undo', ico('M8.5 6.5L4.5 10.5l4 4M4.5 10.5h9a5.5 5.5 0 0 1 0 11H11'), false, st.hist.length ? 'var(--c-ink)' : 'var(--c-faint)') + btn('redo', 'Redo', ico('M15.5 6.5l4 4-4 4M19.5 10.5h-9a5.5 5.5 0 0 0 0 11H13'), false, 'var(--c-faint)') + sep +
+          btn('undo', 'Undo · ⌘Z', FN.icon('undo', st.hist.length ? 'var(--c-ink)' : 'var(--c-faint)', 20), false) +
+          btn('redo', 'Redo · ⇧⌘Z', FN.icon('redo', st.rhist.length ? 'var(--c-ink)' : 'var(--c-faint)', 20), false) + sep +
           btn('notif', 'Notifications, 3 new', ico('M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0') + '<span style="position:absolute;top:7px;right:7px;width:15px;height:15px;border-radius:8px;background:var(--c-loss);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">3</span>', st.notif) +
           btn('settings', 'View settings', ico('M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4'), st.settings) + btn('help', 'Help', ico('M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4M12 16.8v.2')) +
           '<span style="width:30px;height:30px;border-radius:15px;background:var(--c-ink);color:var(--c-paper);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin:0 4px">I1</span><button type="button" data-a="present" style="min-height:36px;padding:0 14px;border-radius:8px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:13px;font-weight:600;cursor:pointer">Present</button>');
       }
       function plan() {
-        var R = FN.ROOFS[st.roof], D = draw(st), M = mods(st), O = obstaclesOf(st), o = '<svg width="1180" height="772" viewBox="0 0 1180 772" role="img" aria-label="Top view of the ' + R.en.toLowerCase() + ' roof">' + (st.imagery ? '<path d="M0 0 H1180 V772 H0 Z" fill="var(--c-canvas)"></path><path d="M0 690 H1180 V740 H0 Z" fill="var(--c-line)" opacity=".5"></path>' : '<path d="M0 0 H1180 V772 H0 Z" fill="var(--c-ground)"></path>') + '<g transform="translate(30 100)">';
-        o += Object.keys(R.faces).map(function (k) { var sel = k === 'N' && (st.selFace || st.preview); return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : k === 'S' ? 'var(--c-roofS)' : 'var(--c-roof)') + '" stroke="' + (sel ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (sel ? 2 : 1) + '" style="cursor:pointer"></path>'; }).join('');
-        // the usable area's contour, from the setbacks and every keep-out
+        var R = FN.ROOFS[st.roof], D = draw(st), M = mods(st), O = obstaclesOf(st);
+        var o = '<svg width="1180" height="772" viewBox="0 0 1180 772" role="img" aria-label="Top view of the ' + R.en.toLowerCase() + ' roof">' + FN.draw.defs();
+        o += '<rect width="1180" height="772" fill="' + (st.imagery ? 'var(--c-canvas)' : 'var(--c-ground)') + '"></rect>';
+        // World transform: zoom (wheel / buttons) and pan (Space + drag / middle-click)
+        o += '<g transform="translate(' + (-st.panX * st.zoom).toFixed(1) + ' ' + (-st.panY * st.zoom).toFixed(1) + ') scale(' + st.zoom.toFixed(3) + ')">';
+        // Layer 1: optional 1 m / 5 m metric grid (dots or lines), driveway, road and site tree
+        if (st.grid !== 'off') o += '<rect x="-1200" y="-1200" width="3600" height="3000" fill="url(#sd-grid-' + st.grid + ')"></rect>';
+        if (st.imagery) {
+          o += '<rect x="858" y="256" width="160" height="434" fill="var(--c-line)" opacity=".42"></rect>' +
+            '<path d="M-600 690 H1800 V740 H-600 Z" fill="var(--c-line)" opacity=".55"></path><path d="M-600 715 H1800" stroke="var(--c-paper)" stroke-width="1.5" stroke-dasharray="14 12" opacity=".55"></path>' +
+            '<circle cx="136" cy="154" r="56" fill="#1D2026" opacity=".10"></circle><circle cx="130" cy="148" r="54" fill="#7A9374" opacity=".28" stroke="#6D8667" stroke-width="1.2"></circle><circle cx="130" cy="148" r="4" fill="#6B5543" opacity=".55"></circle>';
+        }
+        o += '<g transform="translate(30 100)">';
+        // Layer 2: building overhang cast shadow + wall footprint under the 0.35 m eave overhang
+        o += '<rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".13" pointer-events="none"></rect>';
+        // Layer 3: oriented roof faces, directional tile-course hatching, slope arrows and strong ridges/hips
+        var vN = vertsOf(st), dN = 'M' + vN.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + ' Z';
+        o += Object.keys(R.faces).map(function (k) {
+          var sel = k === 'N' && (st.selFace || st.preview || st.tool === 'vertex'), d = k === 'N' ? dN : R.faces[k];
+          return '<path data-a="face" data-v="' + k + '" d="' + d + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : k === 'S' ? 'var(--c-roofS)' : 'var(--c-roof)') + '" stroke="' + (sel ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (sel ? 2.2 : 1.1) + '" style="cursor:pointer"></path>' +
+            '<path d="' + d + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" pointer-events="none"></path>';
+        }).join('');
+        o += '<rect x="232" y="170" width="572" height="372" fill="none" stroke="var(--c-roofLine)" stroke-width="0.9" stroke-dasharray="4 4" opacity=".45" pointer-events="none"></rect>';
+        o += '<text x="244" y="186" font-size="10.5" fill="var(--c-muted)" font-weight="600" pointer-events="none">N · ' + R.pitch + '° ↑</text>' +
+          (R.faces.S ? '<text x="244" y="538" font-size="10.5" fill="var(--c-muted)" pointer-events="none">S · ' + R.pitch + '° ↓</text>' : '');
+        // Layer 4: usable area contour, winter shade, 2.5D solar modules, obstacles and ridges
         if (st.filled || st.preview || st.drag) o += '<path d="' + FN.draw.path(D.rings) + '" fill="var(--c-sel)" fill-opacity=".05" fill-rule="evenodd" stroke="var(--c-sel)" stroke-dasharray="5 5" pointer-events="none"></path>';
         if (st.shade) shadows(st).forEach(function (b) { o += '<path d="M' + b.x + ' ' + b.y + ' L' + (b.x + b.w) + ' ' + b.y + ' L' + (b.x + b.w - 3) + ' ' + (b.y + b.h) + ' L' + (b.x + 3) + ' ' + (b.y + b.h) + ' Z" fill="#1D2026" opacity=".16" pointer-events="none"></path>'; });
-        if ((st.filled || st.preview) && st.mods) M.forEach(function (m) { var g = st.preview && !st.filled; o += '<rect data-a="mod" data-v="' + m.id + '" x="' + m.x.toFixed(1) + '" y="' + m.y.toFixed(1) + '" width="' + m.w.toFixed(1) + '" height="' + m.h.toFixed(1) + '" rx="1.5" fill="' + (m.removed ? 'none' : g ? 'var(--c-selSoft)' : m.shaded && st.shade ? '#46525E' : '#2B3A4A') + '" stroke="' + (m.removed ? 'var(--c-loss)' : g ? 'var(--c-sel)' : '#55667A') + '" stroke-dasharray="' + (m.removed || g ? '4 3' : 'none') + '" style="cursor:pointer"></rect>'; });
+        if ((st.filled || st.preview) && st.mods) M.forEach(function (m) { o += FN.draw.modSvg(m, st.preview && !st.filled, m.shaded && st.shade, st.mod25d); });
         O.forEach(function (ob) { o += FN.draw.shapes(st.roof, ob, st.selObs === ob.id); });
         var cur = st.drag ? O.filter(function (ob) { return ob.id === st.drag.id; })[0] : null;
         if (cur) o += FN.draw.guides(st.roof, cur, st.guides);
-        o += '<path d="M' + R.ridge[0] + ' ' + R.ridge[1] + ' L' + R.ridge[2] + ' ' + R.ridge[3] + '" stroke="var(--c-ridge)" stroke-width="1.5"></path></g>';
-        o += '<text x="40" y="760" font-size="11" fill="var(--c-muted)">' + (D.live ? 'studio-draw · WebAssembly · ' + D.ms.toFixed(1) + ' ms' : 'prototype rows (studio-draw not in this copy)') + '</text>';
-        return o + '<circle cx="1050" cy="716" r="20" fill="var(--c-paper)" stroke="var(--c-line)"></circle><path d="M1050 702 L1055 718 L1050 715 L1045 718 Z" fill="var(--c-ink)"></path></svg>';
+        o += FN.draw.ridges(st.roof);
+        // Edit vertices handles & live edge lengths on the North face (fig-4.svg: Sommets · A)
+        if (st.tool === 'vertex') {
+          var cPitchV = Math.cos(R.pitch * Math.PI / 180);
+          vN.forEach(function (p, i) {
+            var q2 = vN[(i + 1) % vN.length], mx = (p[0] + q2[0]) / 2, my = (p[1] + q2[1]) / 2;
+            var eLen = Math.hypot((q2[0] - p[0]) / 40, (q2[1] - p[1]) / 40 / cPitchV);
+            o += '<g data-a="vadd" data-v="' + i + '" style="cursor:copy"><circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="6" fill="var(--c-paper)" stroke="var(--c-sel)" stroke-width="1.4"></circle>' +
+              '<path d="M' + (mx - 3).toFixed(1) + ' ' + my.toFixed(1) + ' H' + (mx + 3).toFixed(1) + ' M' + mx.toFixed(1) + ' ' + (my - 3).toFixed(1) + ' V' + (my + 3).toFixed(1) + '" stroke="var(--c-sel)" stroke-width="1.3"></path></g>' +
+              '<rect x="' + (mx - 24).toFixed(1) + '" y="' + (my - 23).toFixed(1) + '" width="48" height="15" rx="4" fill="var(--c-paper)" stroke="var(--c-line)" pointer-events="none"></rect>' +
+              '<text x="' + mx.toFixed(1) + '" y="' + (my - 12.5).toFixed(1) + '" font-size="9.5" font-weight="600" text-anchor="middle" fill="var(--c-ink2)" pointer-events="none">' + eLen.toFixed(2) + ' m</text>';
+          });
+          vN.forEach(function (p, i) {
+            var vsel = st.selVtx === i;
+            o += '<rect data-vtx="' + i + '" x="' + (p[0] - 5.5).toFixed(1) + '" y="' + (p[1] - 5.5).toFixed(1) + '" width="11" height="11" rx="2" fill="' + (vsel ? 'var(--c-sel)' : 'var(--c-paper)') + '" stroke="var(--c-sel)" stroke-width="2" style="cursor:move"></rect>';
+          });
+        }
+        // Layer 5: CAD overlays (traced polygons / 3-point rectangles, dimensions & measures, note/photo pins, and live drafting preview)
+        st.zones.forEach(function (z) {
+          var d = 'M' + z.pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + ' Z';
+          var cx = z.pts.reduce(function (a, p) { return a + p[0]; }, 0) / z.pts.length, cy = z.pts.reduce(function (a, p) { return a + p[1]; }, 0) / z.pts.length;
+          o += '<g data-a="zdel" data-v="' + z.id + '" style="cursor:pointer"><path d="' + d + '" fill="var(--c-sel)" fill-opacity=".11" stroke="var(--c-sel)" stroke-width="1.8" stroke-dasharray="6 4"></path>' +
+            z.pts.map(function (p) { return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="var(--c-paper)" stroke="var(--c-sel)" stroke-width="1.6"></circle>'; }).join('') +
+            '<rect x="' + (cx - 42).toFixed(1) + '" y="' + (cy - 10).toFixed(1) + '" width="84" height="20" rx="5" fill="var(--c-paper)" stroke="var(--c-sel)" stroke-width="1"></rect>' +
+            '<text x="' + cx.toFixed(1) + '" y="' + (cy + 3.5).toFixed(1) + '" font-size="10.5" font-weight="600" text-anchor="middle" fill="var(--c-sel)">' + z.label + ' ×</text></g>';
+        });
+        var drawDim = function (d, live) {
+          var dx = d.b[0] - d.a[0], dy = d.b[1] - d.a[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L * 12, ny = dx / L * 12;
+          var ax = d.a[0] + nx, ay = d.a[1] + ny, bx = d.b[0] + nx, by = d.b[1] + ny, mx = (ax + bx) / 2, my = (ay + by) / 2;
+          var col = d.kind === 'measure' ? 'var(--c-sun)' : 'var(--c-ink)', txt = d.kind === 'measure' ? d.plan.toFixed(2) + ' m (slope ' + d.slope.toFixed(2) + ' m)' : d.slope.toFixed(2) + ' m';
+          var w = d.kind === 'measure' ? 148 : 66;
+          return '<g ' + (live ? 'pointer-events="none"' : 'data-a="ddel" data-v="' + d.id + '" style="cursor:pointer"') + '>' +
+            '<path d="M' + d.a[0].toFixed(1) + ' ' + d.a[1].toFixed(1) + ' L' + (ax + nx * 0.3).toFixed(1) + ' ' + (ay + ny * 0.3).toFixed(1) + ' M' + d.b[0].toFixed(1) + ' ' + d.b[1].toFixed(1) + ' L' + (bx + nx * 0.3).toFixed(1) + ' ' + (by + ny * 0.3).toFixed(1) + '" stroke="' + col + '" stroke-width="1" opacity=".75"></path>' +
+            '<path d="M' + ax.toFixed(1) + ' ' + ay.toFixed(1) + ' L' + bx.toFixed(1) + ' ' + by.toFixed(1) + '" stroke="' + col + '" stroke-width="1.5" stroke-dasharray="' + (d.kind === 'measure' ? '4 3' : 'none') + '"></path>' +
+            '<circle cx="' + ax.toFixed(1) + '" cy="' + ay.toFixed(1) + '" r="2.6" fill="' + col + '"></circle><circle cx="' + bx.toFixed(1) + '" cy="' + by.toFixed(1) + '" r="2.6" fill="' + col + '"></circle>' +
+            '<rect x="' + (mx - w / 2).toFixed(1) + '" y="' + (my - 10).toFixed(1) + '" width="' + w + '" height="20" rx="5" fill="var(--c-paper)" stroke="' + col + '" stroke-width="1.1"></rect>' +
+            '<text x="' + mx.toFixed(1) + '" y="' + (my + 3.5).toFixed(1) + '" font-size="10.5" font-weight="600" text-anchor="middle" fill="var(--c-ink)">' + txt + (live ? '' : ' ×') + '</text></g>';
+        };
+        if (st.notesOn) {
+          st.dims.forEach(function (d) { o += drawDim(d, false); });
+          st.pins.forEach(function (p) {
+            var sel = st.selPin === p.id, col = p.kind === 'photo' ? 'var(--c-sel)' : 'var(--c-sun)';
+            o += '<g data-a="pin" data-v="' + p.id + '" style="cursor:pointer"><circle cx="' + (p.x + 1.5).toFixed(1) + '" cy="' + (p.y + 2).toFixed(1) + '" r="12" fill="#12161C" opacity=".22"></circle>' +
+              '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="12" fill="var(--c-paper)" stroke="' + col + '" stroke-width="' + (sel ? 2.5 : 1.6) + '"></circle>' +
+              '<g transform="translate(' + (p.x - 8).toFixed(1) + ' ' + (p.y - 8).toFixed(1) + ') scale(0.67)" stroke="' + col + '" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+              (p.kind === 'photo' ? '<path d="M3 8.5 L3 18.5 L21 18.5 L21 8.5 L16.5 8.5 L15 6 L9 6 L7.5 8.5 Z"></path><circle cx="12" cy="13.5" r="3.2"></circle>' : '<path d="M12 20.5 C12 20.5 18 14.5 18 10 A6 6 0 1 0 6 10 C6 14.5 12 20.5 12 20.5 Z M9.5 9.5 H14.5 M9.5 12 H13"></path>') + '</g></g>';
+          });
+        }
+        if (st.lastMeas && st.tool === 'measure' && !st.pts.length) o += drawDim(st.lastMeas, true);
+        if (st.curPt && ['trace', 'rect3', 'measure', 'dimension'].indexOf(st.tool) >= 0) {
+          var sp = st.curPt;
+          if (sp.kind === 'vertex') o += '<rect x="' + (sp[0] - 5).toFixed(1) + '" y="' + (sp[1] - 5).toFixed(1) + '" width="10" height="10" fill="none" stroke="var(--c-sel)" stroke-width="1.8" pointer-events="none"></rect>';
+          else if (sp.kind === 'grid') o += '<path d="M' + (sp[0] - 5).toFixed(1) + ' ' + sp[1].toFixed(1) + ' H' + (sp[0] + 5).toFixed(1) + ' M' + sp[0].toFixed(1) + ' ' + (sp[1] - 5).toFixed(1) + ' V' + (sp[1] + 5).toFixed(1) + '" stroke="var(--c-sel)" stroke-width="1.4" pointer-events="none"></path>';
+        }
+        if (st.pts.length && st.curPt) {
+          var p0 = st.pts[0], pL = st.pts[st.pts.length - 1], cp = st.curPt, cPitch = Math.cos(R.pitch * Math.PI / 180);
+          if (st.tool === 'measure' || st.tool === 'dimension') {
+            var dPlan = Math.hypot(cp[0] - p0[0], cp[1] - p0[1]) / 40, dSlope = Math.hypot((cp[0] - p0[0]) / 40, (cp[1] - p0[1]) / 40 / cPitch);
+            o += drawDim({ a: p0, b: cp, plan: dPlan, slope: dSlope, kind: st.tool }, true);
+          } else if (st.tool === 'trace') {
+            var allPts = st.pts.concat([cp]);
+            o += '<path d="M' + allPts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + '" fill="var(--c-sel)" fill-opacity=".08" stroke="var(--c-sel)" stroke-width="1.6" stroke-dasharray="5 4" pointer-events="none"></path>' +
+              st.pts.map(function (p, idx) { return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (idx === 0 ? 5.5 : 3.5) + '" fill="' + (idx === 0 ? 'var(--c-sel)' : 'var(--c-paper)') + '" stroke="var(--c-sel)" stroke-width="1.6" pointer-events="none"></circle>'; }).join('');
+          } else if (st.tool === 'rect3') {
+            if (st.pts.length === 1) {
+              o += '<path d="M' + p0[0].toFixed(1) + ' ' + p0[1].toFixed(1) + ' L' + cp[0].toFixed(1) + ' ' + cp[1].toFixed(1) + '" stroke="var(--c-sel)" stroke-width="1.8" stroke-dasharray="5 4" pointer-events="none"></path>' +
+                '<circle cx="' + p0[0].toFixed(1) + '" cy="' + p0[1].toFixed(1) + '" r="4" fill="var(--c-sel)" pointer-events="none"></circle>';
+            } else if (st.pts.length === 2) {
+              var p1 = st.pts[1], ux = p1[0] - p0[0], uy = p1[1] - p0[1], uL = Math.hypot(ux, uy) || 1, nx2 = -uy / uL, ny2 = ux / uL;
+              var hDist = (cp[0] - p1[0]) * nx2 + (cp[1] - p1[1]) * ny2, p2 = [p1[0] + nx2 * hDist, p1[1] + ny2 * hDist], p3 = [p0[0] + nx2 * hDist, p0[1] + ny2 * hDist];
+              o += '<path d="M' + [p0, p1, p2, p3].map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + ' Z" fill="var(--c-sel)" fill-opacity=".12" stroke="var(--c-sel)" stroke-width="1.8" stroke-dasharray="5 4" pointer-events="none"></path>';
+            }
+          }
+          // Dynamic input floating badge near the cursor (fig-6.svg: Saisie / Type value)
+          if (st.tool === 'trace' || st.tool === 'rect3') {
+            var segLen = (Math.hypot(cp[0] - pL[0], cp[1] - pL[1]) / 40).toFixed(2), segAng = Math.round((Math.atan2(-(cp[1] - pL[1]), cp[0] - pL[0]) * 180 / Math.PI + 360) % 360);
+            var showL = st.dynLen !== '' ? st.dynLen : segLen, showA = st.dynAng !== '' ? st.dynAng : '' + segAng;
+            o += '<g transform="translate(' + (cp[0] + 14).toFixed(1) + ' ' + (cp[1] - 32).toFixed(1) + ')" pointer-events="none">' +
+              '<rect width="128" height="24" rx="6" fill="var(--c-paper)" stroke="var(--c-sel)" stroke-width="1.3"></rect>' +
+              '<rect x="4" y="3" width="62" height="18" rx="4" fill="' + (st.dynField === 0 ? 'var(--c-selSoft)' : 'var(--c-paper2)') + '"></rect>' +
+              '<text x="35" y="15.5" font-size="10.5" font-weight="600" text-anchor="middle" fill="var(--c-sel)">' + showL + ' m</text>' +
+              '<rect x="70" y="3" width="54" height="18" rx="4" fill="' + (st.dynField === 1 ? 'var(--c-selSoft)' : 'var(--c-paper2)') + '"></rect>' +
+              '<text x="97" y="15.5" font-size="10.5" font-weight="600" text-anchor="middle" fill="var(--c-ink2)">∠ ' + showA + '°</text></g>';
+          }
+        }
+        o += '</g></g>';
+        var gTxt = st.grid === 'off' ? 'grid off' : 'grid 1 m / 5 m (' + st.grid + ')';
+        o += '<text x="40" y="760" font-size="11" fill="var(--c-muted)">' + (D.live ? 'studio-draw · WebAssembly · ' + D.ms.toFixed(1) + ' ms · ' + gTxt + ' · wheel: zoom · Space+drag: pan' : 'prototype rows · ' + gTxt + ' · wheel: zoom · Space+drag: pan') + '</text>';
+        o += '<g transform="translate(888 708)" pointer-events="none"><path d="M0 12 V17 H120 V12 M40 14 V17 M80 14 V17" fill="none" stroke="var(--c-muted)" stroke-width="1.2"></path><text x="60" y="9" font-size="10" text-anchor="middle" fill="var(--c-muted)">' + (3 / st.zoom).toFixed(1).replace('.0', '') + ' m</text></g>';
+        return o + '<g data-a="north" style="cursor:pointer"><title>North · click to frame and align North up</title><circle cx="1050" cy="716" r="20" fill="var(--c-paper)" stroke="var(--c-line)"></circle><path d="M1050 702 L1055 718 L1050 715 L1045 718 Z" fill="var(--c-ink)"></path><text x="1050" y="693" font-size="9.5" font-weight="600" text-anchor="middle" fill="var(--c-muted)">N</text></g></svg>';
       }
       function grip(key, vertical) { return '<div data-grip="' + key + '" title="Drag to move · double tap to dock" style="' + (vertical ? 'width:16px;border-right:1px solid var(--c-line2)' : 'height:16px;width:100%') + ';cursor:grab;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="' + (vertical ? 'width:3px;height:18px' : 'width:18px;height:3px') + ';border-radius:2px;background:var(--c-grip)"></span></div>'; }
       function rail(key, list) {
         var p = st.pos[key];
-        return '<div style="position:absolute;left:' + p[0] + 'px;top:' + p[1] + 'px;width:60px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);padding:4px 0 8px;display:flex;flex-direction:column;align-items:center;gap:2px;z-index:4" role="toolbar">' + grip(key) + list.map(function (t, i) {
+        return '<div style="position:absolute;left:' + p[0] + 'px;top:' + p[1] + 'px;width:58px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);padding:4px 0 8px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4" role="toolbar">' + grip(key) + list.map(function (t, i) {
           var on = t === 'layers' ? st.layers : st.tool === t;
-          return '<button type="button" data-a="tool" data-v="' + t + '" data-tip="' + t + '|' + key + '|' + i + '" aria-label="' + TIPS[t][0] + '" aria-pressed="' + on + '" style="width:48px;height:48px;border:none;border-radius:11px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer">' + FN.icon(t === 'layers' ? 'layers' : t) + '</button>';
+          var dis = t === 'panel' && !st.filled;
+          var hov = st.hover && st.hover.k === t && !on;
+          var barSide = key === 'tools' ? 'right:-6px' : 'left:-6px';
+          return '<button type="button" data-a="tool" data-v="' + t + '" data-tip="' + t + '|' + key + '|' + i + '" aria-label="' + TIPS[t][0] + '" aria-pressed="' + on + '" style="position:relative;width:44px;height:44px;border:' + (on ? '1.5px solid var(--c-sel)' : hov ? '1px solid var(--c-line)' : 'none') + ';border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : hov ? 'var(--c-line2)' : 'transparent') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';opacity:' + (dis && !on ? '0.42' : '1') + ';display:flex;align-items:center;justify-content:center;cursor:pointer">' +
+            (on ? '<span style="position:absolute;' + barSide + ';top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--c-sel)"></span>' : '') +
+            FN.icon(t === 'layers' ? 'layers' : t) + '</button>';
         }).join('') + '</div>';
       }
       function ui() {
-        var E = energy(st), o = '', P = st.pos, left = ['select', 'trace', 'rect3', 'fill', 'panel', 'chimney', 'measure'], right = ['dimension', 'note', 'photo', 'layers'];
+        var E = energy(st), o = '', P = st.pos, left = ['select', 'vertex', 'trace', 'rect3', 'fill', 'panel', 'chimney', 'measure'], right = ['dimension', 'note', 'photo', 'layers'];
         if (st.level === 0) { left = ['select', 'fill', 'panel', 'chimney']; right = ['layers']; }
         o += rail('tools', left) + rail('notes', right);
         var c = st.chip; if (c && !st.pad) o += '<div style="position:absolute;left:' + c.x + 'px;top:' + c.y + 'px;' + FN.card + ';padding:7px 10px;font-size:12px;display:flex;gap:8px;z-index:3;pointer-events:none;box-shadow:0 6px 18px rgba(29,32,38,.12)"><span style="width:3px;border-radius:2px;background:' + c.c + '"></span><span><b style="color:' + c.c + '">' + c.t + '</b><br><span style="color:var(--c-ink2)">' + c.b + '</span></span></div>';
@@ -1361,45 +1833,85 @@
           '<button type="button" data-a="sheet" style="border:none;background:transparent;padding:10px 14px;display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:var(--c-ink);cursor:pointer"><span style="' + FN.kick + '">Equipment ▸</span><b style="font-size:14px;font-weight:600;color:var(--c-battery)">' + st.modW + ' W · ' + st.inv + ' kW · ' + (st.bat ? st.bat + ' kWh' : 'no battery') + '</b></button><span style="align-self:center;font-size:11px;color:var(--c-muted);padding:0 12px 0 4px;display:flex;gap:6px;align-items:center">' + (st.busy ? '<span style="width:6px;height:6px;border-radius:3px;background:var(--c-live)"></span>computing…' : st.filled ? 'API · 0.3 s' : 'fill a face') + '</span></div>';
         var ctx = [];
         if (st.preview && !st.filled) { ctx = ['portrait', 'landscape', 'mixed'].map(function (v) { return [v.charAt(0).toUpperCase() + v.slice(1), 'variant', v, st.variant === v]; }); ctx.push(['✓ Keep', 'keep', '', 'k']); }
-        else if (st.selFace) ctx = [['Edit vertices', 'noop', '', false], ['Setbacks', 'noop', '', false], ['Delete', 'noop', '', false]];
-        else if (st.tool === 'chimney') ctx = Object.keys(FN.OBST).map(function (k) { return [FN.OBST[k].en, 'otype', k, st.otype === k]; });
-        if (ctx.length) o += '<div style="position:absolute;left:' + P.read[0] + 'px;top:' + (P.read[1] + 70) + 'px;display:flex;align-items:center;gap:4px;' + FN.card + ';padding:4px;box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4"><span style="font-size:12px;color:var(--c-muted);padding:0 8px">' + (st.tool === 'chimney' && !st.preview ? 'Obstacle · tap the north face to place' : 'North face') + '</span>' + ctx.map(function (x) { var k = x[3] === 'k'; return '<button type="button" data-a="' + x[1] + '" data-v="' + x[2] + '" style="min-height:40px;padding:0 12px;border-radius:8px;border:1px solid ' + (k ? 'var(--c-ink)' : x[3] ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (k ? 'var(--c-ink)' : x[3] ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (k ? 'var(--c-paper)' : x[3] ? 'var(--c-sel)' : x[0] === 'Delete' ? 'var(--c-loss)' : 'var(--c-ink)') + ';font:inherit;font-size:13px;cursor:pointer">' + x[0] + '</button>'; }).join('') + '</div>';
-        if (st.hover && !st.layers && !st.settings) { var tp = TIPS[st.hover.k]; o += '<div style="position:absolute;left:' + st.hover.x + 'px;top:' + st.hover.y + 'px;width:260px;background:var(--c-tip);color:var(--c-paper);border-radius:12px;padding:12px;box-shadow:0 10px 28px rgba(29,32,38,.25);display:flex;flex-direction:column;gap:6px;z-index:6;pointer-events:none"><span style="display:flex;justify-content:space-between"><b style="font-size:14px">' + tp[0] + '</b><span style="font-size:11px;border:1px solid currentColor;opacity:.7;border-radius:4px;padding:1px 5px">' + tp[1] + '</span></span>' + tp[2].map(function (s, i) { return '<span style="font-size:12px;line-height:1.45;opacity:.9">' + (i + 1) + ' · ' + s + '</span>'; }).join('') + '<span style="font-size:11px;opacity:.75">' + tp[3] + '</span></div>'; }
-        o += '<div style="position:absolute;left:' + P.changes[0] + 'px;top:' + P.changes[1] + 'px;width:270px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4;overflow:hidden"><div data-grip="changes" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600">Changes</b><span style="font-size:11px;color:var(--c-muted)">' + (st.log.length ? st.log.length + ' recent' : 'none yet') + '</span></div>' +
-          (st.log.length ? st.log.map(function (l) { return '<div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--c-line2);font-size:12px"><span style="width:3px;border-radius:2px;background:' + l.color + '"></span><span style="flex:1"><b style="font-weight:600">' + l.label + '</b><br><span style="color:var(--c-ink2)">' + l.delta + '</span></span><b style="color:' + l.color + ';font-weight:600;white-space:nowrap">' + l.money + '</b></div>'; }).join('') : '<span style="display:block;padding:12px;font-size:12px;color:var(--c-muted);line-height:1.5">Each edit lands here with what it gains or costs. Undo walks back through it.</span>') + '</div>';
+        else if (st.selFace) ctx = [['Edit vertices · A', 'tool', 'vertex', false], ['Setbacks · ' + FN.SETBACK.toFixed(2) + ' m', 'setback', '', false], ['Clear layout', 'clearface', '', false]];
+        else if (st.tool === 'vertex') ctx = [['← 5 cm', 'vnudge', '-2,0', false], ['↑ 5 cm', 'vnudge', '0,-2', false], ['↓ 5 cm', 'vnudge', '0,2', false], ['→ 5 cm', 'vnudge', '2,0', false], ['Square 90°', 'vsquare', '', false], ['Reset face', 'vreset', '', false]];
+        else if (st.tool === 'chimney') ctx = Object.keys(FN.OBST).map(function (k, idx) {
+          var obIco = FN.icon(FN.OBST[k].icon, st.otype === k ? 'var(--c-sel)' : 'var(--c-ink)', 16);
+          return ['<span style="display:inline-flex;align-items:center;gap:5px">' + obIco + FN.OBST[k].en + ' <span style="opacity:.6;font-size:11px">' + (idx + 1) + '</span></span>', 'otype', k, st.otype === k];
+        });
+        else if (st.tool === 'trace') ctx = st.pts.length >= 3 ? [['✓ Close zone (' + st.pts.length + ' pts)', 'zclose', '', 'k'], ['Undo point', 'zundo', '', false], ['Cancel', 'zcancel', '', false]] : [['Undo point', 'zundo', '', false], ['Cancel', 'zcancel', '', false]];
+        else if (st.tool === 'measure' && st.lastMeas && !st.pts.length) ctx = [['✓ Keep as dimension (D)', 'mkeep', '', 'k'], ['Clear', 'zcancel', '', false]];
+        else if (st.tool === 'rect3' || st.tool === 'measure' || st.tool === 'dimension') { if (st.pts.length) ctx = [['Cancel', 'zcancel', '', false]]; }
+        var ctxLabel = st.tool === 'chimney' && !st.preview ? 'Obstacle · tap the north face to place' : st.tool === 'vertex' ? 'Vertices (corner #' + (st.selVtx + 1) + ') · drag handle, tap mid-edge +, or nudge' : st.tool === 'trace' ? 'Trace · tap corners or type length + Enter (' + st.pts.length + ' pts)' : st.tool === 'rect3' ? 'Rectangle 3 pts · ' + ['tap corner A', 'tap corner B (first edge)', 'tap opposite side'][st.pts.length] : st.tool === 'measure' ? 'Measure · ' + (st.pts.length ? 'tap point B to read plan & slope length' : st.lastMeas ? 'plan ' + st.lastMeas.plan.toFixed(2) + ' m · slope ' + st.lastMeas.slope.toFixed(2) + ' m' : 'tap point A on the plan') : st.tool === 'dimension' ? 'Dimension · ' + (st.pts.length ? 'tap second vertex to pin dimension' : 'tap first vertex on the plan') : st.tool === 'note' ? 'Note · tap a point on the roof to pin a field note' : st.tool === 'photo' ? 'Photo · tap a point on the roof to attach a survey photo' : st.tool === 'pan' ? 'Pan · drag the plan to move around (or hold Space)' : 'North face';
+        if (ctx.length || ['vertex', 'trace', 'rect3', 'measure', 'dimension', 'note', 'photo', 'pan'].indexOf(st.tool) >= 0) o += '<div style="position:absolute;left:' + P.read[0] + 'px;top:' + (P.read[1] + 70) + 'px;display:flex;align-items:center;gap:4px;' + FN.card + ';padding:4px 8px;box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4"><span style="font-size:12px;color:var(--c-muted);padding:0 6px">' + ctxLabel + '</span>' + ctx.map(function (x) { var k = x[3] === 'k'; return '<button type="button" data-a="' + x[1] + '" data-v="' + x[2] + '" style="min-height:34px;padding:0 10px;border-radius:8px;border:1px solid ' + (k ? 'var(--c-ink)' : x[3] ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (k ? 'var(--c-ink)' : x[3] ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (k ? 'var(--c-paper)' : x[3] ? 'var(--c-sel)' : x[0].indexOf('Clear') === 0 ? 'var(--c-loss)' : 'var(--c-ink)') + ';font:inherit;font-size:12px;cursor:pointer">' + x[0] + '</button>'; }).join('') + '</div>';
+        if (st.hover && !st.layers && !st.settings) { var tp = TIPS[st.hover.k]; o += '<div style="position:absolute;left:' + st.hover.x + 'px;top:' + st.hover.y + 'px;width:260px;background:var(--c-tip);color:var(--c-paper);border-radius:12px;padding:12px;box-shadow:0 10px 28px rgba(29,32,38,.25);display:flex;flex-direction:column;gap:6px;z-index:6;pointer-events:none"><span style="display:flex;justify-content:space-between"><b style="font-size:14px">' + tp[0] + '</b><span style="font-size:11px;border:1px solid currentColor;opacity:.7;border-radius:4px;padding:1px 5px">' + tp[1] + '</span></span>' + tp[2].map(function (s, i) { return '<span style="font-size:12px;line-height:1.45;opacity:.9">' + (i + 1) + ' · ' + s + '</span>'; }).join('') + '<span style="display:flex;justify-content:space-between;font-size:11px;opacity:.75"><span>' + tp[3] + '</span><span>⌥ snaps off</span></span></div>'; }
+        var chBody = !st.swapped || st.chOpen;
+        o += '<div style="position:absolute;left:' + P.changes[0] + 'px;top:' + P.changes[1] + 'px;width:270px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4;overflow:hidden"><div data-grip="changes" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;' + (chBody ? 'border-bottom:1px solid var(--c-line2);' : '') + 'cursor:grab"><b style="font-size:12px;font-weight:600">Changes</b><button type="button" data-a="chopen" style="border:none;background:transparent;padding:0;font:inherit;font-size:11px;color:var(--c-muted);cursor:pointer">' + (st.log.length ? st.log.length + ' recent' : 'none yet') + (st.swapped ? (st.chOpen ? ' ▴' : ' ▾') : '') + '</button></div>' +
+          (chBody ? (st.log.length ? st.log.map(function (l) { return '<div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--c-line2);font-size:12px"><span style="width:3px;border-radius:2px;background:' + l.color + '"></span><span style="flex:1"><b style="font-weight:600">' + l.label + '</b><br><span style="color:var(--c-ink2)">' + l.delta + '</span></span><b style="color:' + l.color + ';font-weight:600;white-space:nowrap">' + l.money + '</b></div>'; }).join('') : '<span style="display:block;padding:12px;font-size:12px;color:var(--c-muted);line-height:1.5">Each edit lands here with what it gains or costs. Undo walks back through it.</span>') : '') + '</div>';
         var v = P.v3;
-        o += '<div style="position:absolute;left:' + v[0] + 'px;top:' + v[1] + 'px;width:330px;height:252px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.12);z-index:4;overflow:hidden"><div data-grip="v3" style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600">' + (st.swapped ? 'Plan · editing stays here' : '3D · mirrors the plan') + '</b><span style="display:flex;gap:4px">' +
+        o += '<div style="position:absolute;left:' + v[0] + 'px;top:' + v[1] + 'px;width:330px;height:252px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.12);z-index:4;overflow:hidden"><div data-grip="v3" style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600;white-space:nowrap">' + (st.swapped ? 'Plan · tap ⇄ to edit' : '3D · mirrors the plan') + '</b><span style="display:flex;gap:4px">' +
           [[9, '9 am'], [12, 'noon'], [15, '3 pm']].map(function (x) { var on = st.hour3 === x[0]; return '<button type="button" data-a="hour3" data-v="' + x[0] + '" style="min-height:28px;padding:0 7px;border-radius:6px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:11px;cursor:pointer">' + x[1] + '</button>'; }).join('') +
           '<button type="button" data-a="swap" aria-label="Swap the 3D view and the plan" style="width:32px;height:28px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);cursor:pointer">⇄</button></span></div>' +
-          (st.swapped ? '<svg width="330" height="212" viewBox="200 140 640 420" aria-hidden="true">' + Object.keys(FN.ROOFS[st.roof].faces).map(function (k) { return '<path d="' + FN.ROOFS[st.roof].faces[k] + '" fill="var(--c-roof)" stroke="var(--c-roofLine)" stroke-width="2"></path>'; }).join('') + mods(st).filter(function (m) { return st.filled && !m.blocked && !m.removed; }).map(function (m) { return '<rect x="' + m.x + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" fill="#2B3A4A"></rect>'; }).join('') + '</svg>' : '') + (H ? '' : '<div style="height:212px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--c-ink2)">3D loading…</div>') + '</div>';
-        if (st.swapped) o += '<span style="position:absolute;left:92px;bottom:14px;font-size:12px;padding:5px 9px;border-radius:7px;background:var(--c-paper);border:1px solid var(--c-line);color:var(--c-ink2);z-index:3">3D checks · editing stays on the plan · ⇄ to swap back</span>';
+          (st.swapped ? (function () {
+            var R3 = FN.ROOFS[st.roof], D3 = draw(st), O3 = obstaclesOf(st), vN3 = vertsOf(st), dN3 = 'M' + vN3.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + ' Z';
+            return '<svg data-a="swap" width="330" height="212" viewBox="190 135 660 440" aria-hidden="true" style="background:var(--c-canvas);display:block;cursor:pointer">' + FN.draw.defs() +
+              (st.grid !== 'off' ? '<rect x="190" y="135" width="660" height="440" fill="url(#sd-grid-' + st.grid + ')"></rect>' : '') +
+              '<rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".12"></rect>' +
+              Object.keys(R3.faces).map(function (k) { var d = k === 'N' ? dN3 : R3.faces[k]; return '<path d="' + d + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : k === 'S' ? 'var(--c-roofS)' : 'var(--c-roof)') + '" stroke="var(--c-roofLine)" stroke-width="1.3"></path><path d="' + d + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')"></path>'; }).join('') +
+              (st.filled || st.preview ? '<path d="' + FN.draw.path(D3.rings) + '" fill="var(--c-sel)" fill-opacity=".05" fill-rule="evenodd" stroke="var(--c-sel)" stroke-dasharray="5 5"></path>' : '') +
+              ((st.filled || st.preview) && st.mods ? mods(st).filter(function (m) { return !m.blocked && !m.removed; }).map(function (m) { return FN.draw.modSvg(m, st.preview && !st.filled, m.shaded && st.shade, st.mod25d); }).join('') : '') +
+              O3.map(function (ob) { return FN.draw.shapes(st.roof, ob, st.selObs === ob.id); }).join('') +
+              st.zones.map(function (z) { return '<path d="M' + z.pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + ' Z" fill="var(--c-sel)" fill-opacity=".11" stroke="var(--c-sel)" stroke-width="1.8" stroke-dasharray="6 4"></path>'; }).join('') +
+              FN.draw.ridges(st.roof) + '</svg>';
+          })() : '') + (H ? '' : '<div style="height:212px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--c-ink2)">3D loading…</div>') + '</div>';
+        if (st.swapped) o += '<span style="position:absolute;left:92px;bottom:14px;font-size:12px;padding:5px 9px;border-radius:7px;background:var(--c-paper);border:1px solid var(--c-line);color:var(--c-ink2);z-index:3">3D interactive · click the roof to place or edit · ⇄ to swap back</span>';
         // the roof type, as the survey found it: hip, gable or skillion
-        o += '<div style="position:absolute;left:430px;top:768px;display:flex;align-items:center;gap:4px;' + FN.card + ';padding:4px;box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4"><span style="font-size:12px;color:var(--c-muted);padding:0 8px">Roof</span>' + Object.keys(FN.ROOFS).map(function (k) { var on = st.roof === k; return '<button type="button" data-a="roof" data-v="' + k + '" aria-pressed="' + on + '" style="min-height:34px;padding:0 12px;border-radius:8px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';font:inherit;font-size:12.5px;cursor:pointer">' + FN.ROOFS[k].en + '</button>'; }).join('') + '</div>';
+        o += '<div style="position:absolute;left:380px;top:768px;display:flex;align-items:center;gap:4px;' + FN.card + ';padding:4px;box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4"><span style="font-size:12px;color:var(--c-muted);padding:0 8px">Roof</span>' + Object.keys(FN.ROOFS).map(function (k) { var on = st.roof === k; return '<button type="button" data-a="roof" data-v="' + k + '" aria-pressed="' + on + '" style="min-height:34px;padding:0 12px;border-radius:8px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';font:inherit;font-size:12.5px;cursor:pointer">' + FN.ROOFS[k].en + '</button>'; }).join('') + '</div>';
+        // CAD navigation & snap bar on the 2D plan: Pan (H), Zoom (Z), Fit (⇧1), Snaps (S)
+        if (!st.swapped) o += '<div style="position:absolute;left:598px;top:768px;display:flex;align-items:center;gap:3px;' + FN.card + ';padding:4px;box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4">' +
+          '<button type="button" data-a="tool" data-v="' + (st.tool === 'pan' ? 'select' : 'pan') + '" aria-pressed="' + (st.tool === 'pan' || st.space) + '" title="Pan · H (or hold Space + drag)" style="width:32px;height:34px;border-radius:7px;border:1px solid ' + (st.tool === 'pan' || st.space ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (st.tool === 'pan' || st.space ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (st.tool === 'pan' || st.space ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer">' + FN.icon('pan', st.tool === 'pan' || st.space ? 'var(--c-sel)' : 'var(--c-ink)', 17) + '</button>' +
+          '<button type="button" data-a="zoom" data-v="-1" aria-label="Zoom out" title="Zoom out · Z (wheel down)" style="width:28px;height:34px;border-radius:7px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:14px;cursor:pointer">−</button>' +
+          '<button type="button" data-a="zoom" data-v="0" title="Zoom · Z (wheel at cursor)" style="min-width:60px;height:34px;padding:0 5px;border-radius:7px;border:none;background:transparent;color:var(--c-ink);font:inherit;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:3px;cursor:pointer">' + FN.icon('zoom', 'var(--c-muted)', 14) + Math.round(st.zoom * 100) + '%</button>' +
+          '<button type="button" data-a="zoom" data-v="1" aria-label="Zoom in" title="Zoom in · Z (wheel up)" style="width:28px;height:34px;border-radius:7px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:14px;cursor:pointer">+</button>' +
+          '<button type="button" data-a="fit" aria-label="Frame roof" title="Fit roof · ⇧1" style="width:32px;height:34px;border-radius:7px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);display:flex;align-items:center;justify-content:center;cursor:pointer">' + FN.icon('fit', 'var(--c-ink)', 17) + '</button>' +
+          '<button type="button" data-a="snap" aria-pressed="' + st.snapOn + '" title="Magnetic snaps · S (hold Alt to suspend)" style="width:32px;height:34px;border-radius:7px;border:1px solid ' + (st.snapOn ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (st.snapOn ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (st.snapOn ? 'var(--c-sel)' : 'var(--c-muted)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer">' + FN.icon('snap', st.snapOn ? 'var(--c-sel)' : 'var(--c-muted)', 17) + '</button></div>';
         // the popover of the selected obstacle: what it is, its keep-out, where it sits, what it takes
         var so = !st.drag && st.selObs ? obstaclesOf(st).filter(function (x) { return x.id === st.selObs; })[0] : null;
         if (so && !st.pad) {
           var T = FN.OBST[so.type], w0 = FN.draw.where(st.roof, so.x, so.y), others = obstaclesOf(st).filter(function (x) { return x.id !== so.id; }).map(function (x) { return { type: x.type, x: Math.round(x.x), y: Math.round(x.y) }; });
-          var takes = FN.draw.compute(st.roof, others, st.variant).n - draw(st).n, px = Math.min(so.x + 30 + 56, 1180 - 300), py = Math.max(60, Math.min(so.y + 148 - 60, 820 - 300));
-          var row = function (k, val) { return '<span style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + k + '</span><span style="font-weight:600;display:flex;gap:6px;align-items:center">' + val + '</span></span>'; };
+          var takes = FN.draw.compute(st.roof, others, st.variant).n - draw(st).n, sp = planScreen(so.x, so.y), px = Math.max(84, Math.min(sp[0] + 56, 1180 - 300)), py = Math.max(60, Math.min(sp[1] - 60, 820 - 300));
+          var row = function (k, val) { return '<span style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted);display:inline-flex;align-items:center;gap:4px">' + k + '</span><span style="font-weight:600;display:flex;gap:6px;align-items:center">' + val + '</span></span>'; };
           var btn = function (a, v, t) { return '<button type="button" data-a="' + a + '" data-v="' + v + '" style="min-width:28px;min-height:28px;border-radius:7px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:13px;cursor:pointer">' + t + '</button>'; };
-          o += '<div role="dialog" aria-label="' + T.en + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:280px;' + FN.card + ';border-color:var(--c-sel);box-shadow:0 12px 32px rgba(29,32,38,.18);z-index:7;padding:12px 14px;display:flex;flex-direction:column;gap:4px">' +
-            '<span style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px;font-weight:600">' + T.en + '</b>' + btn('oclose', '', '×') + '</span>' +
-            (so.id !== 'chim' ? '<span style="display:flex;gap:4px;margin:2px 0 4px">' + Object.keys(FN.OBST).filter(function (k) { return k !== 'chimney'; }).map(function (k) { var on = so.type === k; return '<button type="button" data-a="ochange" data-v="' + k + '" style="flex:1;min-height:28px;border-radius:7px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + FN.OBST[k].en + '</button>'; }).join('') + '</span>' : '') +
+          o += '<div role="dialog" aria-label="' + T.en + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:296px;' + FN.card + ';border-color:var(--c-sel);box-shadow:0 12px 32px rgba(29,32,38,.18);z-index:7;padding:12px 14px;display:flex;flex-direction:column;gap:4px">' +
+            '<span style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + FN.icon(T.icon, 'var(--c-sel)', 18) + T.en + '</b>' + btn('oclose', '', '×') + '</span>' +
+            (so.id !== 'chim' ? '<span style="display:flex;gap:3px;flex-wrap:wrap;margin:2px 0 4px">' + Object.keys(FN.OBST).filter(function (k) { return k !== 'chimney'; }).map(function (k) { var on = so.type === k; return '<button type="button" data-a="ochange" data-v="' + k + '" style="min-height:26px;padding:0 6px;border-radius:6px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer">' + FN.icon(FN.OBST[k].icon, on ? 'var(--c-sel)' : 'var(--c-ink)', 13) + FN.OBST[k].en + '</button>'; }).join('') + '</span>' : '') +
             row('Size', T.shape ? 'Ø ' + (2 * T.a).toFixed(2) + ' m' : T.a.toFixed(2) + ' × ' + T.b.toFixed(2) + ' m') + row('Keep-out', T.margin.toFixed(2) + ' m, round join') +
-            row('Height above the roof', so.id === 'chim' ? btn('pad', '', so.h.toFixed(2) + ' m ✎') : btn('oh', '-0.1', '−') + so.h.toFixed(2) + ' m' + btn('oh', '0.1', '+')) +
+            row(FN.icon('height', 'var(--c-muted)', 15) + 'Height above roof', so.id === 'chim' ? btn('pad', '', so.h.toFixed(2) + ' m ✎') : btn('oh', '-0.1', '−') + so.h.toFixed(2) + ' m' + btn('oh', '0.1', '+')) +
             row('To the ridge · to the eave', w0.ridge.toFixed(2) + ' m · ' + w0.eave.toFixed(2) + ' m') + row('Modules it takes', takes > 0 ? '<span style="color:var(--c-loss)">' + takes + '</span>' : '0') +
-            '<span style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-size:11px;color:var(--c-muted)">drag it · Alt: no snap</span><button type="button" data-a="odel" style="min-height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--c-loss);background:var(--c-paper2);color:var(--c-loss);font:inherit;font-size:12px;cursor:pointer">Delete</button></span></div>';
+            '<span style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-size:11px;color:var(--c-muted)">drag it · Alt: no snap</span><button type="button" data-a="odel" style="min-height:30px;padding:0 10px;border-radius:7px;border:1px solid var(--c-loss);background:var(--c-paper2);color:var(--c-loss);font:inherit;font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer">' + FN.icon('delete', 'var(--c-loss)', 14) + 'Delete</button></span></div>';
         }
         if (st.pad) o += '<div style="position:absolute;left:600px;top:200px;width:210px;' + FN.card + ';border-color:var(--c-sel);padding:10px;box-shadow:0 10px 28px rgba(29,32,38,.18);display:flex;flex-direction:column;gap:8px;z-index:6"><span style="font-size:12px;color:var(--c-muted)">Chimney height above the roof</span><b style="font-size:22px;font-weight:600;color:var(--c-sel);border-bottom:1.5px solid var(--c-sel)">' + st.chimH + ' m</b><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px">' +
           ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '✓'].map(function (k) { var ok = k === '✓'; return '<button type="button" data-a="key" data-v="' + k + '" style="min-height:44px;border-radius:8px;border:1px solid var(--c-line);background:' + (ok ? 'var(--c-ink)' : 'var(--c-paper2)') + ';color:' + (ok ? 'var(--c-paper)' : 'var(--c-ink)') + ';font:inherit;font-size:16px;cursor:pointer">' + k + '</button>'; }).join('') + '</div></div>';
+        var sp0 = st.selPin ? st.pins.filter(function (p) { return p.id === st.selPin; })[0] : null;
+        if (sp0) {
+          var psc = planScreen(sp0.x, sp0.y), ppx = Math.max(84, Math.min(psc[0] + 22, 1180 - 290)), ppy = Math.max(60, Math.min(psc[1] - 40, 820 - 250)), wPin = FN.draw.where(st.roof, sp0.x, sp0.y);
+          o += '<div role="dialog" aria-label="' + (sp0.kind === 'photo' ? 'Survey photo' : 'Field note') + '" style="position:absolute;left:' + ppx + 'px;top:' + ppy + 'px;width:270px;' + FN.card + ';border-color:' + (sp0.kind === 'photo' ? 'var(--c-sel)' : 'var(--c-sun)') + ';box-shadow:0 12px 32px rgba(29,32,38,.18);z-index:7;padding:12px 14px;display:flex;flex-direction:column;gap:6px">' +
+            '<span style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + FN.icon(sp0.kind === 'photo' ? 'photo' : 'note', sp0.kind === 'photo' ? 'var(--c-sel)' : 'var(--c-sun)', 17) + (sp0.kind === 'photo' ? 'Survey photo · ' + sp0.time : 'Field note') + '</b><button type="button" data-a="pclose" style="min-width:26px;min-height:26px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);cursor:pointer">×</button></span>' +
+            (sp0.kind === 'photo' ? '<svg width="242" height="92" viewBox="0 0 242 92" style="border-radius:8px;border:1px solid var(--c-line);background:#D8E4EE"><rect width="242" height="60" fill="#BFD2E2"></rect><polygon points="18,76 88,28 168,28 228,76" fill="#8C7462" stroke="#5E4B3E" stroke-width="1.5"></polygon><rect x="108" y="18" width="22" height="26" fill="#7D6250" stroke="#5E4B3E"></rect><text x="10" y="84" font-size="10" fill="#1D2026" font-weight="600">GPS ±0.4 m · azimuth 12° N · tile check OK</text></svg>' : '') +
+            '<span style="font-size:12.5px;color:var(--c-ink);line-height:1.45;background:var(--c-paper2);padding:7px 9px;border-radius:7px;border:1px solid var(--c-line2)">' + sp0.text + '</span>' +
+            (sp0.kind === 'note' ? '<div style="display:flex;gap:4px;flex-wrap:wrap">' + ['Rafter spacing 600 mm', 'Tile flashing check', 'Cable entry here', 'Shade after 3:30 pm'].map(function (pr) { return '<button type="button" data-a="pnote" data-v="' + pr + '" style="padding:3px 7px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink2);font:inherit;font-size:11px;cursor:pointer">' + pr + '</button>'; }).join('') + '</div>' : '') +
+            '<span style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--c-muted);padding-top:2px"><span>' + wPin.ridge.toFixed(2) + ' m to ridge · ' + wPin.eave.toFixed(2) + ' m to eave</span><button type="button" data-a="pdel" style="padding:3px 9px;border-radius:6px;border:1px solid var(--c-loss);background:var(--c-paper2);color:var(--c-loss);font:inherit;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;cursor:pointer">' + FN.icon('delete', 'var(--c-loss)', 13) + 'Delete</button></span></div>';
+        }
         var TD = [['Fill the north face', 3], ['Chimney at 1.20 m', 6], ['Remove a module', 2], ['Try another battery', 2], ['Present', 1]];
         var hints = ['Hover a tool for its tutorial. Fill zone, the north face, ✓ Keep.', 'Obstacle, tap the face, 1 . 2 on the pad, ✓.', 'Modules, then tap any module.', 'Battery ▸ in the reading card, pick a size.', 'Present, top right.', 'Done. Drag any card or bar by its grip; settings reset the layout.'];
         if (!J) o += '<div style="position:absolute;left:' + P.coach[0] + 'px;top:' + P.coach[1] + 'px;width:290px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4;overflow:hidden"><div data-grip="coach" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600">Demos · touches counted</b><span style="font-size:11px;color:var(--c-muted)">catalogue §6</span></div><div style="padding:6px 8px;display:flex;flex-direction:column;gap:2px">' +
           TD.map(function (t, k) { var cur = k === st.task, dn = k < st.task, u = st.touches[k]; return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 6px;border-radius:6px;background:' + (cur ? 'var(--c-selSoft)' : 'transparent') + '"><span style="color:' + (dn ? 'var(--c-gain)' : 'var(--c-ink)') + ';font-weight:' + (cur ? 600 : 400) + '">' + (dn ? '✓ ' : '') + t[0] + '</span><span style="color:' + (u > t[1] ? 'var(--c-loss)' : 'var(--c-muted)') + '">' + (dn || cur ? u + ' / ' : '') + t[1] + '</span></div>'; }).join('') + '<span style="font-size:11px;color:var(--c-muted);padding:4px 6px">' + hints[Math.min(st.task, 5)] + '</span></div></div>';
         if (st.notif) o += '<div style="position:absolute;right:120px;top:52px;width:320px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;overflow:hidden"><b style="display:block;padding:10px 12px;font-size:12px;font-weight:600;border-bottom:1px solid var(--c-line2)">Notifications</b>' + [['Rebate steps down on 1 January', '2 quotes in flight need re-pricing.', 'var(--c-sun)'], ['Survey photos arrived', '12 photos from the phone, attached to this site.', 'var(--c-sel)'], ['Household opened proposal v0', 'Unit 4, 22 Ash Street, yesterday 19:40.', 'var(--c-muted)']].map(function (n) { return '<div style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-line2);font-size:12px;line-height:1.45"><span style="width:3px;border-radius:2px;background:' + n[2] + '"></span><span><b style="font-weight:600">' + n[0] + '</b><br><span style="color:var(--c-ink2)">' + n[1] + '</span></span></div>'; }).join('') + '</div>';
         if (st.settings) o += '<div style="position:absolute;right:80px;top:52px;width:280px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:12px;display:flex;flex-direction:column;gap:10px"><b style="font-size:12px;font-weight:600">View settings</b><span style="font-size:12px;color:var(--c-muted)">Disclosure level</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px">' + ['Guided', 'Standard', 'Expert'].map(function (l, k) { return '<button type="button" data-a="level" data-v="' + k + '" style="flex:1;min-height:36px;border:none;border-radius:6px;background:' + (k === st.level ? 'var(--c-paper)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + l + '</button>'; }).join('') + '</div>' + '<button type="button" data-a="reset" style="min-height:40px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:13px;cursor:pointer">Reset panels to the F layout</button></div>';
-        if (st.layers) { var ln = P.notes, li = right.indexOf('layers'); o += '<div style="position:absolute;left:' + (ln[0] - 252) + 'px;top:' + Math.max(56, ln[1] + 16 + li * 50 - 8) + 'px;width:240px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:8px;display:flex;flex-direction:column"><b style="font-size:12px;font-weight:600;color:var(--c-muted);padding:6px 8px">Layers</b>' +
-          [['Imagery · Mar 2026', 'imagery'], ['Modules', 'mods'], ['Shade, 9 am in June', 'shade']].map(function (r) { return '<button type="button" data-a="layer" data-v="' + r[1] + '" aria-pressed="' + !!st[r[1]] + '" style="min-height:42px;display:flex;justify-content:space-between;align-items:center;border:none;background:transparent;color:var(--c-ink);font:inherit;font-size:13px;padding:0 8px;cursor:pointer"><span>' + r[0] + '</span><span style="font-size:12px;color:' + (st[r[1]] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st[r[1]] ? 'shown' : 'hidden') + '</span></button>'; }).join('') + '</div>'; }
+        if (st.layers) { var ln = P.notes, li = right.indexOf('layers'); o += '<div style="position:absolute;left:' + (ln[0] - 262) + 'px;top:' + Math.max(56, ln[1] + 16 + li * 48 - 8) + 'px;width:250px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:8px;display:flex;flex-direction:column"><b style="font-size:12px;font-weight:600;color:var(--c-muted);padding:6px 8px;display:flex;align-items:center;gap:6px">' + FN.icon('layers', 'var(--c-muted)', 16) + 'Layers · L</b>' +
+          [['Imagery · Mar 2026', 'imagery'], ['Modules', 'mods'], ['Modules · 2.5D relief', 'mod25d'], ['Notes & dimensions', 'notesOn'], ['Shade, 9 am in June', 'shade']].map(function (r) { var onL = !!st[r[1]]; return '<button type="button" data-a="layer" data-v="' + r[1] + '" aria-pressed="' + onL + '" style="min-height:38px;display:flex;justify-content:space-between;align-items:center;border:none;border-radius:7px;background:transparent;color:var(--c-ink);font:inherit;font-size:12.5px;padding:0 8px;cursor:pointer"><span style="display:inline-flex;align-items:center;gap:8px;opacity:' + (onL ? 1 : 0.5) + '">' + FN.icon('eye', onL ? 'var(--c-sel)' : 'var(--c-faint)', 17) + r[0] + '</span><span style="font-size:11.5px;color:' + (onL ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (onL ? 'shown' : 'hidden') + '</span></button>'; }).join('') +
+          '<div style="border-top:1px solid var(--c-line2);margin-top:4px;padding:8px 8px 4px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--c-muted)">Grid · 1 m / 5 m</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px">' +
+          [['dots', 'Dots'], ['lines', 'Lines'], ['off', 'Off']].map(function (g) { var on = st.grid === g[0]; return '<button type="button" data-a="grid" data-v="' + g[0] + '" aria-pressed="' + on + '" style="flex:1;min-height:30px;border:none;border-radius:6px;background:' + (on ? 'var(--c-paper)' : 'transparent') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';font:inherit;font-size:12px;font-weight:' + (on ? 600 : 400) + ';cursor:pointer">' + g[1] + '</button>'; }).join('') + '</div></div></div>'; }
         if (st.toast) o += '<div style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--c-tip);color:var(--c-paper);font-size:13px;padding:9px 14px;border-radius:10px;z-index:8">' + st.toast + '</div>';
         if (st.sheet) {
           var sizes = [0, 10, 13.5, 20, 28], ratio = E.kwp / st.inv, okRatio = ratio <= 1.33;
@@ -1474,12 +1986,18 @@
         return o;
       }
       function place3d() {
-        var b = q('.sd-3d'), v = st.pos.v3;
+        var b = q('.sd-3d'), c3 = q('.sd-3d-ctrl'), v = st.pos.v3;
         if (st.swapped) b.setAttribute('style', 'position:absolute;left:0;top:48px;width:1180px;height:772px;z-index:2;overflow:hidden;background:var(--c-canvas)');
         else b.setAttribute('style', 'position:absolute;left:' + (v[0] + 1) + 'px;top:' + (v[1] + 41) + 'px;width:328px;height:210px;z-index:5;overflow:hidden;background:var(--c-canvas)');
-        if (H) { H.size(st.swapped ? 1180 : 328, st.swapped ? 772 : 210); H.radius = st.swapped ? 34 : 38; H.place();
-          H.setPanels(st.filled ? mods(st).filter(function (m) { return !m.blocked && !m.removed; }).map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h, shaded: m.shaded && st.shade }; }) : []);
-          H.setRoof(st.roof); H.setObstacles(obstaclesOf(st)); H.bat.visible = st.bat > 0; H.setHour(st.hour3); }
+        if (c3) {
+          c3.setAttribute('style', 'position:absolute;' + (st.swapped ? 'left:664px;bottom:10px' : 'right:8px;bottom:8px') + ';display:flex;gap:4px;z-index:3;' + FN.card + ';padding:3px;border-radius:9px;box-shadow:0 4px 14px rgba(29,32,38,.10)');
+          c3.innerHTML = '<button type="button" data-a="proj3" title="Switch isometric and perspective" style="min-height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--c-sel);background:var(--c-selSoft);color:var(--c-sel);font:inherit;font-size:11px;font-weight:600;cursor:pointer">' + (st.iso ? 'Iso' : 'Persp') + '</button>' +
+            '<button type="button" data-a="turn3" aria-label="Turn 90 degrees" title="Snap 90° around the four isometric corners" style="min-height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:11px;cursor:pointer">↻ 90°</button>';
+        }
+        if (H) { H.useIso = st.iso && !st.present; H.size(st.swapped ? 1180 : 328, st.swapped ? 772 : 210); H.radius = st.swapped ? 34 : 38; H.place();
+          H.setRoof(st.roof, st.vtx);
+          H.setPanels(((st.filled || st.preview) && st.mods) ? mods(st).filter(function (m) { return !m.blocked && !m.removed; }).map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h, shaded: m.shaded && st.shade }; }) : []);
+          H.setObstacles(obstaclesOf(st)); H.bat.visible = st.bat > 0; H.setHour(st.hour3); }
       }
       function render() { q('.sd-top').innerHTML = top(); q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui(); place3d(); }
       // dragging bars and cards by their grip, in screen pixels whatever the scale
@@ -1487,15 +2005,44 @@
       el.addEventListener('pointerdown', function (e) { var g = e.target.closest('[data-grip]'); if (!g) return; var k = g.getAttribute('data-grip'), s = el.getBoundingClientRect().width / 1180; drag = { k: k, x: e.clientX, y: e.clientY, o: st.pos[k].slice(), s: s }; e.preventDefault(); });
       window.addEventListener('pointermove', function (e) { if (!drag) return; st.pos[drag.k] = [Math.max(0, Math.min(1120, drag.o[0] + (e.clientX - drag.x) / drag.s)), Math.max(48, Math.min(780, drag.o[1] + (e.clientY - drag.y) / drag.s))]; q('.sd-ui').innerHTML = ui(); place3d(); });
       window.addEventListener('pointerup', function () { drag = null; });
-      el.addEventListener('pointerdown', function (e) { var t = e.target.closest('[data-obs]'); if (!t) return; var id = t.getAttribute('data-obs'), o = obstaclesOf(st).filter(function (x) { return x.id === id; })[0]; if (!o) return; st.drag = { id: id, x0: o.x, y0: o.y, moved: false }; st.selObs = id; e.preventDefault(); e.stopPropagation(); });
+      var vtxDrag = null;
+      el.addEventListener('pointerdown', function (e) {
+        var vt = e.target.closest('[data-vtx]');
+        if (vt) {
+          var idx = +vt.getAttribute('data-vtx'), v0 = vertsOf(st);
+          st.selVtx = idx;
+          vtxDrag = { idx: idx, v0: v0.map(function (p) { return p.slice(); }), moved: false };
+          e.preventDefault(); e.stopPropagation();
+          render();
+          return;
+        }
+        var t = e.target.closest('[data-obs]'); if (!t) return;
+        var id = t.getAttribute('data-obs'), o = obstaclesOf(st).filter(function (x) { return x.id === id; })[0]; if (!o) return;
+        st.drag = { id: id, x0: o.x, y0: o.y, moved: false }; st.selObs = id; e.preventDefault(); e.stopPropagation();
+      });
       window.addEventListener('pointermove', function (e) {
+        if (vtxDrag) {
+          var ptV = snapCad(planXY(e), e.altKey || !st.snapOn), vn = vertsOf(st).map(function (p) { return p.slice(); });
+          vn[vtxDrag.idx] = [Math.max(160, Math.min(880, ptV[0])), Math.max(120, Math.min(420, ptV[1]))];
+          st.vtx = vn; vtxDrag.moved = true;
+          q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui(); place3d();
+          return;
+        }
         if (!st.drag) return;
-        var pt = planXY(e), sn = FN.draw.snap(st.roof, pt[0], pt[1], e.altKey);
-        if (!FN.draw.inside(FN.ROOFS[st.roof].north, sn.x, sn.y)) return;
+        var pt = planXY(e), sn = FN.draw.snap(st.roof, pt[0], pt[1], e.altKey || !st.snapOn);
+        if (!FN.draw.inside(vertsOf(st), sn.x, sn.y)) return;
         setObs(st.drag.id, sn.x, sn.y); st.guides = sn; st.drag.moved = true;
-        q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui();
+        q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui(); place3d();
       });
       window.addEventListener('pointerup', function () {
+        if (vtxDrag) {
+          var vd = vtxDrag; vtxDrag = null;
+          if (!vd.moved) return;
+          var vNew = st.vtx.map(function (p) { return p.slice(); });
+          st.vtx = vd.v0;
+          commit({ vtx: vNew }, 'Vertex #' + (vd.idx + 1) + ' adjusted');
+          return;
+        }
         if (!st.drag) return;
         var d = st.drag, o = obstaclesOf(st).filter(function (x) { return x.id === d.id; })[0]; st.drag = null; st.guides = null;
         if (!d.moved || !o) { render(); return; }
@@ -1505,28 +2052,243 @@
         commit(patch, FN.OBST[o.type].en + ' moved · ' + w0.ridge.toFixed(2) + ' m to the ridge');
       });
       el.addEventListener('dblclick', function (e) { var g = e.target.closest('[data-grip]'); if (!g) return; var k = g.getAttribute('data-grip'); if (k === 'v3') st.swapped = !st.swapped; else st.pos[k] = HOME[k].slice(); render(); });
-      el.addEventListener('pointerover', function (e) { var b = e.target.closest('[data-tip]'); if (!b) return; var p = b.getAttribute('data-tip').split('|'), base = st.pos[p[1]], nx = p[1] === 'notes' ? base[0] - 272 : base[0] + 70; if (!st.hover || st.hover.k !== p[0]) { st.hover = { k: p[0], x: nx, y: base[1] + 16 + (+p[2]) * 50 }; q('.sd-ui').innerHTML = ui(); } });
+      el.addEventListener('pointerover', function (e) { var b = e.target.closest('[data-tip]'); if (!b) return; var p = b.getAttribute('data-tip').split('|'), base = st.pos[p[1]], nx = p[1] === 'notes' ? base[0] - 272 : base[0] + 70, ny = base[1] + 16 + (+p[2]) * 48; if (p[1] === 'tools' && nx < st.pos.read[0] + 640 && ny < st.pos.read[1] + 66) ny = st.pos.read[1] + 68; if (!st.hover || st.hover.k !== p[0]) { st.hover = { k: p[0], x: nx, y: ny }; q('.sd-ui').innerHTML = ui(); } });
       el.addEventListener('pointerout', function (e) { var b = e.target.closest('[data-tip]'); if (b && !b.contains(e.relatedTarget)) { st.hover = null; q('.sd-ui').innerHTML = ui(); } });
-      // the plan point under a pointer event, in the plan's px (40 px a metre)
-      function planXY(e) { var b = el.getBoundingClientRect(), k = b.width / 1180; return [(e.clientX - b.left) / k - 30, (e.clientY - b.top) / k - 148]; }
+      // the plan point under a pointer event, in the plan's px (40 px a metre), inverted for zoom & pan
+      function planXY(e) {
+        var b = el.getBoundingClientRect(), k = b.width / 1180;
+        var sx = (e.clientX - b.left) / k, sy = (e.clientY - b.top) / k - 48;
+        return [st.panX + sx / st.zoom - 30, st.panY + sy / st.zoom - 100];
+      }
+      function planScreen(x, y) {
+        return [Math.round((x + 30 - st.panX) * st.zoom), Math.round((y + 100 - st.panY) * st.zoom + 48)];
+      }
+      // magnetic CAD snap to roof vertices (for Dimension / Trace / Measure) or 0.25 m grid
+      function snapCad(pt, free) {
+        if (free) { var pFree = [pt[0], pt[1]]; pFree.kind = 'free'; return pFree; }
+        var vn = vertsOf(st), verts = vn.concat([[218, 356], [818, 356], [218, 556], [818, 556]]);
+        for (var i = 0; i < verts.length; i++) {
+          if (Math.hypot(pt[0] - verts[i][0], pt[1] - verts[i][1]) < 14) { var pv = verts[i].slice(); pv.kind = 'vertex'; return pv; }
+        }
+        var pg = [Math.round(pt[0] / 10) * 10, Math.round(pt[1] / 10) * 10]; pg.kind = 'grid';
+        return pg;
+      }
+      function polyArea(pts) {
+        var a = 0;
+        for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j][0] * pts[i][1] - pts[i][0] * pts[j][1]);
+        return Math.abs(a) / 2 / 1600;
+      }
+      function toastMsg(msg) {
+        st.toast = msg; clearTimeout(tToast);
+        tToast = setTimeout(function () { st.toast = ''; render(); }, 1800);
+      }
+      // CAD wheel zoom (anchored at the cursor) & Space + drag / middle-click pan on the 2D plan
+      var pan2 = null, hoverIn = false;
+      var KEYMAP = { KeyV: 'select', KeyA: 'vertex', KeyP: 'trace', KeyR: 'rect3', KeyF: 'fill', KeyG: 'panel', KeyO: 'chimney', KeyM: 'measure', KeyD: 'dimension', KeyN: 'note', KeyI: 'photo', KeyL: 'layers', KeyH: 'pan', KeyS: 'snap', KeyZ: 'zoom' };
+      var OBKEYS = ['chimney', 'skylight', 'antenna', 'box', 'vent', 'prism'];
+      el.addEventListener('pointerenter', function () { hoverIn = true; });
+      el.addEventListener('pointerleave', function () { hoverIn = false; st.space = false; if (H) H.space = false; q('.sd-plan').style.cursor = ''; });
+      window.addEventListener('keydown', function (e) {
+        if (!hoverIn || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if ((e.metaKey || e.ctrlKey) && e.code === 'KeyZ') {
+          e.preventDefault();
+          if (e.shiftKey) el.querySelector('[data-a="redo"]').click();
+          else el.querySelector('[data-a="undo"]').click();
+          return;
+        }
+        if (e.shiftKey && e.code === 'Digit1') { e.preventDefault(); st.zoom = 1; st.panX = 0; st.panY = 0; toastMsg('Fitted roof to view · ⇧1'); render(); return; }
+        if (e.code === 'Space') { st.space = true; if (H) H.space = true; if (!pan2) q('.sd-plan').style.cursor = 'grab'; e.preventDefault(); return; }
+        if (e.code === 'Escape') { st.pts = []; st.curPt = null; st.dynLen = ''; st.dynAng = ''; st.lastMeas = null; st.selPin = ''; st.selObs = ''; st.preview = false; render(); return; }
+        if (e.code === 'Backspace' || e.code === 'Delete') {
+          if ((st.tool === 'trace' || st.tool === 'rect3') && st.pts.length) {
+            if (st.dynField === 0 && st.dynLen) st.dynLen = st.dynLen.slice(0, -1);
+            else if (st.dynField === 1 && st.dynAng) st.dynAng = st.dynAng.slice(0, -1);
+            else st.pts.pop();
+            e.preventDefault(); render(); return;
+          }
+          if (st.selObs) { e.preventDefault(); var dl = st.selObs; if (dl === 'chim') commit({ chimney: false, selObs: '' }, 'Chimney removed'); else commit({ obs: st.obs.filter(function (o) { return o.id !== dl; }), selObs: '' }, 'Obstacle removed'); return; }
+          if (st.selPin) { e.preventDefault(); commit({ pins: st.pins.filter(function (p) { return p.id !== st.selPin; }), selPin: '' }, 'Annotation removed'); return; }
+        }
+        // Dynamic input while tracing or drawing a 3-point rectangle (fig-6.svg: Type value)
+        if ((st.tool === 'trace' || st.tool === 'rect3') && st.pts.length) {
+          if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
+            if (st.dynField === 0) st.dynLen = (st.dynLen + e.key).slice(0, 5);
+            else st.dynAng = (st.dynAng + e.key).slice(0, 4);
+            e.preventDefault(); q('.sd-plan').innerHTML = plan(); return;
+          }
+          if (e.key === 'Tab') { st.dynField = st.dynField ? 0 : 1; e.preventDefault(); q('.sd-plan').innerHTML = plan(); return; }
+          if (e.key === 'Enter' && (st.dynLen || st.dynAng)) {
+            e.preventDefault();
+            var pLast = st.pts[st.pts.length - 1], cp0 = st.curPt || [pLast[0] + 80, pLast[1]];
+            var defL = Math.hypot(cp0[0] - pLast[0], cp0[1] - pLast[1]) / 40, defA = Math.atan2(-(cp0[1] - pLast[1]), cp0[0] - pLast[0]);
+            var useL = (parseFloat(st.dynLen) || defL) * 40, useA = st.dynAng !== '' ? (parseFloat(st.dynAng) * Math.PI / 180) : defA;
+            var nxP = [pLast[0] + Math.cos(useA) * useL, pLast[1] - Math.sin(useA) * useL];
+            st.pts.push(nxP); st.dynLen = ''; st.dynAng = ''; st.dynField = 0;
+            render(); return;
+          }
+        }
+        // Obstacle shape keys 1-6 when Obstacle tool is active
+        if (st.tool === 'chimney' && e.key >= '1' && e.key <= '6') {
+          st.otype = OBKEYS[+e.key - 1]; render(); return;
+        }
+        var tk = KEYMAP[e.code];
+        if (tk && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (tk === 'layers') { st.layers = !st.layers; st.settings = false; st.notif = false; }
+          else if (tk === 'snap') { st.snapOn = !st.snapOn; toastMsg('Magnetic snaps ' + (st.snapOn ? 'ON · S' : 'OFF · S')); }
+          else if (tk === 'zoom') { st.zoom = st.zoom < 1.4 ? 1.5 : 1; st.panX = 0; st.panY = 0; }
+          else { st.tool = tk; st.pts = []; st.curPt = null; st.dynLen = ''; st.dynAng = ''; st.preview = false; st.selFace = false; st.pad = false; }
+          st.hover = null; render();
+        }
+      });
+      window.addEventListener('keyup', function (e) {
+        if (e.code !== 'Space') return;
+        st.space = false; if (H) H.space = false; if (!pan2) q('.sd-plan').style.cursor = st.tool === 'pan' ? 'grab' : '';
+      });
+      q('.sd-plan').addEventListener('wheel', function (e) {
+        e.preventDefault();
+        var b = el.getBoundingClientRect(), k = b.width / 1180;
+        var sx = (e.clientX - b.left) / k, sy = (e.clientY - b.top) / k - 48;
+        var z0 = st.zoom, z1 = Math.max(0.6, Math.min(2.6, Math.round(z0 * (e.deltaY > 0 ? 0.9 : 1.11) * 100) / 100));
+        if (z1 === z0) return;
+        st.panX = Math.max(-450, Math.min(650, st.panX + sx / z0 - sx / z1));
+        st.panY = Math.max(-350, Math.min(500, st.panY + sy / z0 - sy / z1));
+        st.zoom = z1;
+        q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui();
+      }, { passive: false });
+      q('.sd-plan').addEventListener('pointerdown', function (e) {
+        if (!st.space && st.tool !== 'pan' && e.button !== 1) return;
+        var b = el.getBoundingClientRect(), k = b.width / 1180;
+        pan2 = { x: e.clientX, y: e.clientY, px: st.panX, py: st.panY, k: k };
+        q('.sd-plan').style.cursor = 'grabbing';
+        e.preventDefault(); e.stopPropagation();
+      }, true);
+      q('.sd-plan').addEventListener('pointermove', function (e) {
+        if (pan2 || st.drag || vtxDrag) return;
+        if (['trace', 'rect3', 'measure', 'dimension'].indexOf(st.tool) < 0) return;
+        st.curPt = snapCad(planXY(e), e.altKey || !st.snapOn);
+        q('.sd-plan').innerHTML = plan();
+      });
+      q('.sd-plan').addEventListener('click', function (e) {
+        if (pan2 || st.drag || vtxDrag || e.target.closest('[data-obs],[data-vtx],[data-a="zdel"],[data-a="ddel"],[data-a="pin"],[data-a="vadd"],[data-a="north"]')) return;
+        if (['trace', 'rect3', 'measure', 'dimension', 'note', 'photo'].indexOf(st.tool) < 0) return;
+        var pt = snapCad(planXY(e), e.altKey || !st.snapOn), R = FN.ROOFS[st.roof], cPitch = Math.cos(R.pitch * Math.PI / 180);
+        if (st.tool === 'note' || st.tool === 'photo') {
+          var pid = 'p' + (st.pins.length + 1) + '-' + Math.round(pt[0]), now = '14:0' + (2 + (st.pins.length % 7));
+          var np = { id: pid, kind: st.tool, x: pt[0], y: pt[1], time: now, text: st.tool === 'photo' ? 'North slope tiles & flashing inspected · clear for rail brackets.' : 'Rafter spacing 600 mm · check tile hook clearance.' };
+          commit({ pins: st.pins.concat([np]), selPin: pid, notesOn: true }, (st.tool === 'photo' ? 'Survey photo' : 'Field note') + ' pinned');
+          return;
+        }
+        if (st.tool === 'measure' || st.tool === 'dimension') {
+          if (!st.pts.length) { st.pts = [pt]; st.curPt = pt; st.lastMeas = null; render(); return; }
+          var p0 = st.pts[0], dPlan = Math.hypot(pt[0] - p0[0], pt[1] - p0[1]) / 40, dSlope = Math.hypot((pt[0] - p0[0]) / 40, (pt[1] - p0[1]) / 40 / cPitch);
+          if (dPlan < 0.05) return;
+          st.pts = []; st.curPt = null;
+          if (st.tool === 'measure') {
+            st.lastMeas = { id: 'm-' + Math.round(pt[0]), a: p0, b: pt, plan: dPlan, slope: dSlope, kind: 'measure' };
+            render(); return;
+          }
+          var nd = { id: 'd' + (st.dims.length + 1) + '-' + Math.round(pt[0]), a: p0, b: pt, plan: dPlan, slope: dSlope, kind: 'dimension' };
+          commit({ dims: st.dims.concat([nd]), notesOn: true }, 'Dimension: ' + dSlope.toFixed(2) + ' m', { t: 'Dimension pinned', b: 'Plan ' + dPlan.toFixed(2) + ' m · slope ' + dSlope.toFixed(2) + ' m', c: 'var(--c-ink)', x: Math.min(920, Math.round((p0[0] + pt[0]) / 2 + 50)), y: Math.round((p0[1] + pt[1]) / 2 + 120) });
+          return;
+        }
+        if (st.tool === 'trace') {
+          if (st.pts.length >= 3 && Math.hypot(pt[0] - st.pts[0][0], pt[1] - st.pts[0][1]) < 18) {
+            var zp = st.pts.slice(), ar = polyArea(zp) / cPitch, zid = 'z' + (st.zones.length + 1);
+            st.pts = []; st.curPt = null; st.dynLen = ''; st.dynAng = '';
+            commit({ zones: st.zones.concat([{ id: zid, pts: zp, label: 'Zone ' + ar.toFixed(1) + ' m²' }]), filled: true }, 'Traced zone · ' + ar.toFixed(1) + ' m²', { t: 'Zone closed (' + zp.length + ' vertices)', b: 'True area ' + ar.toFixed(1) + ' m² · setbacks 0.40 m', c: 'var(--c-sel)', x: 440, y: 240 });
+            return;
+          }
+          st.pts.push(pt); st.curPt = pt; st.dynLen = ''; st.dynAng = ''; render(); return;
+        }
+        if (st.tool === 'rect3') {
+          if (st.pts.length < 2) { st.pts.push(pt); st.curPt = pt; st.dynLen = ''; st.dynAng = ''; render(); return; }
+          var r0 = st.pts[0], r1 = st.pts[1], ux = r1[0] - r0[0], uy = r1[1] - r0[1], uL = Math.hypot(ux, uy) || 1, nx2 = -uy / uL, ny2 = ux / uL;
+          var hDist = (pt[0] - r1[0]) * nx2 + (pt[1] - r1[1]) * ny2;
+          if (Math.abs(hDist) < 6) hDist = 80;
+          var r2 = [r1[0] + nx2 * hDist, r1[1] + ny2 * hDist], r3 = [r0[0] + nx2 * hDist, r0[1] + ny2 * hDist];
+          var wM = uL / 40, hM = Math.abs(hDist) / 40 / cPitch, zid2 = 'z' + (st.zones.length + 1);
+          st.pts = []; st.curPt = null; st.dynLen = ''; st.dynAng = '';
+          commit({ zones: st.zones.concat([{ id: zid2, pts: [r0, r1, r2, r3], label: wM.toFixed(1) + '×' + hM.toFixed(1) + ' m' }]), filled: true }, 'Rectangle ' + wM.toFixed(2) + ' × ' + hM.toFixed(2) + ' m', { t: 'Rectangle 3 pts closed', b: wM.toFixed(2) + ' × ' + hM.toFixed(2) + ' m (' + (wM * hM).toFixed(1) + ' m²)', c: 'var(--c-sel)', x: 440, y: 240 });
+        }
+      });
+      window.addEventListener('pointermove', function (e) {
+        if (!pan2) return;
+        st.panX = Math.max(-450, Math.min(650, pan2.px - (e.clientX - pan2.x) / (pan2.k * st.zoom)));
+        st.panY = Math.max(-350, Math.min(500, pan2.py - (e.clientY - pan2.y) / (pan2.k * st.zoom)));
+        q('.sd-plan').innerHTML = plan();
+      });
+      window.addEventListener('pointerup', function () {
+        if (!pan2) return;
+        pan2 = null; q('.sd-plan').style.cursor = (st.space || st.tool === 'pan') ? 'grab' : '';
+      });
       function setObs(id, x, y) { if (id === 'chim') { st.cx = x; st.cy = y; } else st.obs = st.obs.map(function (o) { return o.id === id ? { id: o.id, type: o.type, x: x, y: y, h: o.h } : o; }); }
       FN.wire(el, function (a, v, e) {
         // with the obstacle tool, a tap on a module places on the face under it
         if (a === 'mod' && st.tool === 'chimney') { a = 'face'; v = 'N'; }
-        if (a === 'tool') { touch(); if (v === 'layers') { st.layers = !st.layers; st.settings = false; st.notif = false; } else { st.tool = v; st.preview = false; st.selFace = false; st.pad = false; } st.hover = null; check(); }
-        else if (a === 'face') { if (v !== 'N') { st.selObs = ''; render(); return; }
+        if (a === 'tool') {
+          touch();
+          if (v === 'layers') { st.layers = !st.layers; st.settings = false; st.notif = false; }
+          else {
+            if (v === 'panel' && !st.filled) toastMsg('Fill a face first (F), or click Keep to edit modules');
+            st.tool = v; st.pts = []; st.curPt = null; st.dynLen = ''; st.dynAng = ''; st.preview = false; st.selFace = false; st.pad = false;
+            q('.sd-plan').style.cursor = v === 'pan' ? 'grab' : '';
+          }
+          st.hover = null; check();
+        }
+        else if (a === 'face') {
+          if (['trace', 'rect3', 'measure', 'dimension', 'note', 'photo'].indexOf(st.tool) >= 0) return;
+          if (v !== 'N') { st.selObs = ''; render(); return; }
           if (st.tool === 'chimney') { var pt = e && e.clientX !== undefined ? planXY(e) : [520, 198];
-            if (!FN.draw.inside(FN.ROOFS[st.roof].north, pt[0], pt[1])) return;
+            if (!FN.draw.inside(vertsOf(st), pt[0], pt[1])) return;
             if (st.otype === 'chimney') { if (!st.chimney) commit({ chimney: true, pad: true, fresh: true, cx: pt[0], cy: pt[1], selObs: 'chim' }, 'Chimney added', { t: 'Chimney added', b: 'Type its height on the pad', c: 'var(--c-ink)', x: pt[0] + 70, y: pt[1] + 148 }); else { st.selObs = 'chim'; render(); } return; }
             var nid = 'o' + (st.obs.length + 1) + '-' + Math.round(pt[0]); commit({ obs: st.obs.concat([{ id: nid, type: st.otype, x: pt[0], y: pt[1], h: FN.OBST[st.otype].h }]), selObs: nid }, FN.OBST[st.otype].en + ' added', { t: FN.OBST[st.otype].en + ' added', b: 'Keep-out ' + FN.OBST[st.otype].margin.toFixed(2) + ' m, round', c: 'var(--c-ink)', x: pt[0] + 70, y: pt[1] + 148 }); return; }
           st.selObs = ''; touch(); if (st.tool === 'fill') st.preview = true; else if (st.tool === 'select') st.selFace = !st.selFace; check(); }
+        else if (a === 'vadd') {
+          var vi = +v, vn0 = vertsOf(st).map(function (p) { return p.slice(); }), pA = vn0[vi], pB = vn0[(vi + 1) % vn0.length];
+          vn0.splice(vi + 1, 0, [(pA[0] + pB[0]) / 2, (pA[1] + pB[1]) / 2]);
+          st.selVtx = vi + 1;
+          commit({ vtx: vn0 }, 'Edge split · vertex #' + (vi + 2) + ' added'); return;
+        }
+        else if (a === 'vnudge') {
+          var dxy = v.split(',').map(Number), vn1 = vertsOf(st).map(function (p) { return p.slice(); }), si = st.selVtx % vn1.length;
+          vn1[si] = [vn1[si][0] + dxy[0], vn1[si][1] + dxy[1]];
+          commit({ vtx: vn1 }, 'Vertex #' + (si + 1) + ' nudged 5 cm'); return;
+        }
+        else if (a === 'vsquare') {
+          var vn2 = vertsOf(st).map(function (p) { return p.slice(); }), si2 = st.selVtx % vn2.length, prev = vn2[(si2 + vn2.length - 1) % vn2.length];
+          if (Math.abs(vn2[si2][0] - prev[0]) < Math.abs(vn2[si2][1] - prev[1])) vn2[si2][0] = prev[0]; else vn2[si2][1] = prev[1];
+          commit({ vtx: vn2 }, 'Corner #' + (si2 + 1) + ' squared to 90°'); return;
+        }
+        else if (a === 'vreset') { commit({ vtx: null, selVtx: 0 }, 'North face vertices reset'); return; }
+        else if (a === 'zclose') {
+          if (st.pts.length < 3) return;
+          var zp2 = st.pts.slice(), ar2 = polyArea(zp2) / Math.cos(FN.ROOFS[st.roof].pitch * Math.PI / 180), zid3 = 'z' + (st.zones.length + 1);
+          st.pts = []; st.curPt = null; st.dynLen = ''; st.dynAng = '';
+          commit({ zones: st.zones.concat([{ id: zid3, pts: zp2, label: 'Zone ' + ar2.toFixed(1) + ' m²' }]), filled: true }, 'Traced zone · ' + ar2.toFixed(1) + ' m²'); return;
+        }
+        else if (a === 'zundo') { st.pts.pop(); if (!st.pts.length) st.curPt = null; }
+        else if (a === 'zcancel') { st.pts = []; st.curPt = null; st.dynLen = ''; st.dynAng = ''; st.lastMeas = null; }
+        else if (a === 'zdel') { commit({ zones: st.zones.filter(function (z) { return z.id !== v; }) }, 'Traced zone removed'); return; }
+        else if (a === 'mkeep') {
+          if (!st.lastMeas) return;
+          var m0 = st.lastMeas, nd2 = { id: 'd' + (st.dims.length + 1), a: m0.a, b: m0.b, plan: m0.plan, slope: m0.slope, kind: 'dimension' };
+          st.lastMeas = null;
+          commit({ dims: st.dims.concat([nd2]), notesOn: true }, 'Measure kept as dimension · ' + m0.slope.toFixed(2) + ' m'); return;
+        }
+        else if (a === 'ddel') { commit({ dims: st.dims.filter(function (d) { return d.id !== v; }) }, 'Dimension removed'); return; }
+        else if (a === 'pin') { st.selPin = st.selPin === v ? '' : v; }
+        else if (a === 'pclose') { st.selPin = ''; }
+        else if (a === 'pnote') { st.pins = st.pins.map(function (p) { return p.id === st.selPin ? { id: p.id, kind: p.kind, x: p.x, y: p.y, time: p.time, text: v } : p; }); }
+        else if (a === 'pdel') { var dp = st.selPin; commit({ pins: st.pins.filter(function (p) { return p.id !== dp; }), selPin: '' }, 'Annotation removed'); return; }
+        else if (a === 'setback') { FN.SETBACK = FN.SETBACK < 0.45 ? 0.5 : 0.4; toastMsg('Eave & hip setbacks: ' + FN.SETBACK.toFixed(2) + ' m'); }
+        else if (a === 'clearface') { commit({ filled: false, preview: false, removed: [], zones: [], selFace: false }, 'North face layout cleared'); return; }
         else if (a === 'variant') { touch(); st.variant = v; }
         else if (a === 'otype') st.otype = v;
         else if (a === 'oclose') st.selObs = '';
         else if (a === 'odel') { var dl = st.selObs; if (dl === 'chim') commit({ chimney: false, selObs: '' }, 'Chimney removed'); else commit({ obs: st.obs.filter(function (o) { return o.id !== dl; }), selObs: '' }, 'Obstacle removed'); return; }
         else if (a === 'oh') { st.obs = st.obs.map(function (o) { return o.id === st.selObs ? { id: o.id, type: o.type, x: o.x, y: o.y, h: Math.max(0, Math.round((o.h + +v) * 10) / 10) } : o; }); }
         else if (a === 'ochange') { commit({ obs: st.obs.map(function (o) { return o.id === st.selObs ? { id: o.id, type: v, x: o.x, y: o.y, h: FN.OBST[v].h } : o; }) }, 'Obstacle: ' + FN.OBST[v].en); return; }
-        else if (a === 'roof') { if (v === st.roof) return; commit({ roof: v, removed: [], obs: [], chimney: false, selObs: '' }, 'Roof type: ' + FN.ROOFS[v].en, { t: FN.ROOFS[v].en + ' roof', b: FN.ROOFS[v].say, c: 'var(--c-ink)', x: 560, y: 250 }); if (J) { S.roof = v; if (opts.onChange) opts.onChange(); } return; }
+        else if (a === 'roof') { if (v === st.roof) return; commit({ roof: v, removed: [], obs: [], chimney: false, selObs: '', vtx: null }, 'Roof type: ' + FN.ROOFS[v].en, { t: FN.ROOFS[v].en + ' roof', b: FN.ROOFS[v].say, c: 'var(--c-ink)', x: 560, y: 250 }); if (J) { S.roof = v; if (opts.onChange) opts.onChange(); } return; }
         else if (a === 'keep') { commit({ filled: true, preview: false }, 'Zone filled · ' + st.variant, { t: 'Zone filled', b: 'Setbacks 0.40 m from eaves and hips', c: 'var(--c-gain)', x: 420, y: 250 }); return; }
         else if (a === 'mod') { if (st.tool !== 'panel' || !st.filled) return; var r = st.removed.slice(), i = r.indexOf(v), was = i >= 0; if (was) r.splice(i, 1); else r.push(v);
           var m = mods(st).filter(function (x) { return x.id === v; })[0]; commit({ removed: r }, was ? 'Module added' : 'Module removed', { t: was ? '+1 module' : '−1 module', b: (was ? '+' : '−') + '0.44 kWp', c: was ? 'var(--c-gain)' : 'var(--c-loss)', x: Math.round(m.x + 30 + m.w + 8), y: m.y + 148 }); return; }
@@ -1550,14 +2312,85 @@
         else if (a === 'settings') { st.settings = !st.settings; st.notif = false; st.layers = false; }
         else if (a === 'level') st.level = +v;
         else if (a === 'layer') st[v] = !st[v];
-        else if (a === 'reset') st.pos = JSON.parse(JSON.stringify(HOME));
+        else if (a === 'grid') st.grid = v;
+        else if (a === 'fit') { st.zoom = 1; st.panX = 0; st.panY = 0; toastMsg('Fitted roof to view · ⇧1'); }
+        else if (a === 'north') { st.zoom = 1; st.panX = 0; st.panY = 0; if (H) H.turnTo(-Math.PI * 0.75); toastMsg('North aligned up · 0°'); }
+        else if (a === 'snap') { st.snapOn = !st.snapOn; toastMsg('Magnetic snaps ' + (st.snapOn ? 'ON · S' : 'OFF · S')); }
+        else if (a === 'zoom') {
+          if (+v === 0) { st.zoom = 1; st.panX = 0; st.panY = 0; }
+          else {
+            var z0 = st.zoom, z1 = Math.max(0.6, Math.min(2.6, Math.round(z0 * (+v > 0 ? 1.2 : 1 / 1.2) * 100) / 100));
+            st.panX = Math.max(-450, Math.min(650, st.panX + 590 / z0 - 590 / z1));
+            st.panY = Math.max(-350, Math.min(500, st.panY + 386 / z0 - 386 / z1));
+            st.zoom = z1;
+          }
+        }
+        else if (a === 'reset') { st.pos = JSON.parse(JSON.stringify(HOME)); st.zoom = 1; st.panX = 0; st.panY = 0; }
         else if (a === 'hour3') st.hour3 = +v;
-        else if (a === 'swap') st.swapped = !st.swapped;
-        else if (a === 'undo') { if (!st.hist.length) return; var last = st.hist.pop(), sn = JSON.parse(last.snap); for (var k in sn) st[k] = sn[k]; st.log.shift(); st.toast = 'Undone: ' + last.label; st.chip = null; st.pad = false; st.preview = false; clearTimeout(tToast); tToast = setTimeout(function () { st.toast = ''; render(); }, 1600); }
+        else if (a === 'swap') { st.swapped = !st.swapped; st.chOpen = false; }
+        else if (a === 'chopen') st.chOpen = !st.chOpen;
+        else if (a === 'proj3') st.iso = !st.iso;
+        else if (a === 'turn3') {
+          if (H) {
+            var q = Math.PI / 2, k = Math.round((H.theta - Math.PI / 4) / q);
+            H.turnTo(Math.PI / 4 + (k + 1) * q);
+          }
+          return;
+        }
+        else if (a === 'undo') {
+          if (!st.hist.length) return;
+          var curSnap = JSON.stringify({ filled: st.filled, variant: st.variant, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
+          var last = st.hist.pop(), sn = JSON.parse(last.snap);
+          st.rhist.push({ snap: curSnap, label: last.label, logItem: st.log[0] });
+          for (var k in sn) st[k] = sn[k];
+          st.log.shift(); toastMsg('Undone: ' + last.label); st.chip = null; st.pad = false; st.preview = false;
+        }
+        else if (a === 'redo') {
+          if (!st.rhist.length) return;
+          var curSnap2 = JSON.stringify({ filled: st.filled, variant: st.variant, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
+          var nxt = st.rhist.pop(), sn2 = JSON.parse(nxt.snap);
+          st.hist.push({ snap: curSnap2, label: nxt.label });
+          for (var k2 in sn2) st[k2] = sn2[k2];
+          if (nxt.logItem) st.log.unshift(nxt.logItem);
+          toastMsg('Redone: ' + nxt.label); st.chip = null; st.pad = false; st.preview = false;
+        }
         render();
       });
       render();
-      FN.three(q('.sd-canvas'), function (h3) { H = h3; render(); });
+      FN.three(q('.sd-canvas'), function (h3) {
+        H = h3; H.theta = -Math.PI * 0.75; H.useIso = st.iso;
+        H.onTap = function (pt) {
+          if (!st.swapped) return;
+          if (!FN.draw.inside(vertsOf(st), pt[0], pt[1])) return;
+          if (st.tool === 'chimney') {
+            if (st.otype === 'chimney') {
+              if (!st.chimney) commit({ chimney: true, pad: true, fresh: true, cx: pt[0], cy: pt[1], selObs: 'chim' }, 'Chimney added', { t: 'Chimney added', b: 'Type its height on the pad', c: 'var(--c-ink)', x: 520, y: 240 });
+              else { st.selObs = 'chim'; render(); }
+              return;
+            }
+            var nid = 'o' + (st.obs.length + 1) + '-' + Math.round(pt[0]);
+            commit({ obs: st.obs.concat([{ id: nid, type: st.otype, x: pt[0], y: pt[1], h: FN.OBST[st.otype].h }]), selObs: nid }, FN.OBST[st.otype].en + ' added', { t: FN.OBST[st.otype].en + ' added', b: 'Keep-out ' + FN.OBST[st.otype].margin.toFixed(2) + ' m, round', c: 'var(--c-ink)', x: 520, y: 240 });
+          } else if (st.tool === 'fill') {
+            st.selObs = ''; touch(); st.preview = true; check(); render();
+          } else if (st.tool === 'panel' && st.filled) {
+            var hitM = mods(st).filter(function (m) { return pt[0] >= m.x && pt[0] <= m.x + m.w && pt[1] >= m.y && pt[1] <= m.y + m.h; })[0];
+            if (hitM) {
+              var r = st.removed.slice(), i = r.indexOf(hitM.id), was = i >= 0;
+              if (was) r.splice(i, 1); else r.push(hitM.id);
+              commit({ removed: r }, was ? 'Module added' : 'Module removed', { t: was ? '+1 module' : '−1 module', b: (was ? '+' : '−') + '0.44 kWp', c: was ? 'var(--c-gain)' : 'var(--c-loss)', x: 520, y: 240 });
+            }
+          } else if (st.tool === 'select') {
+            var nearO = obstaclesOf(st).filter(function (o) { return Math.hypot(pt[0] - o.x, pt[1] - o.y) < 28; })[0];
+            if (nearO) { st.selObs = nearO.id; render(); }
+            else { st.selObs = ''; st.selFace = !st.selFace; render(); }
+          } else if (st.tool === 'note' || st.tool === 'photo') {
+            var pid = 'p' + (st.pins.length + 1) + '-' + Math.round(pt[0]), now = '14:0' + (2 + (st.pins.length % 7));
+            var np = { id: pid, kind: st.tool, x: pt[0], y: pt[1], time: now, text: st.tool === 'photo' ? 'North slope tiles & flashing inspected · clear for rail brackets.' : 'Rafter spacing 600 mm · check tile hook clearance.' };
+            commit({ pins: st.pins.concat([np]), selPin: pid, notesOn: true }, (st.tool === 'photo' ? 'Survey photo' : 'Field note') + ' pinned');
+          }
+        };
+        render();
+      });
       FN.draw.load(function () { render(); });
       if (opts.api) opts.api.render = function () { if (J && !S.shared) st.mode = -1; render(); };
     })();
@@ -1823,8 +2656,8 @@
     function stepRoof() {
       var R = FN.ROOFS[S.roof || 'hip'], all3 = R.pv.every(function (k) { return st.conf[k]; }), F0 = fillOf(), mods = F0.mods, f = filled();
       var o = '<div style="position:absolute;left:12px;top:12px;bottom:12px;width:80px;' + FN.card + ';display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px" role="toolbar">' + [['confirm', 'Confirm', false], ['fill', 'Fill zone', !all3]].map(function (t) { var on = st.tool === t[0]; return '<button type="button" data-a="tool" data-v="' + t[0] + '"' + (t[2] ? ' disabled' : '') + ' style="width:64px;min-height:64px;border:none;border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (t[2] ? 'var(--c-faint)' : on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;font:inherit;cursor:pointer">' + FN.icon(t[0]) + '<span style="font-size:11px">' + t[1] + '</span></button>'; }).join('') + '</div>';
-      o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 480" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + Object.keys(R.faces).map(function (k) { var pv = R.pv.indexOf(k) >= 0, c = pv && st.conf[k], hi = pv && !c; return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') : k === 'S' ? 'var(--c-roofS)' : 'var(--c-selSoft)') + '" stroke="' + (hi ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (hi ? 2.5 : 1) + '" style="cursor:pointer"></path>'; }).join('') +
-        ((f || st.preview) ? mods.map(function (m) { var g = !f; return '<rect x="' + m.x.toFixed(1) + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="1.5" fill="' + (g ? 'var(--c-selSoft)' : '#2B3A4A') + '" stroke="' + (g ? 'var(--c-sel)' : '#55667A') + '" stroke-dasharray="' + (g ? '4 3' : 'none') + '"></rect>'; }).join('') : '') + '<path d="M' + R.ridge[0] + ' ' + R.ridge[1] + ' L' + R.ridge[2] + ' ' + R.ridge[3] + '" stroke="var(--c-ridge)" stroke-width="1.5"></path></svg>' +
+      o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 480" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + FN.draw.defs() + '<rect x="150" y="110" width="740" height="480" fill="url(#sd-grid-dots)"></rect><rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".13"></rect>' + Object.keys(R.faces).map(function (k) { var pv = R.pv.indexOf(k) >= 0, c = pv && st.conf[k], hi = pv && !c; return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') : k === 'S' ? 'var(--c-roofS)' : 'var(--c-selSoft)') + '" stroke="' + (hi ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (hi ? 2.5 : 1.1) + '" style="cursor:pointer"></path><path d="' + R.faces[k] + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" pointer-events="none"></path>'; }).join('') +
+        ((f || st.preview) ? mods.map(function (m) { return FN.draw.modSvg(m, !f, false, true); }).join('') : '') + FN.draw.ridges(S.roof || 'hip') + '</svg>' +
         '<span style="position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">LiDAR-measured · 0.91 · our drawing, not a photo</span>' +
         (st.preview && !f ? '<div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);' + FN.card + ';padding:6px;display:flex;gap:6px;align-items:center"><span style="font-size:13px;color:var(--c-muted);padding:0 8px">' + F0.n + ' modules · ' + (F0.n * 0.44).toFixed(2) + ' kWp · ' + FN.n(F0.n * 0.44 * 1460) + ' kWh/yr</span><button type="button" data-a="keep" style="min-height:42px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-size:13px;font-weight:600;cursor:pointer">✓ Keep</button></div>' : '') + '</div>';
       o += '<div style="position:absolute;right:12px;top:12px;bottom:12px;width:328px;' + FN.card + ';padding:16px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px;font-weight:600">' + (!all3 ? 'Is this your roof?' : !f ? 'Fill your roof' : 'Your roof is ready') + '</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">' + (!all3 ? (R.pv.length > 1 ? 'Tap each face to confirm it: north, west and east. The south face gets no panels.' : 'Tap the north face to confirm it: it is the one that takes the panels.') : !f ? 'Fill zone, the north face, then ✓ Keep: three touches.' : F0.n + ' modules on the north face after 0.40 m setbacks from the edges. Next: what solar, a battery, a car or a heat pump would change.') + '</span>' +
@@ -2180,11 +3013,14 @@
     skillion: { en: 'Skillion', fr: 'Monopente', pitch: 10, depth: 10, ridgeLen: 15, faces: { N: 'M218 156 L818 156 L818 556 L218 556 Z' },
       north: [[218, 156, 0], [818, 156, 4], [818, 556, 1], [218, 556, 4]], ridge: [218, 556, 818, 556], pv: ['N'], say: 'one face rising to the south, low eave on the north' }
   };
-  // obstacle types: shape (0 rectangle a × b, 1 disc of radius a), keep-out margin (round join, §4.6), height above the roof
+  // obstacle types: shape (0 rectangle a × b, 1 disc of radius a, 2 dormer polygon), keep-out margin (round join, §4.6), height above the roof
   FN.OBST = {
-    chimney: { en: 'Chimney', shape: 0, a: 0.6, b: 0.6, margin: 0.3, h: 1.0, fill: '#8C7462', line: '#5E4B3E' },
-    vent: { en: 'Vent pipe', shape: 1, a: 0.08, b: 0, margin: 0.2, h: 0.4, fill: '#9AA1A9', line: '#5B6068' },
-    skylight: { en: 'Skylight', shape: 0, a: 0.8, b: 1.2, margin: 0.3, h: 0.1, fill: '#BFD4E6', line: '#5E7A93' }
+    chimney: { en: 'Chimney', icon: 'chimney', shape: 0, a: 0.60, b: 0.60, margin: 0.30, h: 1.00, fill: '#8C7462', line: '#5E4B3E' },
+    skylight: { en: 'Skylight', icon: 'skylight', shape: 0, a: 0.78, b: 1.18, margin: 0.30, h: 0.15, fill: '#BFD4E6', line: '#5E7A93' },
+    antenna: { en: 'Antenna', icon: 'antenna', shape: 1, a: 0.08, b: 0, margin: 0.30, h: 2.50, fill: '#6F7780', line: '#3F454C' },
+    box: { en: 'Box (AC)', icon: 'box', shape: 0, a: 1.00, b: 0.70, margin: 0.30, h: 0.80, fill: '#B6BBC2', line: '#616870' },
+    vent: { en: 'Cylinder (vent)', icon: 'cylinder', shape: 1, a: 0.10, b: 0, margin: 0.20, h: 0.60, fill: '#9AA1A9', line: '#5B6068' },
+    prism: { en: 'Polygon (dormer)', icon: 'prism', shape: 0, a: 1.20, b: 1.10, margin: 0.30, h: 1.50, fill: '#A99C8E', line: '#6A5F54' }
   };
   FN.SETBACK = 0.4;
   FN.MOD = { portrait: [1.134, 1.722], landscape: [1.722, 1.134] };
@@ -2259,11 +3095,79 @@
     return { mods: mods, rings: [ring], n: mods.length, ms: 0, live: false };
   };
   FN.draw.path = function (rings) { return rings.map(function (r) { return 'M' + r.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + ' Z'; }).join(' '); };
-  // the obstacle's body and keep-out, in plan px
+  // shared SVG defs for the 2D plan: 1 m / 5 m metric grids (dots and lines), roof slope hatches, and 2.5D PV module gradients/cells
+  FN.draw.defs = function () {
+    return '<defs>' +
+      '<pattern id="sd-dots1" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="var(--c-roofLine)" opacity=".38"></circle></pattern>' +
+      '<pattern id="sd-grid-dots" width="200" height="200" patternUnits="userSpaceOnUse"><rect width="200" height="200" fill="url(#sd-dots1)"></rect><path d="M0 0 H5 M0 0 V5 M200 0 H195 M0 200 V195" fill="none" stroke="var(--c-roofLine)" stroke-width="1.1" opacity=".65"></path><circle cx="0" cy="0" r="1.8" fill="var(--c-roofLine)" opacity=".6"></circle></pattern>' +
+      '<pattern id="sd-lines1" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="var(--c-line)" stroke-width="0.65" opacity=".6"></path></pattern>' +
+      '<pattern id="sd-grid-lines" width="200" height="200" patternUnits="userSpaceOnUse"><rect width="200" height="200" fill="url(#sd-lines1)"></rect><path d="M200 0 H0 V200" fill="none" stroke="var(--c-roofLine)" stroke-width="0.95" opacity=".5"></path></pattern>' +
+      '<pattern id="sd-hatch-h" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M0 6 H12" stroke="var(--c-roofLine)" stroke-width="0.6" opacity=".22"></path></pattern>' +
+      '<pattern id="sd-hatch-v" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M6 0 V12" stroke="var(--c-roofLine)" stroke-width="0.6" opacity=".22"></path></pattern>' +
+      '<linearGradient id="sd-pv-sun" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1A2736"></stop><stop offset="55%" stop-color="#243548"></stop><stop offset="100%" stop-color="#15202D"></stop></linearGradient>' +
+      '<linearGradient id="sd-pv-shade" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#35414E"></stop><stop offset="55%" stop-color="#3E4C5B"></stop><stop offset="100%" stop-color="#2D3843"></stop></linearGradient>' +
+      '<pattern id="sd-cells" width="9" height="10.8" patternUnits="userSpaceOnUse"><path d="M9 0 H0 V10.8" fill="none" stroke="rgba(165,198,230,0.20)" stroke-width="0.55"></path></pattern>' +
+      '</defs>';
+  };
+  // strong ridge and hip lines for the roof type
+  FN.draw.ridges = function (type) {
+    var R = FN.ROOFS[type] || FN.ROOFS.hip, s = '';
+    if (type === 'hip') {
+      s += '<path d="M218 156 L368 356 M818 156 L668 356 M218 556 L368 356 M818 556 L668 356" stroke="var(--c-ridge)" stroke-width="2.2" stroke-linecap="round" pointer-events="none"></path>';
+    }
+    s += '<path d="M' + R.ridge[0] + ' ' + R.ridge[1] + ' L' + R.ridge[2] + ' ' + R.ridge[3] + '" stroke="var(--c-ridge)" stroke-width="2.8" stroke-linecap="round" pointer-events="none"></path>';
+    return s;
+  };
+  // 2.5D or flat module rendering in the 2D plan
+  FN.draw.modSvg = function (m, ghost, shaded, relief) {
+    var x = m.x, y = m.y, w = m.w, h = m.h;
+    if (m.removed || ghost || !relief) {
+      return '<rect data-a="mod" data-v="' + m.id + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5" fill="' + (m.removed ? 'none' : ghost ? 'var(--c-selSoft)' : shaded ? '#46525E' : '#2B3A4A') + '" stroke="' + (m.removed ? 'var(--c-loss)' : ghost ? 'var(--c-sel)' : '#55667A') + '" stroke-dasharray="' + (m.removed || ghost ? '4 3' : 'none') + '" style="cursor:pointer"></rect>';
+    }
+    var ix = (x + 1.5).toFixed(1), iy = (y + 1.5).toFixed(1), iw = Math.max(2, w - 3).toFixed(1), ih = Math.max(2, h - 3).toFixed(1);
+    var bus = h >= w ? 'M' + (x + 2).toFixed(1) + ' ' + (y + h / 2).toFixed(1) + ' H' + (x + w - 2).toFixed(1) : 'M' + (x + w / 2).toFixed(1) + ' ' + (y + 2).toFixed(1) + ' V' + (y + h - 2).toFixed(1);
+    return '<g data-a="mod" data-v="' + m.id + '" style="cursor:pointer">' +
+      '<rect x="' + (x + 2.2).toFixed(1) + '" y="' + (y + 2.6).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.8" fill="#12161C" opacity=".26"></rect>' +
+      '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.6" fill="' + (shaded ? '#636E7B' : '#8A94A0') + '" stroke="#36404C" stroke-width="0.7"></rect>' +
+      '<rect x="' + ix + '" y="' + iy + '" width="' + iw + '" height="' + ih + '" rx="0.8" fill="url(#' + (shaded ? 'sd-pv-shade' : 'sd-pv-sun') + ')"></rect>' +
+      '<rect x="' + ix + '" y="' + iy + '" width="' + iw + '" height="' + ih + '" fill="url(#sd-cells)"></rect>' +
+      '<path d="' + bus + '" stroke="rgba(185,215,242,0.34)" stroke-width="0.9"></path>' +
+      '<path d="M' + (x + 1).toFixed(1) + ' ' + (y + h - 1.5).toFixed(1) + ' V' + (y + 1).toFixed(1) + ' H' + (x + w - 1.5).toFixed(1) + '" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="0.7"></path>' +
+      '</g>';
+  };
+  // the obstacle's body and keep-out, in plan px (with 2.5D cartographic shadow and architectural detail)
   FN.draw.shapes = function (type, o, sel) {
-    var R = FN.ROOFS[type], T = FN.OBST[o.type], c = Math.cos(R.pitch * Math.PI / 180), m = T.margin * 40, s = '';
-    if (T.shape) { var r = T.a * 40; s += '<ellipse cx="' + o.x + '" cy="' + o.y + '" rx="' + (r + m) + '" ry="' + ((r + m) * c) + '" fill="none" stroke="var(--c-loss)" stroke-dasharray="3 4"></ellipse><ellipse data-obs="' + o.id + '" cx="' + o.x + '" cy="' + o.y + '" rx="' + Math.max(r, 4) + '" ry="' + Math.max(r * c, 4) + '" fill="' + T.fill + '" stroke="' + (sel ? 'var(--c-sel)' : T.line) + '" stroke-width="' + (sel ? 2.5 : 1) + '" style="cursor:grab"></ellipse>'; }
-    else { var hw = T.a * 20, hh = T.b * 20 * c; s += '<rect x="' + (o.x - hw - m) + '" y="' + (o.y - hh - m * c) + '" width="' + (2 * hw + 2 * m) + '" height="' + (2 * hh + 2 * m * c) + '" rx="' + m + '" ry="' + (m * c) + '" fill="none" stroke="var(--c-loss)" stroke-dasharray="3 4"></rect><rect data-obs="' + o.id + '" x="' + (o.x - hw) + '" y="' + (o.y - hh) + '" width="' + 2 * hw + '" height="' + 2 * hh + '" fill="' + T.fill + '" stroke="' + (sel ? 'var(--c-sel)' : T.line) + '" stroke-width="' + (sel ? 2.5 : 1) + '" style="cursor:grab"></rect>'; }
+    var R = FN.ROOFS[type], T = FN.OBST[o.type] || FN.OBST.chimney, c = Math.cos(R.pitch * Math.PI / 180), m = T.margin * 40, s = '';
+    if (T.shape) {
+      var r = Math.max(T.a * 40, 4.5), ry = Math.max(T.a * 40 * c, 4.2);
+      s += '<ellipse cx="' + o.x + '" cy="' + o.y + '" rx="' + (T.a * 40 + m) + '" ry="' + ((T.a * 40 + m) * c) + '" fill="none" stroke="var(--c-loss)" stroke-dasharray="3 4"></ellipse>' +
+        '<g data-obs="' + o.id + '" style="cursor:grab">' +
+        '<ellipse cx="' + (o.x + 2) + '" cy="' + (o.y + 2.5) + '" rx="' + (r + 1.5) + '" ry="' + (ry + 1.5) + '" fill="#12161C" opacity=".24"></ellipse>' +
+        '<ellipse cx="' + o.x + '" cy="' + o.y + '" rx="' + (r + 2) + '" ry="' + (ry + 1.8) + '" fill="#6A7078" stroke="' + (sel ? 'var(--c-sel)' : T.line) + '" stroke-width="' + (sel ? 2.2 : 0.9) + '"></ellipse>' +
+        '<ellipse cx="' + o.x + '" cy="' + o.y + '" rx="' + r + '" ry="' + ry + '" fill="' + T.fill + '"></ellipse>' +
+        (o.type === 'antenna'
+          ? '<path d="M' + (o.x - 6) + ' ' + o.y + ' H' + (o.x + 6) + ' M' + o.x + ' ' + (o.y - 6) + ' V' + (o.y + 6) + '" stroke="#1D2026" stroke-width="1.2"></path>'
+          : '<ellipse cx="' + o.x + '" cy="' + o.y + '" rx="' + (r * 0.45) + '" ry="' + (ry * 0.45) + '" fill="#3A4047"></ellipse>') +
+        '</g>';
+    } else {
+      var hw = T.a * 20, hh = T.b * 20 * c, x0 = o.x - hw, y0 = o.y - hh, w = 2 * hw, h = 2 * hh;
+      s += '<rect x="' + (x0 - m) + '" y="' + (y0 - m * c) + '" width="' + (w + 2 * m) + '" height="' + (h + 2 * m * c) + '" rx="' + m + '" ry="' + (m * c) + '" fill="none" stroke="var(--c-loss)" stroke-dasharray="3 4"></rect>' +
+        '<g data-obs="' + o.id + '" style="cursor:grab">' +
+        '<rect x="' + (x0 + 2.5) + '" y="' + (y0 + 3) + '" width="' + w + '" height="' + h + '" rx="1.5" fill="#12161C" opacity=".24"></rect>';
+      if (o.type === 'prism') {
+        var pts = (x0 + 3) + ',' + (y0 + h) + ' ' + o.x + ',' + y0 + ' ' + (x0 + w - 3) + ',' + (y0 + h);
+        s += '<polygon points="' + pts + '" fill="' + T.fill + '" stroke="' + (sel ? 'var(--c-sel)' : T.line) + '" stroke-width="' + (sel ? 2.5 : 1.1) + '"></polygon>' +
+          '<path d="M' + o.x + ' ' + y0 + ' V' + (y0 + h) + '" stroke="' + T.line + '" stroke-width="0.9"></path>';
+      } else {
+        s += '<rect x="' + x0 + '" y="' + y0 + '" width="' + w + '" height="' + h + '" rx="1.2" fill="' + T.fill + '" stroke="' + (sel ? 'var(--c-sel)' : T.line) + '" stroke-width="' + (sel ? 2.5 : 1.1) + '"></rect>' +
+          (o.type === 'skylight'
+            ? '<rect x="' + (x0 + 2.2) + '" y="' + (y0 + 2.2) + '" width="' + Math.max(2, w - 4.4) + '" height="' + Math.max(2, h - 4.4) + '" fill="#8AB2D4" stroke="#5E7A93" stroke-width="0.7"></rect><path d="M' + o.x + ' ' + (y0 + 2.2) + ' V' + (y0 + h - 2.2) + '" stroke="#5E7A93" stroke-width="0.7"></path>'
+            : o.type === 'box'
+              ? '<circle cx="' + (x0 + w * 0.34) + '" cy="' + o.y + '" r="' + (Math.min(hw, hh) * 0.55) + '" fill="none" stroke="' + T.line + '" stroke-width="0.9"></circle><path d="M' + (x0 + w * 0.66) + ' ' + (y0 + 3) + ' V' + (y0 + h - 3) + '" stroke="' + T.line + '" stroke-width="0.8"></path>'
+              : '<rect x="' + (x0 + 2.2) + '" y="' + (y0 + 2.2) + '" width="' + Math.max(2, w - 4.4) + '" height="' + Math.max(2, h - 4.4) + '" fill="none" stroke="#6E5A4B" stroke-width="0.8"></rect><circle cx="' + o.x + '" cy="' + o.y + '" r="' + Math.min(hw, hh) * 0.42 + '" fill="#47392F" stroke="#6E5A4B" stroke-width="1"></circle>');
+      }
+      s += '</g>';
+    }
     return s;
   };
   // snapping while an obstacle moves: the ridge axis, then 0.05 m steps from the ridge and the eave
