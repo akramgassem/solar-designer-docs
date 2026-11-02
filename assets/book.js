@@ -608,7 +608,9 @@
   function smRoute(W, A, B, y, off) {
     var n = W.length, per = W.per, pa = W[A.w].p0 + A.s, pb = W[B.w].p0 + B.s;
     var fwd = ((pb - pa) % per + per) % per, pts = [smAt(W, A.w, A.s, off, y)], w = A.w, left, edge;
-    var corner = function (k) { var v = W[k].b, m = W[(k + 1) % n]; return [v[0] + (W[k].nx + m.nx) * off, y, v[1] + (W[k].nz + m.nz) * off]; };
+    // a corner's point at the offset: the mitre of the two walls, which holds for square, re-entrant
+    // and straight corners (two walls in line, as where a garage's wall continues the house's)
+    var corner = function (k) { var v = W[k].b, m = W[(k + 1) % n], f = off / (1 + W[k].nx * m.nx + W[k].nz * m.nz); return [v[0] + (W[k].nx + m.nx) * f, y, v[1] + (W[k].nz + m.nz) * f]; };
     if (fwd <= per - fwd) {
       left = fwd; edge = W[w].L - A.s;
       while (left > edge + 1e-6) { pts.push(corner(w)); left -= edge; w = (w + 1) % n; edge = W[w].L; }
@@ -1377,22 +1379,73 @@
 
   /* the household's site on the 3D home: equipment on its walls, the cables between, the checks and what the
      installer verifies on site; both screens read these (D-72) */
-  FN.WALLS3 = smWalls([[-7.5, -5], [7.5, -5], [7.5, 5], [-7.5, 5]], [3, 3, 3, 3]);
-  FN.WALLNAME = ['north', 'east', 'south', 'west'];
+  // the homes of the 3D scene, each from one description (D-72): the footprint clockwise seen from above
+  // (x east, z south, metres) with a height per wall, the blocks that stand on it ([x0, z0, x1, z1, height,
+  // roof]: 'main' under the roof type the household picked, 'flat' a schematic flat roof), the doors and
+  // windows by wall and distance along it (y0 and y1 when they are not a window's 0.95–2.15 m), where the
+  // strings come down (pv), where the household's units go by default (eq) and where they stand before it
+  // places them (stand). The walls, the openings, the battery zones, the anchors and the cables all read it.
+  FN.HOMES = {
+    rect: {
+      en: 'Rectangle', fr: 'Rectangle',
+      foot: [[-7.5, -5], [7.5, -5], [7.5, 5], [-7.5, 5]], wallH: [3, 3, 3, 3],
+      names: ['north', 'east', 'south', 'west'], namesFr: ['nord', 'est', 'sud', 'ouest'],
+      bodies: [[-7.5, -5, 7.5, 5, 3, 'main']],
+      open: [{ w: 0, s0: 2.4, s1: 4.2, k: 'win' }, { w: 0, s0: 6.4, s1: 8.6, k: 'win' }, { w: 0, s0: 10.8, s1: 12.6, k: 'win' }, { w: 1, s0: 2.75, s1: 4.25, k: 'win' },
+        { w: 2, s0: 3.7, s1: 5.7, k: 'win' }, { w: 2, s0: 9.6, s1: 12.4, k: 'door', y0: 0.4, y1: 2.3 }, { w: 3, s0: 2.5, s1: 3.9, k: 'win', y0: 1, y1: 2.1 }, { w: 3, s0: 5.9, s1: 7.3, k: 'win', y0: 1, y1: 2.1 }],
+      pv: { w: 0, s: 13.7 },
+      eq: { inv: { w: 1, s: 5.4 }, bat: { w: 1, s: 7.0 }, sb: { w: 1, s: 1.2 }, evc: { w: 1, s: 9.3 }, hp: { w: 3, s: 4.7 } },
+      stand: { inv: { w: 1, s: 5.9 }, bat: { w: 1, s: 7.2 }, sb: { w: 1, s: 4.3 }, evc: { w: 1, s: 8.6 }, hp: { w: 3, s: 3.5 } }
+    },
+    // the same house with a 6 × 6 m garage on its south-west corner: an L of seven walls, one of them a
+    // re-entrant corner the cables turn round; the garage's flat roof is schematic
+    ell: {
+      en: 'L with a garage', fr: 'En L avec garage',
+      foot: [[-7.5, -5], [7.5, -5], [7.5, 5], [-1.5, 5], [-1.5, 11], [-7.5, 11], [-7.5, 5]], wallH: [3, 3, 3, 2.7, 2.7, 2.7, 3],
+      names: ['north', 'east', 'south', 'garage’s east', 'garage’s south', 'garage’s west', 'west'], namesFr: ['nord', 'est', 'sud', 'est du garage', 'sud du garage', 'ouest du garage', 'ouest'],
+      bodies: [[-7.5, -5, 7.5, 5, 3, 'main'], [-7.5, 5, -1.5, 11, 2.7, 'flat']],
+      open: [{ w: 0, s0: 2.4, s1: 4.2, k: 'win' }, { w: 0, s0: 6.4, s1: 8.6, k: 'win' }, { w: 0, s0: 10.8, s1: 12.6, k: 'win' }, { w: 1, s0: 2.75, s1: 4.25, k: 'win' },
+        { w: 2, s0: 3.7, s1: 5.7, k: 'win' }, { w: 2, s0: 6.6, s1: 8.4, k: 'door', y0: 0.4, y1: 2.3 }, { w: 3, s0: 1, s1: 1.9, k: 'door', y0: 0.3, y1: 2.3 },
+        { w: 4, s0: 0.6, s1: 5.4, k: 'gdoor', y0: 0.3, y1: 2.4 }, { w: 6, s0: 2.5, s1: 3.9, k: 'win', y0: 1, y1: 2.1 }, { w: 6, s0: 5.9, s1: 7.3, k: 'win', y0: 1, y1: 2.1 }],
+      pv: { w: 0, s: 13.7 },
+      eq: { inv: { w: 1, s: 5.4 }, bat: { w: 1, s: 7.0 }, sb: { w: 1, s: 1.2 }, evc: { w: 1, s: 9.3 }, hp: { w: 3, s: 3.8 } },
+      stand: { inv: { w: 1, s: 5.9 }, bat: { w: 1, s: 7.2 }, sb: { w: 1, s: 4.3 }, evc: { w: 1, s: 8.6 }, hp: { w: 3, s: 3.8 } }
+    }
+  };
+  FN.homeW = {};
+  // a home's description and its walls for the site core, from a key or the household's site (S.home)
+  FN.home = function (S) {
+    var k = typeof S === 'string' ? S : S && S.home;
+    if (!FN.HOMES[k]) k = 'rect';
+    var D = FN.HOMES[k];
+    return { key: k, D: D, W: FN.homeW[k] || (FN.homeW[k] = smWalls(D.foot, D.wallH)) };
+  };
+  FN.wallName = function (S, w) { return FN.home(S).D.names[w]; };
   FN.EQD = { inv: { n: 'Inverter', W: 0.45, H: 0.55, y0: 1.375 }, bat: { n: 'Battery', W: 0.74, H: 1.12, y0: 0.39 }, sb: { n: 'Switchboard', W: 0.5, H: 0.7, y0: 1.2 }, evc: { n: 'Charger', W: 0.25, H: 0.4, y0: 1.0 }, hp: { n: 'Heat pump', W: 0.96, H: 0.82, y0: 0.1 } };
-  // doors and windows of the 3D home, by wall and distance along it; the south door is the exit
-  FN.OPEN3 = [{ w: 0, s0: 2.4, s1: 4.2, k: 'win' }, { w: 0, s0: 6.4, s1: 8.6, k: 'win' }, { w: 0, s0: 10.8, s1: 12.6, k: 'win' }, { w: 1, s0: 2.75, s1: 4.25, k: 'win' },
-    { w: 2, s0: 3.7, s1: 5.7, k: 'win' }, { w: 2, s0: 9.6, s1: 12.4, k: 'door' }, { w: 3, s0: 2.5, s1: 3.9, k: 'win' }, { w: 3, s0: 5.9, s1: 7.3, k: 'win' }];
   FN.CIRC = [['dc', 'Strings', '#E8A800', 'pv', 'inv', 'solar'], ['ac', 'Inverter to board', '#3D4650', 'inv', 'sb', 'solar'], ['bat', 'Battery', '#7A5BD0', 'inv', 'bat', 'bat'], ['ev', 'Charger', '#1F7A55', 'sb', 'evc', 'ev'], ['hp', 'Heat pump', '#2457C5', 'sb', 'hp', 'hp']];
-  FN.EQPOS = function () { return { inv: { w: 1, s: 5.4 }, bat: { w: 1, s: 7.0 }, sb: { w: 1, s: 1.2 }, evc: { w: 1, s: 9.3 }, hp: { w: 3, s: 4.7 } }; };
+  // where a unit can stand on a wall: on it, 0.2 m clear of each end; none when the wall is too short for it
+  FN.eqFit = function (W, k, a) {
+    var d = FN.EQD[k], wl = W[a.w];
+    if (!wl || wl.L < d.W + 0.4) return null;
+    return { w: a.w, s: Math.max(d.W / 2 + 0.2, Math.min(wl.L - d.W / 2 - 0.2, a.s)) };
+  };
+  // the household's units by default, each on a wall long enough for it (else the middle of the longest)
+  FN.EQPOS = function (S) {
+    var hm = FN.home(S), W = hm.W, out = {};
+    Object.keys(hm.D.eq).forEach(function (k) {
+      var j = W.reduce(function (b, wl, i) { return wl.L > W[b].L ? i : b; }, 0);
+      out[k] = FN.eqFit(W, k, hm.D.eq[k]) || { w: j, s: W[j].L / 2 };
+    });
+    return out;
+  };
   FN.eqOn = function (S, k) { var M = S.measures; return { inv: M.solar || M.bat, bat: M.bat, sb: M.solar || M.bat || M.ev || M.hp, evc: M.ev, hp: M.hp }[k]; };
   FN.wires = function (S) {
-    var W = FN.WALLS3, P = S.eqPos || FN.EQPOS(), run = 2.4, off = 0.06;
+    var hm = FN.home(S), W = hm.W, P = S.eqPos || FN.EQPOS(S), run = 2.4, off = 0.06;
     var tap = function (k) { var d = FN.EQD[k]; return { a: P[k], p: smAt(W, P[k].w, P[k].s, off, Math.min(d.y0 + d.H, run)) }; };
     return FN.CIRC.filter(function (c) { return S.measures[c[5]] && FN.eqOn(S, c[4]); }).map(function (c) {
       var B = tap(c[4]), pts;
       // the strings leave the north face at its east end, down the fascia to the run
-      if (c[3] === 'pv') pts = [[6.2, 3.55, -4.7], [6.2, 2.86, -5.37], [6.2, run, -5.37]].concat(smRoute(W, { w: 0, s: 13.7 }, B.a, run, off));
+      if (c[3] === 'pv') pts = [[6.2, 3.55, -4.7], [6.2, 2.86, -5.37], [6.2, run, -5.37]].concat(smRoute(W, hm.D.pv, B.a, run, off));
       else { var A = tap(c[3]); pts = [A.p].concat(smRoute(W, A.a, B.a, run, off)); }
       pts.push(B.p);
       pts = pts.filter(function (p, i) { return i === 0 || Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1], p[2] - pts[i - 1][2]) > 1e-6; });
@@ -1400,13 +1453,13 @@
     });
   };
   FN.checks = function (S) {
-    var P = S.eqPos || FN.EQPOS(), out = [], b = P.bat, d = FN.EQD.bat;
+    var hm = FN.home(S), P = S.eqPos || FN.EQPOS(S), out = [], b = P.bat, d = FN.EQD.bat;
     if (S.measures.bat) {
-      var hit = FN.OPEN3.filter(function (o) { return o.w === b.w && b.s + d.W / 2 > o.s0 - 0.6 && b.s - d.W / 2 < o.s1 + 0.6; })[0];
+      var hit = smZones({ rule: 'bat', open: hm.D.open }).filter(function (z) { return z.w === b.w && b.s + d.W / 2 > z.s0 && b.s - d.W / 2 < z.s1; })[0];
       out.push(hit ? { k: 'bat', bad: true, t: 'Battery inside the zone of a ' + (hit.k === 'door' ? 'door' : 'window') + ': AS/NZS 5139 keeps it 600 mm from an exit, 600 mm beside and 900 mm below a window of a habitable room (to verify against the standard).' } : { k: 'bat', t: 'Battery clear of the zones around doors and windows.' });
     }
     if (S.measures.ev) {
-      var c = smAt(FN.WALLS3, P.evc.w, P.evc.s, 0.1, 1.0), r = Math.hypot(c[0] - 10.05, c[1] - 0.85, c[2] - 3.7) * 1.15;
+      var c = smAt(hm.W, P.evc.w, P.evc.s, 0.1, 1.0), r = Math.hypot(c[0] - 10.05, c[1] - 0.85, c[2] - 3.7) * 1.15;
       out.push(r > 5 ? { k: 'evc', bad: true, t: 'The charger’s 5 m tethered cable does not reach the car (' + r.toFixed(1) + ' m): move it closer to the driveway.' } : { k: 'evc', t: 'Charger cable to the car: about ' + r.toFixed(1) + ' m of 5 m.' });
     }
     return out;
@@ -1415,19 +1468,27 @@
   // where each unit goes, the cables' estimate and any check that fails
   // the site's Australian categories from its type and the capacity summed over every zone (D-73): the
   // support scheme, the planning pathway and the network connection, as the raw report read them
-  FN.siteCats = function (S, roofKwp, kVA) {
-    var zn = (S && S.zones || []).reduce(function (a, z) { return a + z.n; }, 0), kwp = roofKwp + zn * SMKWC;
+  // roofKwp is what the design prices, the zones the installer confirmed included (ok: one flag a zone,
+  // the zones' own by default); the zones still to check are added on top
+  FN.siteCats = function (S, roofKwp, kVA, ok) {
+    var Z = S && S.zones || [], on = function (i) { return ok ? !!ok[i] : !!Z[i].ok; };
+    var zn = Z.reduce(function (a, z, i) { return a + (on(i) ? 0 : z.n); }, 0), kwp = roofKwp + zn * SMKWC;
     var kind = !S || !S.site || S.site === 'house' || S.site === 'units' || S.site === 'other' ? 'house' : S.site === 'carpark' ? 'park' : 'ci';
     var carport = !!(S && (S.zones || []).some(function (z) { return z.k === 'carport'; }));
     var c = smCats(kind, { kWc: kwp, kVA: kVA, ph: 1, carport: carport, cover: 0 }, false, function (v) { return v.toFixed(1); })[1];
     return { kwp: kwp, kva: kVA, zones: zn, support: c[1], planning: c[2], connection: c[3] };
   };
+  // the household's zones the installer confirmed on site: they join the design and the offer
+  FN.zonesOk = function (S, ok) {
+    return (S && S.zones || []).filter(function (z, i) { return ok ? !!ok[i] : !!z.ok; });
+  };
+  FN.ZONENAME = { carport: 'carport', custom: 'custom zone' };
   FN.toVerify = function (S) {
-    var r = [], P = S.eqPos || FN.EQPOS();
+    var r = [], P = S.eqPos || FN.EQPOS(S);
     var SN = { house: 'a house', units: 'an apartment building', business: 'a business site', carpark: 'a car park', other: 'another kind of site' };
     if (S.site) r.push(['Site type', SN[S.site] + ', confirmed by the household']);
-    (S.zones || []).forEach(function (z) { r.push([z.k === 'carport' ? 'Carport' : 'Custom zone', z.n + ' modules · ' + (z.k === 'carport' ? 'a new structure: approval and engineering' : 'checked against no rule yet')]); });
-    Object.keys(FN.EQD).forEach(function (k) { if (FN.eqOn(S, k)) r.push([FN.EQD[k].n, FN.WALLNAME[P[k].w] + ' wall, ' + P[k].s.toFixed(1) + ' m along it' + (S.ok && S.ok[k] ? ' · confirmed ✓' : '')]); });
+    (S.zones || []).forEach(function (z) { r.push([z.k === 'carport' ? 'Carport' : 'Custom zone', z.n + ' modules · ' + (z.ok ? 'confirmed on site, priced ✓' : z.k === 'carport' ? 'a new structure: approval and engineering' : 'checked against no rule yet')]); });
+    Object.keys(FN.EQD).forEach(function (k) { if (FN.eqOn(S, k)) r.push([FN.EQD[k].n, FN.wallName(S, P[k].w) + ' wall, ' + P[k].s.toFixed(1) + ' m along it' + (S.ok && S.ok[k] ? ' · confirmed ✓' : '')]); });
     var W = FN.wires(S);
     if (W.length) r.push(['Cables', W.reduce(function (a, w) { return a + w.len; }, 0).toFixed(1) + ' m in all, estimated along the walls']);
     FN.checks(S).filter(function (c) { return c.bad; }).forEach(function (c) { r.push(['To fix', c.t, true]); });
@@ -1468,7 +1529,7 @@
     c.fillStyle = g; c.fillRect(0, 0, 256, 256);
     return new T.CanvasTexture(cv);
   };
-  FN.contactAoTex = function (T) {
+  FN.contactAoTex = function (T, bodies) {
     var cv = doc.createElement('canvas'); cv.width = 256; cv.height = 256;
     var c = cv.getContext('2d'), px = function (x) { return (x + 20) / 40 * 256; }, pz = function (z) { return (z + 16) / 32 * 256; };
     // Multi-pass soft rect for house base + roof overhang ambient occlusion
@@ -1476,7 +1537,7 @@
     for (i = 0; i < 8; i++) {
       pad = (8 - i) * 0.22; a = 0.026;
       c.fillStyle = 'rgba(29,32,38,' + a + ')';
-      c.fillRect(px(-7.6 - pad), pz(-5.1 - pad), (15.2 + pad * 2) / 40 * 256, (10.2 + pad * 2) / 32 * 256);
+      (bodies || FN.HOMES.rect.bodies).forEach(function (b) { c.fillRect(px(b[0] - 0.1 - pad), pz(b[1] - 0.1 - pad), (b[2] - b[0] + 0.2 + pad * 2) / 40 * 256, (b[3] - b[1] + 0.2 + pad * 2) / 32 * 256); });
     }
     // Soft radial contact shadow under the tree (-12, -9)
     var tx = px(-12), tz = pz(-9), tr = 2.8 / 40 * 256, tg = c.createRadialGradient(tx, tz, 1, tx, tz, tr);
@@ -1525,23 +1586,13 @@
       var drive = new T.Mesh(new T.PlaneGeometry(6, 14), mat(C.drive, { roughness: 0.9 })); drive.rotation.x = -Math.PI / 2; drive.position.set(11, 0.01, 4); drive.receiveShadow = true; sc.add(drive);
       var aoPlane = new T.Mesh(new T.PlaneGeometry(40, 32), new T.MeshBasicMaterial({ map: FN.contactAoTex(T), transparent: true, depthWrite: false }));
       aoPlane.rotation.x = -Math.PI / 2; aoPlane.position.y = 0.018; sc.add(aoPlane);
-      // House: plinth, main walls, recessed openings, gable/skillion wall extensions, roof slabs with overhang + fascia, ridge caps
-      var plinth = new T.Mesh(new T.BoxGeometry(15.12, 0.28, 10.12), mat(C.drive, { roughness: 0.9 }));
-      plinth.position.y = 0.14; plinth.castShadow = true; plinth.receiveShadow = true; sc.add(plinth);
+      // House: plinths, walls and openings from the home's description (H.setHome), gable/skillion wall extensions,
+      // roof slabs with overhang + fascia, ridge caps
       // the maquette's look from the site core: walls darker at their foot, tile courses, contact shadows
       var mWall = mat(C.walls, { roughness: 0.88 }), courseTex = smCourseTex(T), seamTex = smSeamTex(T), aoTex = smAoTex(T);
-      var walls = new T.Mesh(smShade(T, new T.BoxGeometry(15, 2.72, 10)), mat(C.walls, { roughness: 0.88, vertexColors: true }));
-      walls.position.y = 1.64; walls.castShadow = true; walls.receiveShadow = true; addEdges(walls, walls.geometry); sc.add(walls);
-      // Subtle architectural window/door recesses
-      var mWin = mat('#4A525D', { roughness: 0.3, metalness: 0.2 }), mSill = mat(C.drive, { roughness: 0.85 });
-      [[-4.2, 1.55, -5.01, 1.8, 1.2, 0.06], [0, 1.55, -5.01, 2.2, 1.2, 0.06], [4.2, 1.55, -5.01, 1.8, 1.2, 0.06],
-       [-3.5, 1.35, 5.01, 2.8, 1.9, 0.06], [2.8, 1.55, 5.01, 2.0, 1.2, 0.06],
-       [-7.51, 1.55, -1.6, 0.06, 1.1, 1.4], [-7.51, 1.55, 1.8, 0.06, 1.1, 1.4],
-       [7.51, 1.55, -1.5, 0.06, 1.1, 1.5]].forEach(function (w) {
-        var wm = new T.Mesh(new T.BoxGeometry(w[3], w[4], w[5]), mWin); wm.position.set(w[0], w[1], w[2]); sc.add(wm);
-        var sm = new T.Mesh(new T.BoxGeometry(w[3] + (w[3] > 0.2 ? 0.12 : 0.04), 0.06, w[5] + (w[5] > 0.2 ? 0.12 : 0.04)), mSill);
-        sm.position.set(w[0], w[1] - w[4] / 2 - 0.02, w[2]); sc.add(sm);
-      });
+      var homeG = new T.Group(); sc.add(homeG);
+      var mWallV = mat(C.walls, { roughness: 0.88, vertexColors: true }), mPlinth = mat(C.drive, { roughness: 0.9 }), mFlat = mat(C.roof3, { roughness: 0.8 });
+      var mWin = mat('#4A525D', { roughness: 0.3, metalness: 0.2 }), mSill = mat(C.drive, { roughness: 0.85 }), mGdoor = mat('#9AA0A6', { roughness: 0.6, metalness: 0.2 });
       var gables = new T.Mesh(new T.BufferGeometry(), mWall); gables.castShadow = true; gables.receiveShadow = true; sc.add(gables);
       var mRoof = mat(C.roof3, { roughness: 0.78, map: courseTex });
       var roof = new T.Mesh(new T.BufferGeometry(), mRoof); roof.castShadow = true; roof.receiveShadow = true; sc.add(roof);
@@ -1599,7 +1650,7 @@
       var txSun = FN.panelTex(T, false), txShade = FN.panelTex(T, true);
       var pm = mat('#FFFFFF', { map: txSun, roughness: 0.24, metalness: 0.22 }), pmShade = mat('#FFFFFF', { map: txShade, roughness: 0.35, metalness: 0.15 });
       var mFrame = mat('#8A94A0', { roughness: 0.38, metalness: 0.55 }), mFrameShade = mat('#5F6975', { roughness: 0.45, metalness: 0.4 }), mRail = mat('#39414C', { roughness: 0.5, metalness: 0.5 }), mBallast = mat('#8E969F', { roughness: 0.9 });
-      var H = { gnd: gnd, drive: drive, plinth: plinth, walls: walls, gables: gables, roof: roof, hr: 15, T: T, r: r, scene: sc, cam: cam, iso: iso, top: top, useTop: false, useIso: false, theta: 0.75, radius: 40, zoom: 1, tx: 0, tz: -0.3, space: false, panels: panels, bat: bat, inv: inv, car: car, carport: carport, hp: hp, chim: chim, sun: sun, hemi: hemi, w: 0, h: 0, dead: false };
+      var H = { gnd: gnd, drive: drive, gables: gables, roof: roof, hr: 15, T: T, r: r, scene: sc, cam: cam, iso: iso, top: top, useTop: false, useIso: false, theta: 0.75, radius: 40, zoom: 1, tx: 0, tz: -0.3, space: false, panels: panels, bat: bat, inv: inv, car: car, carport: carport, hp: hp, chim: chim, sun: sun, hemi: hemi, w: 0, h: 0, dead: false };
       var raf = 0;
       H.frame = function () {
         if (H.dead || raf) return;
@@ -1879,12 +1930,50 @@
         aoPlane.material.opacity = up ? 1 : 0.45;
         H.hr = hr; sc.background.set(up ? C.sky : '#3A3D45'); H.frame();
       };
-      H.paint = function () { C = FN.tokens(); gnd.material.color.set(C.earth); drive.material.color.set(C.drive); plinth.material.color.set(C.drive); mWall.color.set(C.walls); mRoof.color.set(C.roof3); mRidge.color.set(C.ridge); mEdge.color.set(C.roofLine); H.setHour(H.hr); };
+      H.paint = function () { C = FN.tokens(); gnd.material.color.set(C.earth); drive.material.color.set(C.drive); mPlinth.color.set(C.drive); mWall.color.set(C.walls); mWallV.color.set(C.walls); mFlat.color.set(C.roof3); mRoof.color.set(C.roof3); mRidge.color.set(C.ridge); mEdge.color.set(C.roofLine); H.setHour(H.hr); };
       window.addEventListener('sd-palette', function () { if (!H.dead) H.paint(); });
       window.addEventListener('langchange', function () { if (!H.dead) setTimeout(H.frame, 0); });
-      // the house's walls for the site core, clockwise from the north wall: equipment is anchored to one
-      // of them by a distance along it, and cables run along them (D-72)
-      H.wallsL = FN.WALLS3; H.eq = EQ3;
+      H.eq = EQ3;
+      // the home from its description (FN.HOMES): a plinth and walls per block, a schematic flat roof over the
+      // blocks the roof type does not cover (no straight skeleton yet), the doors and windows on their walls,
+      // and the walls for the site core, clockwise from the north wall: equipment is anchored to one of them
+      // by a distance along it, and cables run along them (D-72)
+      H.home = '';
+      H.setHome = function (key) {
+        var hm = FN.home(key), B = hm.D.bodies, W = hm.W, ov = 0.25;
+        if (hm.key === H.home) return false;
+        H.home = hm.key; clear(homeG);
+        var shadowed = function (m) { m.castShadow = true; m.receiveShadow = true; homeG.add(m); return m; };
+        // a side of a block that meets another block has no overhang: 0 north, 1 east, 2 south, 3 west
+        var meets = function (b, side) {
+          return B.some(function (c) {
+            if (c === b) return false;
+            var alongX = c[0] < b[2] && c[2] > b[0], alongZ = c[1] < b[3] && c[3] > b[1];
+            return side === 0 ? c[3] === b[1] && alongX : side === 1 ? c[0] === b[2] && alongZ : side === 2 ? c[1] === b[3] && alongX : c[2] === b[0] && alongZ;
+          });
+        };
+        B.forEach(function (b) {
+          var w = b[2] - b[0], d = b[3] - b[1], cx = (b[0] + b[2]) / 2, cz = (b[1] + b[3]) / 2;
+          shadowed(new T.Mesh(new T.BoxGeometry(w + 0.12, 0.28, d + 0.12), mPlinth)).position.set(cx, 0.14, cz);
+          var wm = shadowed(new T.Mesh(smShade(T, new T.BoxGeometry(w, b[4] - 0.28, d)), mWallV)); wm.position.set(cx, (b[4] + 0.28) / 2, cz); addEdges(wm, wm.geometry);
+          if (b[5] === 'flat') {
+            var x0 = b[0] - (meets(b, 3) ? 0 : ov), x1 = b[2] + (meets(b, 1) ? 0 : ov), z0 = b[1] - (meets(b, 0) ? 0 : ov), z1 = b[3] + (meets(b, 2) ? 0 : ov);
+            var fr = shadowed(new T.Mesh(new T.BoxGeometry(x1 - x0, 0.14, z1 - z0), mFlat)); fr.position.set((x0 + x1) / 2, b[4] + 0.04 - 0.07, (z0 + z1) / 2); addEdges(fr, fr.geometry);
+          }
+        });
+        // doors and windows a little proud of their wall, a sill under each but a garage door
+        hm.D.open.forEach(function (o) {
+          var wl = W[o.w], len = o.s1 - o.s0, y0 = o.y0 != null ? o.y0 : 0.95, y1 = o.y1 != null ? o.y1 : 2.15, h = y1 - y0, g = new T.Group();
+          g.add(new T.Mesh(new T.BoxGeometry(len, h, 0.06), o.k === 'gdoor' ? mGdoor : mWin));
+          if (o.k !== 'gdoor') { var sm = new T.Mesh(new T.BoxGeometry(len + 0.12, 0.06, 0.1), mSill); sm.position.y = -h / 2 - 0.02; g.add(sm); }
+          var p = smAt(W, o.w, (o.s0 + o.s1) / 2, 0.01, (y0 + y1) / 2);
+          g.position.set(p[0], p[1], p[2]); g.rotation.y = Math.atan2(wl.nx, wl.nz); homeG.add(g);
+        });
+        aoPlane.material.map.dispose(); aoPlane.material.map = FN.contactAoTex(T, B); aoPlane.material.needsUpdate = true;
+        H.wallsL = W;
+        Object.keys(hm.D.stand).forEach(function (k) { H.placeEq(k, hm.D.stand[k]); });
+        H.frame(); return true;
+      };
       H.camNow = function () { return H.useTop ? top : H.useIso ? iso : cam; };
       H.placeEq = function (k, a) {
         var g = EQ3[k], e = g.userData.e, W = H.wallsL, wl = W[a.w], p = smAt(W, a.w, a.s, (e.gap || 0) + e.D / 2 + 0.02, g.position.y);
@@ -1968,7 +2057,7 @@
         drag = null;
       });
       canvas.addEventListener('pointerleave', function () { drag = null; });
-      H.setRoof('hip'); setChimneyDefault(); H.setHour(15); H.place();
+      H.setHome('rect'); H.setRoof('hip'); setChimneyDefault(); H.setHour(15); H.place();
       function setChimneyDefault() { chim.visible = false; car.visible = false; hp.visible = false; bat.visible = false; }
       done(H);
     };
@@ -1993,7 +2082,10 @@
   // the installer's catalogue, from its price list (illustrative prices, excluding GST)
   FN.CAT = {
     modules: [{ w: 400, name: '400 W mono, budget', price: 150, warranty: '12 / 25 years' }, { w: 440, name: '440 W mono, tier 1', price: 185, warranty: '25 / 30 years' }, { w: 475, name: '475 W n-type, premium', price: 230, warranty: '25 / 30 years' }],
-    inverters: [{ kw: 5, name: '5 kW hybrid', price: 1650 }, { kw: 6, name: '6 kW hybrid', price: 1900 }, { kw: 8, name: '8 kW hybrid', price: 2600 }, { kw: 10, name: '10 kW hybrid', price: 3300 }, { kw: 15, name: '15 kW hybrid, three-phase', price: 4900 }, { kw: 20, name: '20 kW hybrid, three-phase', price: 6400 }]
+    inverters: [{ kw: 5, name: '5 kW hybrid', price: 1650 }, { kw: 6, name: '6 kW hybrid', price: 1900 }, { kw: 8, name: '8 kW hybrid', price: 2600 }, { kw: 10, name: '10 kW hybrid', price: 3300 }, { kw: 15, name: '15 kW hybrid, three-phase', price: 4900 }, { kw: 20, name: '20 kW hybrid, three-phase', price: 6400 }],
+    // the household's carport: a steel frame on four posts over one bay, with its engineering, bought from a
+    // builder and resold at the price list's margin; illustrative like every price here, quoted for real after approval
+    structures: { carport: { name: 'Carport structure, steel, one bay, 8 modules', price: 7400 } }
   };
   // the smallest inverter that keeps the panels under the 133 % limit (the largest when none does)
   FN.invFor = function (kwp) {
@@ -2015,7 +2107,7 @@
       var st = { level: 1, mode: 1, tool: 'select', selFace: false, preview: false, filled: false, variant: 'portrait', flatMode: J && S.flatMode ? S.flatMode : null, flatRule: J && S.flatRule ? S.flatRule : FN.PACK.rule, typedEdges: true, chimney: false, chimH: '1.00', pad: false, fresh: true, removed: [], bat: 13.5,
         sheet: false, present: false, circ: true, fid: false, imagery: true, shade: true, notesOn: true, hist: [], rhist: [], log: [], touches: [0, 0, 0, 0, 0], task: 0, toast: '', busy: false, chip: null, hover: null, notif: false, settings: false, layers: false, mods: true, mod25d: true, grid: 'dots', zoom: 1, panX: 0, panY: 0, space: false, chOpen: false, snapOn: true,
         pos: JSON.parse(JSON.stringify(HOME)), swapped: false, iso: true, hour3: 9, modW: 440, inv: 6, qs: 'cover', qseen: {}, qnotes: [], qopts: [], roof: J ? (S.roof || 'hip') : 'hip', cx: 520, cy: 198, obs: [], otype: 'chimney', selObs: '', guides: null,
-        pts: [], curPt: null, zones: [], dims: [], pins: [], selPin: '', pinTxt: '', vtx: null, selVtx: 0, dynLen: '', dynAng: '', dynField: 0, lastMeas: null };
+        zok: J ? (S.zones || []).map(function (z) { return !!z.ok; }) : [], pts: [], curPt: null, zones: [], dims: [], pins: [], selPin: '', pinTxt: '', vtx: null, selVtx: 0, dynLen: '', dynAng: '', dynField: 0, lastMeas: null };
       // in the journey the studio starts on its inbox, and the household's draft (16 portrait modules) comes with the site
       if (J) { st.mode = -1; st.filled = true; st.bat = S.measures.bat ? 13.5 : 0; }
       el.innerHTML = '<div class="sd-root" style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden;user-select:none">' +
@@ -2046,10 +2138,12 @@
       // a flat roof's rack variant: the one chosen, else the one with the most energy under the rule (D-70)
       function rackMode(s) { return s.flatMode || FN.draw.rackVariants([], s.flatRule)[0].id; }
       function energy(s) {
-        if (!s.filled) return { n: 0, kwp: 0, kwh: 0, save: 0, eff: 0 };
+        if (!s.filled) return { n: 0, nRoof: 0, nZones: 0, kwp: 0, kwh: 0, save: 0, eff: 0 };
         // on racks, the variant's yield per kWp (chapter 6) instead of FN.sim's own
         var M = mods(s).filter(function (m) { return !m.blocked && !m.removed; }), n = M.length, loss = M.reduce(function (a, m) { return a + (m.shaded ? 0.15 : 0); }, 0), eff = (n - loss) * s.modW / 1000, y = s.roof === 'flat' ? FN.RACKS[rackMode(s)].yield : FN.YIELD;
-        return { n: n, kwp: n * s.modW / 1000, kwh: eff * y, eff: eff, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: eff * y / FN.YIELD, cap: s.bat, ev: J ? S.measures.ev : true, hp: J && S.measures.hp }).total };
+        // the household's zones the installer confirmed, at the roof's yield per kWp until their own orientation is measured
+        var zn = J ? FN.zonesOk(S, s.zok).reduce(function (a, z) { return a + z.n; }, 0) : 0, zk = zn * s.modW / 1000, kwh = eff * y + zk * FN.YIELD;
+        return { n: n + zn, nRoof: n, nZones: zn, kwp: (n + zn) * s.modW / 1000, kwh: kwh, eff: eff + zk, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: kwh / FN.YIELD, cap: s.bat, ev: J ? S.measures.ev : true, hp: J && S.measures.hp }).total };
       }
       function touch() { if (st.task < 5) st.touches[st.task]++; }
       function check() {
@@ -2059,7 +2153,7 @@
       function commit(patch, label, chip) {
         var before = energy(st), next = {}; for (var k in st) next[k] = st[k]; for (k in patch) next[k] = patch[k];
         var after = energy(next), dk = after.kwh - before.kwh, dm = after.save - before.save;
-        st.hist.push({ snap: JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx }), label: label });
+        st.hist.push({ snap: JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx, zok: st.zok }), label: label });
         st.rhist = [];
         st.log.unshift({ label: label, delta: (dk >= 0 ? '+' : '−') + FN.n(Math.abs(dk)) + ' kWh/yr · ' + after.n + ' modules', money: (dm >= 0 ? '+' : '−') + FN.money(dm) + '/yr', color: Math.abs(dm) < 1 ? 'var(--c-muted)' : dm > 0 ? 'var(--c-gain)' : 'var(--c-loss)' });
         st.log = st.log.slice(0, 5);
@@ -2351,7 +2445,7 @@
         }
         if (st.toast) o += '<div style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--c-tip);color:var(--c-paper);font-size:13px;padding:9px 14px;border-radius:10px;z-index:8">' + st.toast + '</div>';
         if (st.sheet) {
-          // the inverter fits the modules this design prices; the household's zones join once checked on site
+          // the inverter fits the modules this design prices: the roof's and the zones the installer confirmed
           var sizes = [0, 10, 13.5, 20, 28], siteKwp = E.kwp, ratio = siteKwp / st.inv, okRatio = ratio <= 1.33;
           var pick = function (act, v, on, title, sub, extra) { return '<button type="button" data-a="' + act + '" data-v="' + v + '" aria-pressed="' + on + '" style="min-height:62px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:6px 10px;text-align:left;display:flex;flex-direction:column;gap:2px;font:inherit;cursor:pointer"><b style="font-size:13px;font-weight:600">' + title + '</b><span style="font-size:11.5px;color:var(--c-muted)">' + sub + '</span>' + (extra || '') + '</button>'; };
           o += '<div style="position:absolute;left:84px;right:84px;bottom:12px;' + FN.card + ';border-radius:16px;padding:12px 16px;box-shadow:0 14px 36px rgba(29,32,38,.18);display:flex;flex-direction:column;gap:9px;z-index:7">' +
@@ -2366,10 +2460,12 @@
         }
         if (st.sheet) {
           // the site's categories, read on the whole site: the household's zones count with the roof (D-73)
-          var SC = FN.siteCats(J ? S : null, E.kwp, st.inv);
+          var SC = FN.siteCats(J ? S : null, E.kwp, st.inv, st.zok), ZS = J ? S.zones || [] : [], nOk = ZS.filter(function (z, i) { return st.zok[i]; }).length;
           o += '<div style="position:absolute;left:84px;right:84px;top:64px;' + FN.card + ';border-radius:12px;padding:8px 14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;z-index:7">' +
-            '<b style="font-size:13px;font-weight:600">Site categories</b><span style="color:var(--c-muted)">' + SC.kwp.toFixed(2) + ' kWp summed over ' + (SC.zones ? 'the roof and ' + (J && S.zones.length > 1 ? S.zones.length + ' zones' : 'one zone') : 'the roof') + (SC.zones ? ' · the zones (' + (SC.zones * SMKWC).toFixed(2) + ' kWp) are priced once checked on site and would need a ' + FN.invFor(SC.kwp) + ' kW inverter' : '') + '</span>' +
-            [['Support', SC.support], ['Planning', SC.planning], ['Connection', SC.connection]].map(function (r) { return '<span style="display:flex;gap:6px;align-items:baseline;padding:3px 9px;border-radius:999px;background:var(--c-selSoft)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;color:var(--c-sel)">' + r[1] + '</b></span>'; }).join('') + '</div>';
+            '<b style="font-size:13px;font-weight:600">Site categories</b><span style="color:var(--c-muted)">' + SC.kwp.toFixed(2) + ' kWp summed over ' + (ZS.length ? 'the roof and ' + (ZS.length > 1 ? ZS.length + ' zones' : 'one zone') : 'the roof') + (nOk ? ' · ' + (nOk === ZS.length ? (nOk > 1 ? 'the zones are' : 'the zone is') : nOk + ' of ' + ZS.length + ' zones') + ' confirmed and priced with the roof' : '') + (SC.zones ? ' · ' + (nOk ? 'the others' : 'the zones') + ' (' + (SC.zones * SMKWC).toFixed(2) + ' kWp) are priced once checked on site and would need a ' + FN.invFor(SC.kwp) + ' kW inverter' : '') + '</span>' +
+            [['Support', SC.support], ['Planning', SC.planning], ['Connection', SC.connection]].map(function (r) { return '<span style="display:flex;gap:6px;align-items:baseline;padding:3px 9px;border-radius:999px;background:var(--c-selSoft)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;color:var(--c-sel)">' + r[1] + '</b></span>'; }).join('') +
+            // each zone the household added, confirmed on site with one tap: it then joins the design and the offer
+            (ZS.length ? '<span style="flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="color:var(--c-muted)">The household’s zones</span>' + ZS.map(function (z, i) { var on = !!st.zok[i], lock = !!S.proposal; return '<button type="button" data-a="zoneOk" data-v="' + i + '" aria-pressed="' + on + '"' + (lock ? ' disabled' : '') + ' style="min-height:30px;padding:0 10px;border-radius:8px;border:1px ' + (on ? 'solid var(--c-gain)' : 'dashed var(--c-sunText)') + ';background:' + (on ? 'var(--c-paper2)' : 'transparent') + ';color:' + (on ? 'var(--c-gain)' : 'var(--c-sunText)') + ';font:inherit;font-size:12px;cursor:' + (lock ? 'default' : 'pointer') + '">' + (z.k === 'carport' ? 'Carport' : 'Custom zone') + ' · ' + z.n + ' modules · ' + (on ? 'confirmed on site ✓' : 'confirm on site') + '</button>'; }).join('') + '</span>' : '') + '</div>';
         }
         if (st.present) {
           var vs = st.roof === 'flat' ? Object.keys(FN.RACKS).map(function (vv) {
@@ -2424,7 +2520,7 @@
         if (st.removed.length) notes.push(['Modules', st.removed.length + ' taken off the layout by hand, to clear a vent or a shaded corner', false]);
         notes.push(['Switchboard', 'circuit breakers with room for two more; no upgrade needed', false], ['Meter', 'smart meter, import and export; the network keeps it', false]);
         st.qnotes.forEach(function (i) { notes.push([QNOTES[i][0], QNOTES[i][1], false]); });
-        return FN.offer({ site: S, n: E.n, kwp: E.kwp, eff: E.eff, kwh: E.kwh, modW: st.modW, inv: st.inv, bat: st.bat, ev: S.measures.ev, hp: S.measures.hp, save: E.save, simKwp: E.kwh / FN.YIELD, rack: st.roof === 'flat' ? rackMode(st) : null, unc: S.profile.unc, badge: S.profile.badge, roof: st.roof, obstacles: obstaclesOf(st), mods: ms.map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h }; }), chimney: st.chimney ? (parseFloat(st.chimH) || 1).toFixed(2) : 0, shaded: ms.filter(function (m) { return m.shaded && st.shade; }).length, notes: notes });
+        return FN.offer({ site: S, n: E.n, nRoof: E.nRoof, zok: st.zok.slice(), zones: FN.zonesOk(S, st.zok).map(function (z) { return { k: z.k, n: z.n }; }), kwp: E.kwp, eff: E.eff, kwh: E.kwh, modW: st.modW, inv: st.inv, bat: st.bat, ev: S.measures.ev, hp: S.measures.hp, save: E.save, simKwp: E.kwh / FN.YIELD, rack: st.roof === 'flat' ? rackMode(st) : null, unc: S.profile.unc, badge: S.profile.badge, roof: st.roof, obstacles: obstaclesOf(st), mods: ms.map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h }; }), chimney: st.chimney ? (parseFloat(st.chimH) || 1).toFixed(2) : 0, shaded: ms.filter(function (m) { return m.shaded && st.shade; }).length, notes: notes });
       }
       function proposal(E) {
         var P = quoteData(E), u = S.profile.unc, sent = !!S.proposal, i = FN.SECTIONS.map(function (x) { return x[0]; }).indexOf(st.qs), seen = Object.keys(st.qseen).length, N = FN.SECTIONS.length;
@@ -2455,13 +2551,20 @@
         return o;
       }
       function circuitsSvg() {
-        var px = function (p) { return (518 + p[0] * 40).toFixed(1) + ' ' + (356 + p[2] * 40).toFixed(1); }, o = '', P = S.eqPos || FN.EQPOS(), ok = S.ok || {};
+        var px = function (p) { return (518 + p[0] * 40).toFixed(1) + ' ' + (356 + p[2] * 40).toFixed(1); }, o = '', P = S.eqPos || FN.EQPOS(S), ok = S.ok || {}, HW = FN.home(S).W;
         var bad = {}; FN.checks(S).forEach(function (c) { if (c.bad) bad[c.k] = true; });
+        // the blocks the roof plan does not show (a garage), schematic, declared by the household with its footprint
+        FN.home(S).D.bodies.forEach(function (b) {
+          if (b[5] === 'main') return;
+          var x = 518 + b[0] * 40, y = 356 + b[1] * 40, w = (b[2] - b[0]) * 40, h = (b[3] - b[1]) * 40;
+          o += '<g pointer-events="none"><rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="var(--c-roof)" fill-opacity=".55" stroke="' + (st.fid ? SMF.declared : 'var(--c-roofLine)') + '" stroke-width="' + (st.fid ? 3 : 1.5) + '" stroke-dasharray="8 5"></rect>' +
+            '<text x="' + (x + w / 2) + '" y="' + (y + 28) + '" text-anchor="middle" font-size="12" fill="var(--c-muted)">Garage, flat roof (schematic)</text></g>';
+        });
         if (st.circ) FN.wires(S).forEach(function (w) { o += '<path d="M' + w.pts.map(px).join(' L') + '" fill="none" stroke="' + w.color + '" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round" pointer-events="none"></path>'; });
         if (st.fid) o += '<path d="M211 149 H825 V563 H211 Z" fill="none" stroke="' + SMF.measured + '" stroke-width="3" pointer-events="none"></path>';
         Object.keys(FN.EQD).forEach(function (k) {
           if (!FN.eqOn(S, k)) return;
-          var d = FN.EQD[k], wl = FN.WALLS3[P[k].w], c = smAt(FN.WALLS3, P[k].w, P[k].s, 0.35, 0), l = smAt(FN.WALLS3, P[k].w, P[k].s, 1.1, 0);
+          var d = FN.EQD[k], wl = HW[P[k].w], c = smAt(HW, P[k].w, P[k].s, 0.35, 0), l = smAt(HW, P[k].w, P[k].s, 1.1, 0);
           var cx = 518 + c[0] * 40, cy = 356 + c[2] * 40, rot = Math.atan2(wl.dz, wl.dx) * 180 / Math.PI, conf = !!ok[k];
           var col = bad[k] ? 'var(--c-loss)' : st.fid ? (conf ? SMF.measured : SMF.declared) : '#3D4650';
           o += '<g data-a="eqOk" data-v="' + k + '" style="cursor:pointer"><rect x="' + (cx - d.W * 20) + '" y="' + (cy - 6) + '" width="' + d.W * 40 + '" height="12" rx="2" transform="rotate(' + rot + ' ' + cx + ' ' + cy + ')" fill="' + col + '" stroke="#FFFFFF" stroke-width="1.5"' + (conf ? '' : ' stroke-dasharray="3 2"') + '></rect>' +
@@ -2472,12 +2575,12 @@
       }
       function place3d() {
         placeBox3d();
-        if (H) { H.setRoof(st.roof, st.vtx);
+        if (H) { H.setHome(J && S ? S.home : 'rect'); H.setRoof(st.roof, st.vtx);
           H.setPanels(((st.filled || st.preview) && st.mods) ? mods(st).filter(function (m) { return !m.blocked && !m.removed; }).map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h, tilt: m.tilt, mode: m.mode, facing: m.facing, shaded: m.shaded && st.shade }; }) : []);
           H.setObstacles(obstaclesOf(st)); H.bat.visible = st.bat > 0;
           // the household's units where it put them, its cables with the Circuits layer, its carport
           if (J && S && S.measures && S.opened) {
-            var P3 = S.eqPos || FN.EQPOS(); Object.keys(P3).forEach(function (k) { H.placeEq(k, P3[k]); });
+            var P3 = S.eqPos || FN.EQPOS(S); Object.keys(P3).forEach(function (k) { H.placeEq(k, P3[k]); });
             H.hp.visible = !!S.measures.hp; H.car.visible = !!S.measures.ev; H.carport.visible = !!S.measures.solar && (S.zones || []).some(function (z) { return z.k === 'carport'; });
             H.setCables(st.circ ? FN.wires(S) : []);
           }
@@ -2495,7 +2598,7 @@
         }
         if (H && !boxOnly) { H.useIso = st.iso && !st.present; H.size(st.swapped ? 1180 : 328, st.swapped ? 772 : 210); H.radius = st.swapped ? 34 : 38; H.place(); }
       }
-      function render() { q('.sd-top').innerHTML = top(); q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui(); place3d(); }
+      function render() { if (J) (S.zones || []).forEach(function (z, i) { z.ok = !!st.zok[i]; }); q('.sd-top').innerHTML = top(); q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui(); place3d(); }
       // dragging bars and cards by their grip, in screen pixels whatever the scale
       var drag = null;
       el.addEventListener('pointerdown', function (e) { var g = e.target.closest('[data-grip]'); if (!g) return; var k = g.getAttribute('data-grip'), s = el.getBoundingClientRect().width / 1180; drag = { k: k, x: e.clientX, y: e.clientY, o: st.pos[k].slice(), s: s }; e.preventDefault(); });
@@ -2835,6 +2938,13 @@
         else if (a === 'settings') { st.settings = !st.settings; st.notif = false; st.layers = false; }
         else if (a === 'level') st.level = +v;
         else if (a === 'layer') st[v] = !st[v];
+        // a zone the household added, confirmed on site: its modules join the design, the inverter is sized on the total
+        else if (a === 'zoneOk') {
+          if (!J || S.proposal || !S.zones[+v]) return;
+          var zk = st.zok.slice(), Zc = S.zones[+v], nx = {}; zk[+v] = !zk[+v]; for (var k3 in st) nx[k3] = st[k3]; nx.zok = zk;
+          var Ez = energy(nx), iv = FN.invFor(Ez.kwp), zl = Zc.k === 'carport' ? 'Carport' : 'Custom zone';
+          commit({ zok: zk, inv: iv }, zl + (zk[+v] ? ' confirmed on site' : ' back to declared'), { t: zl + (zk[+v] ? ' confirmed on site' : ' back to declared'), b: (zk[+v] ? '+' : '−') + Zc.n + ' modules · ' + Ez.kwp.toFixed(2) + ' kWp · inverter ' + iv + ' kW, sized on the total', c: zk[+v] ? 'var(--c-gain)' : 'var(--c-muted)', x: 440, y: 190 }); return;
+        }
         else if (a === 'eqOk') { S.ok = S.ok || {}; S.ok[v] = !S.ok[v]; if (opts.onChange) opts.onChange(); }
         else if (a === 'grid') st.grid = v;
         else if (a === 'fit') { st.zoom = 1; st.panX = 0; st.panY = 0; toastMsg('Fitted roof to view · ⇧1'); }
@@ -2863,7 +2973,7 @@
         }
         else if (a === 'undo') {
           if (!st.hist.length) return;
-          var curSnap = JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
+          var curSnap = JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx, zok: st.zok });
           var last = st.hist.pop(), sn = JSON.parse(last.snap);
           st.rhist.push({ snap: curSnap, label: last.label, logItem: st.log[0] });
           for (var k in sn) st[k] = sn[k];
@@ -2871,7 +2981,7 @@
         }
         else if (a === 'redo') {
           if (!st.rhist.length) return;
-          var curSnap2 = JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
+          var curSnap2 = JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx, zok: st.zok });
           var nxt = st.rhist.pop(), sn2 = JSON.parse(nxt.snap);
           st.hist.push({ snap: curSnap2, label: nxt.label });
           for (var k2 in sn2) st[k2] = sn2[k2];
@@ -3193,7 +3303,13 @@
         skillion: 'M4 22 V14 L36 8 V22 Z',
         flat: 'M4 18 H36 V22 H4 Z'
       };
-      return '<span style="font-size:12px;color:var(--c-muted)">What does your roof look like?</span><span style="display:flex;gap:6px;margin-bottom:4px">' + Object.keys(FN.ROOFS).map(function (k) { var on = (S.roof || 'hip') === k; return '<button type="button" data-a="roof" data-v="' + k + '" aria-pressed="' + on + '" style="flex:1;min-height:58px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;font-size:11.5px;cursor:pointer"><svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true"><path d="' + pic[k] + '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>' + FN.ROOFS[k].en + '</button>'; }).join('') + '</span>';
+      return '<span style="font-size:12px;color:var(--c-muted)">What does your roof look like?</span><span style="display:flex;gap:6px;margin-bottom:4px">' + Object.keys(FN.ROOFS).map(function (k) { var on = (S.roof || 'hip') === k; return '<button type="button" data-a="roof" data-v="' + k + '" aria-pressed="' + on + '" style="flex:1;min-height:58px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;font-size:11.5px;cursor:pointer"><svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true"><path d="' + pic[k] + '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>' + FN.ROOFS[k].en + '</button>'; }).join('') + '</span>' + homePick();
+    }
+    // its footprint seen from above: the walls, doors and windows of the 3D home, the units' walls and the
+    // cables follow it; the roof type covers the house, a garage keeps a schematic flat roof
+    function homePick() {
+      var pic = { rect: 'M6 6 H34 V20 H6 Z', ell: 'M6 4 H34 V14 H20 V22 H6 Z' };
+      return '<span style="font-size:12px;color:var(--c-muted)">And seen from above?</span><span style="display:flex;gap:6px;margin-bottom:4px">' + Object.keys(FN.HOMES).map(function (k) { var on = (S.home || 'rect') === k; return '<button type="button" data-a="home" data-v="' + k + '" aria-pressed="' + on + '" style="flex:1;min-height:44px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:11.5px;cursor:pointer"><svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true"><path d="' + pic[k] + '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>' + FN.HOMES[k].en + '</button>'; }).join('') + '</span>';
     }
     // step 2 begins with the site: its type, proposed from the address's land use, confirmed by the household
     // on our drawing of the lot (D-73); only a house goes on to its roof (D-74)
@@ -3262,8 +3378,11 @@
       if (handed()) return siteHand();
       var isFlat = (S.roof === 'flat');
       var R = FN.ROOFS[S.roof || 'hip'], all3 = R.pv.every(function (k) { return st.conf[k]; }), F0 = fillOf(), mods = F0.mods, f = filled();
+      // the blocks beside the roof's (a garage) in plan, 40 px a metre; the drawing grows to show them
+      var HB = FN.home(S).D.bodies, vbH = Math.max(480, 356 + 40 * Math.max.apply(null, HB.map(function (b) { return b[3]; })) + 34 - 110);
+      var garages = HB.filter(function (b) { return b[5] !== 'main'; }).map(function (b) { var x = 518 + b[0] * 40, y = 356 + b[1] * 40, w = (b[2] - b[0]) * 40, h = (b[3] - b[1]) * 40; return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="var(--c-roof)" stroke="var(--c-roofLine)" stroke-width="1.1" stroke-dasharray="8 5"></rect><text x="' + (x + w / 2) + '" y="' + (y + h / 2 + 5) + '" text-anchor="middle" font-size="15" fill="var(--c-muted)">Garage · flat roof</text>'; }).join('');
       var o = '<div style="position:absolute;left:12px;top:12px;bottom:12px;width:80px;' + FN.card + ';display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px" role="toolbar">' + [['confirm', 'Confirm', false], ['fill', 'Fill zone', !all3]].map(function (t) { var on = st.tool === t[0]; return '<button type="button" data-a="tool" data-v="' + t[0] + '"' + (t[2] ? ' disabled' : '') + ' style="width:64px;min-height:64px;border:none;border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (t[2] ? 'var(--c-faint)' : on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;font:inherit;cursor:pointer">' + FN.icon(t[0]) + '<span style="font-size:11px">' + t[1] + '</span></button>'; }).join('') + '</div>';
-      o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 480" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + FN.draw.defs() + '<rect x="150" y="110" width="740" height="480" fill="url(#sd-grid-dots)"></rect><rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".13"></rect>' + Object.keys(R.faces).map(function (k) { var pv = R.pv.indexOf(k) >= 0, c = pv && st.conf[k], hi = pv && !c; return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') : k === 'S' ? 'var(--c-roofS)' : 'var(--c-selSoft)') + '" stroke="' + (hi ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (hi ? 2.5 : 1.1) + '" style="cursor:pointer"></path><path d="' + R.faces[k] + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" pointer-events="none"></path>'; }).join('') +
+      o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 ' + vbH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + FN.draw.defs() + '<rect x="150" y="110" width="740" height="' + vbH + '" fill="url(#sd-grid-dots)"></rect><rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".13"></rect>' + garages + Object.keys(R.faces).map(function (k) { var pv = R.pv.indexOf(k) >= 0, c = pv && st.conf[k], hi = pv && !c; return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') : k === 'S' ? 'var(--c-roofS)' : 'var(--c-selSoft)') + '" stroke="' + (hi ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (hi ? 2.5 : 1.1) + '" style="cursor:pointer"></path><path d="' + R.faces[k] + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" pointer-events="none"></path>'; }).join('') +
         ((f || st.preview) ? mods.map(function (m) { return FN.draw.modSvg(m, !f, false, true); }).join('') : '') + FN.draw.ridges(S.roof || 'hip') + '</svg>' +
         '<span style="position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">LiDAR-measured · 0.91 · our drawing, not a photo</span>' +
         (st.preview && !f ? '<div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);' + FN.card + ';padding:6px;display:flex;gap:6px;align-items:center"><span style="font-size:13px;color:var(--c-muted);padding:0 8px">' + F0.n + ' modules · ' + (F0.n * 0.44).toFixed(2) + ' kWp · ' + FN.n(F0.n * 0.44 * 1460) + ' kWh/yr</span><button type="button" data-a="keep" style="min-height:42px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-size:13px;font-weight:600;cursor:pointer">✓ Keep</button></div>' : '') + '</div>';
@@ -3423,7 +3542,7 @@
       q('.hh-foot').innerHTML = '<button type="button" data-a="back"' + (s ? '' : ' disabled') + ' style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:' + (s ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;cursor:pointer">Back</button><span style="flex:1;font-size:13px;color:var(--c-ink2)">' + ['Pick the plan you take; your bill makes the ranking yours.', !S.site ? 'Confirm what this site is; a house goes on to its roof.' : handed() ? 'An installer designs this site: share it with one.' : (FN.ROOFS[S.roof || 'hip'].pv.length > 1 ? 'Confirm the three faces, then fill the north face.' : S.roof === 'flat' ? 'Confirm the roof, compare the rack layouts, then fill it.' : 'Confirm the north face, then fill it.'), 'Add what you want; each move shows its effect on top of the others.', 'Name who receives your home, then share.', S.proposal ? 'Read the proposal, then sign.' : 'The installer works on its own screen.'][s] + '</span>' +
         (s < 4 ? '<button type="button" data-a="next"' + (canNext ? '' : ' disabled') + ' style="min-width:170px;min-height:44px;padding:0 18px;border-radius:10px;border:none;background:' + (canNext ? 'var(--c-live)' : 'var(--c-line)') + ';color:' + (canNext ? 'var(--c-onLive)' : 'var(--c-ink2)') + ';font:inherit;font-size:14px;font-weight:600;cursor:' + (canNext ? 'pointer' : 'default') + '">' + (canNext ? 'Next · ' + STEPS[s + 1] : need) + '</button>' : '');
       var box = q('.hh-3d'); box.style.display = s === 2 && st.view4 !== 'eq' ? 'block' : 'none'; box.style.top = '157px'; box.style.left = '385px'; box.style.width = '782px'; box.style.height = '526px';
-      if (H) { H.size(782, 526); H.setRoof(S.roof || 'hip'); H.setPanels(S.measures.solar ? (S.layout || []) : []); H.bat.visible = S.measures.bat; H.car.visible = S.measures.ev; H.hp.visible = S.measures.hp; H.carport.visible = S.measures.solar && hasZone('carport'); H.setHour(st.hour); equipUpdate(); H.useTop = st.top; }
+      if (H) { H.size(782, 526); if (H.setHome(S.home)) Object.keys(S.eqPos).forEach(function (k) { H.placeEq(k, S.eqPos[k]); }); H.setRoof(S.roof || 'hip'); H.setPanels(S.measures.solar ? (S.layout || []) : []); H.bat.visible = S.measures.bat; H.car.visible = S.measures.ev; H.hp.visible = S.measures.hp; H.carport.visible = S.measures.solar && hasZone('carport'); H.setHour(st.hour); equipUpdate(); H.useTop = st.top; }
     }
     FN.wire(el, function (a, v) {
       var P = st.prof;
@@ -3445,6 +3564,7 @@
       else if (a === 'face') { if (FN.ROOFS[S.roof].pv.indexOf(v) >= 0 && !st.conf[v]) st.conf[v] = true; else if (st.tool === 'fill' && v === 'N' && !filled()) st.preview = true; }
       else if (a === 'rackMode') { S.flatMode = v; if (filled()) { var F = fillOf(); S.layout = F.mods; S.kwp = F.n * 0.44; } }
       else if (a === 'roof') { if (v !== S.roof) { S.roof = v; st.conf = {}; st.preview = false; S.measures.solar = false; S.layout = null; S.kwp = 0; st.tool = 'confirm'; S.flatMode = null; S.zones = []; } }
+      else if (a === 'home') { if (v !== (S.home || 'rect')) { S.home = v; S.eqPos = FN.EQPOS(S); S.ok = {}; } }
       else if (a === 'tool') { st.tool = v; st.preview = false; }
       else if (a === 'siteSel') st.siteSel = v;
       else if (a === 'zoneAdd') { S.zones = (S.zones || []).concat([{ k: v, n: ZONES[v].n }]); }
@@ -3498,8 +3618,8 @@
       H.onRender = placeChips;
     }
     function moveEq(k, w, s) {
-      var W = H.wallsL, d = EQD[k]; if (W[w].L < d.W + 0.4) return;
-      S.eqPos[k] = { w: w, s: Math.round(Math.max(d.W / 2 + 0.2, Math.min(W[w].L - d.W / 2 - 0.2, s)) * 20) / 20 };
+      var a = FN.eqFit(H.wallsL, k, { w: w, s: s }); if (!a) return;
+      S.eqPos[k] = { w: a.w, s: Math.round(a.s * 20) / 20 };
       H.placeEq(k, S.eqPos[k]); equipUpdate();
     }
     function slideTo(k, ev) {
@@ -3552,7 +3672,7 @@
 
   all('figure.bk-widget[data-widget="journey"]').forEach(function (fig) {
     FN.when(fig, function () {
-      var F = FN.frames(fig), S = { plan: '', profile: { badge: 'Estimated', unc: 30 }, measures: { plan: false, solar: false, hp: false, ev: false, bat: false }, shared: false, opened: false, sharedAt: '', proposal: null, signed: false, roof: 'hip', kwp: 0, layout: null, site: '', zones: [], eqPos: FN.EQPOS() };
+      var F = FN.frames(fig), S = { plan: '', profile: { badge: 'Estimated', unc: 30 }, measures: { plan: false, solar: false, hp: false, ev: false, bat: false }, shared: false, opened: false, sharedAt: '', proposal: null, signed: false, roof: 'hip', home: 'rect', kwp: 0, layout: null, site: '', zones: [], eqPos: FN.EQPOS('rect') };
       var hh = null, ins = {};
       function band() {
         var fr = F.fr, t = S.signed ? (fr ? '↑ Proposition signée · le site garde la trace du système à poser' : '↑ Proposal signed · the site keeps a record of the system to install')
@@ -3587,9 +3707,13 @@
   // the offer from a design: lines, costs, certificates and the figures every section needs
   FN.offer = function (d) {
     var mod = FN.CAT.modules.filter(function (m) { return m.w === d.modW; })[0], inv = FN.CAT.inverters.filter(function (x) { return x.kw === d.inv; })[0];
-    var c = { modules: d.n * mod.price * 1.18, inverter: inv.price * 1.18, battery: d.bat ? (1100 + 790 * d.bat) * 1.18 : 0, charger: d.ev ? 1400 * 1.18 : 0, install: (1800 + 60 * d.n) * 1.18 };
+    // d.n counts every module priced: the roof's (d.nRoof) and those of the zones the installer confirmed (d.zones)
+    var zs = d.zones || [], nRoof = d.nRoof != null ? d.nRoof : d.n, cp = zs.some(function (z) { return z.k === 'carport'; });
+    var c = { modules: d.n * mod.price * 1.18, inverter: inv.price * 1.18, battery: d.bat ? (1100 + 790 * d.bat) * 1.18 : 0, charger: d.ev ? 1400 * 1.18 : 0, install: (1800 + 60 * d.n) * 1.18, carport: cp ? FN.CAT.structures.carport.price * 1.18 : 0 };
     var stc = FN.stcSolar(d.kwp), bc = d.bat ? FN.batteryCerts(d.bat) : 0;
-    var lines = [[d.n + ' × ' + mod.name, 'price list', c.modules], [inv.name + ' inverter', 'price list', c.inverter]];
+    var lines = zs.length ? [[nRoof + ' × ' + mod.name + ', on the roof', 'price list', nRoof * mod.price * 1.18]].concat(zs.map(function (z) { return [z.n + ' × ' + mod.name + ', on the ' + FN.ZONENAME[z.k], 'price list', z.n * mod.price * 1.18]; })) : [[d.n + ' × ' + mod.name, 'price list', c.modules]];
+    if (cp) lines.push([FN.CAT.structures.carport.name, 'price list', c.carport]);
+    lines.push([inv.name + ' inverter', 'price list', c.inverter]);
     if (d.bat) lines.push([d.bat + ' kWh battery, LFP, VPP-ready', 'price list', c.battery]);
     if (d.ev) lines.push(['Car charger, 7 kW', 'price list', c.charger]);
     lines.push(['Installation and design', 'price list', c.install], [stc + ' solar certificates (STC)', 'open-energy', -stc * FN.STC]);
@@ -3600,9 +3724,9 @@
     var self = function (r) { var pv = 0, ex = 0; for (var h = 0; h < 24; h++) { pv += r.pv[h]; ex += r.exp[h]; } return pv ? (pv - ex) / pv : 0; };
     var solarSave = FN.TODAY() - solo.total - (d.ev ? 2044 : 0) - (d.hp ? 520 : 0), batSave = d.bat ? solo.total - withB.total : 0;
     var p = {}; for (var k in d) p[k] = d[k];
-    p.mod = mod; p.invP = inv; p.cost = c; p.stc = stc; p.bc = bc; p.lines = lines; p.total = lines.reduce(function (a, l) { return a + l[2]; }, 0);
+    p.nRoof = nRoof; p.zones = zs; p.mod = mod; p.invP = inv; p.cost = c; p.stc = stc; p.bc = bc; p.lines = lines; p.total = lines.reduce(function (a, l) { return a + l[2]; }, 0);
     p.self0 = self(solo); p.self1 = self(withB); p.solarSave = solarSave; p.batSave = batSave;
-    p.payS = (c.modules + c.inverter + c.install - stc * FN.STC) / Math.max(solarSave, 1); p.payB = d.bat ? (c.battery - FN.rebate(d.bat)) / Math.max(batSave, 1) : 0;
+    p.payS = (c.modules + c.carport + c.inverter + c.install - stc * FN.STC) / Math.max(solarSave, 1); p.payB = d.bat ? (c.battery - FN.rebate(d.bat)) / Math.max(batSave, 1) : 0;
     return p;
   };
 
@@ -3615,13 +3739,21 @@
   FN.offerSite = function (P) {
     var S = P.site; if (!S || !S.measures) return null;
     var names = { house: 'House', units: 'Apartment building', business: 'Business site', carpark: 'Car park', other: 'Other site' };
-    return { type: names[S.site || 'house'], zones: S.zones || [], cats: FN.siteCats(S, P.kwp, P.inv), wires: FN.wires(S), ok: S.ok || {}, pos: S.eqPos || FN.EQPOS() };
+    return { type: names[S.site || 'house'], zones: S.zones || [], cats: FN.siteCats(S, P.kwp, P.inv, P.zok), wires: FN.wires(S), ok: S.ok || {}, pos: S.eqPos || FN.EQPOS(S), names: FN.home(S).D.names };
   };
   FN.cableLen = function (P, id) { var X = FN.offerSite(P), w = X && X.wires.filter(function (w) { return w.id === id; })[0]; return w ? w.len : null; };
-  // strings: the north face split over the inverter's two MPPT inputs, checked hot and cold
+  // strings, checked hot and cold against the inverter's window (80 V start, 600 V maximum): the roof alone
+  // is split over the two MPPT inputs; with the zones the installer confirmed, the roof keeps input 1 and the
+  // zones, at another tilt, share input 2. A group longer than a string can be is cut into equal strings in parallel
   FN.strings = function (P) {
-    var s = FN.SPEC[P.modW], a = Math.ceil(P.n / 2), b = P.n - a, cold = s.voc * (1 + 0.0026 * 25), hot = s.vmp * (1 - 0.0034 * 45);
-    return { a: a, b: b, vocA: a * cold, vmpB: b * hot, isc: s.isc * 1.25, ok: a * cold < 600 && b * hot > 80 };
+    var s = FN.SPEC[P.modW], cold = s.voc * (1 + 0.0026 * 25), hot = s.vmp * (1 - 0.0034 * 45), max = Math.floor(600 / cold), isc = s.isc * 1.25;
+    var zs = P.zones || [], nRoof = P.nRoof != null ? P.nRoof : P.n, list = [];
+    var cut = function (n, from, inp) { var k = Math.max(1, Math.ceil(n / max)), b = Math.floor(n / k), r = n % k; for (var i = 0; i < k; i++) list.push({ input: typeof inp === 'function' ? inp(i) : inp, from: from, n: b + (i < r ? 1 : 0) }); };
+    if (!zs.length) { var k0 = Math.max(2, Math.ceil(nRoof / max)), b0 = Math.floor(nRoof / k0), r0 = nRoof % k0; for (var i0 = 0; i0 < k0; i0++) list.push({ input: i0 % 2 + 1, from: 'roof', n: b0 + (i0 < r0 ? 1 : 0) }); }
+    else { cut(nRoof, 'roof', 1); zs.forEach(function (z) { cut(z.n, FN.ZONENAME[z.k], 2); }); }
+    list.forEach(function (x, i) { x.id = i + 1; x.voc = x.n * cold; x.vmp = x.n * hot; x.ok = x.voc < 600 && x.vmp > 80; });
+    var inputs = [1, 2].map(function (k) { var L = list.filter(function (x) { return x.input === k; }), ns = L.map(function (x) { return x.n; }); return { input: k, strings: L.length, isc: L.length * isc, matched: ns.every(function (n) { return n === ns[0]; }) }; });
+    return { list: list, inputs: inputs, max: max, cold: cold, hot: hot, isc: isc, vocMax: Math.max.apply(null, list.map(function (x) { return x.voc; })), vmpMin: Math.min.apply(null, list.map(function (x) { return x.vmp; })), split: list.length > 2, matched: inputs.every(function (x) { return x.matched; }), ok: list.every(function (x) { return x.ok; }) };
   };
 
   // the single-line diagram, AS/NZS 5033 on the DC side, AS/NZS 4777.1 at the grid, AS/NZS 5139 for the battery
@@ -3629,29 +3761,35 @@
     ink = ink || '#1D2026'; line = line || '#9C958A'; soft = soft || '#F3F1EC';
     var S = FN.strings(P), box = function (x, y, w, h, t, sub) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="6" fill="' + soft + '" stroke="' + ink + '"></rect><text x="' + (x + w / 2) + '" y="' + (y + h / 2 - (sub ? 3 : -4)) + '" font-size="12" font-weight="600" text-anchor="middle" fill="' + ink + '">' + t + '</text>' + (sub ? '<text x="' + (x + w / 2) + '" y="' + (y + h / 2 + 12) + '" font-size="10" text-anchor="middle" fill="' + ink + '" opacity=".75">' + sub + '</text>' : ''); };
     var wire = function (d, lab, lx, ly) { return '<path d="' + d + '" fill="none" stroke="' + ink + '" stroke-width="1.6"></path>' + (lab ? '<text x="' + lx + '" y="' + ly + '" font-size="9.5" fill="' + ink + '" opacity=".7">' + lab + '</text>' : ''); };
-    var o = '<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 640 300" font-family="Inter, system-ui, sans-serif" role="img" aria-label="Single-line diagram of the system">';
-    o += box(10, 20, 130, 46, 'String 1', S.a + ' × ' + P.modW + ' W · Voc ' + Math.round(S.vocA) + ' V') + box(10, 84, 130, 46, 'String 2', S.b + ' × ' + P.modW + ' W');
+    // one box a string, stacked on the left, each wired to its MPPT input (1 above, 2 below)
+    var N = S.list.length, bh = N > 2 ? 34 : 46, step = N > 2 ? 42 : 64, ty = Math.max(170, 20 + (N - 1) * step + bh + 22), H = Math.max(300, ty + 30);
+    var o = '<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 640 ' + H + '" font-family="Inter, system-ui, sans-serif" style="flex-shrink:0" role="img" aria-label="Single-line diagram of the system">';
     var L = function (id) { var v = FN.cableLen(P, id); return v ? ' · ≈ ' + v.toFixed(1) + ' m' : ''; };
-    o += wire('M140 43 H190 V64 H210', 'DC 4 mm²' + L('dc'), 146, 37) + wire('M140 107 H190 V86 H210');
+    S.list.forEach(function (x, i) { var y = 20 + i * step; o += box(10, y, 150, bh, 'String ' + x.id + ' · input ' + x.input, x.n + ' × ' + P.modW + ' W · ' + x.from + ' · ' + Math.round(x.voc) + ' V') + wire('M160 ' + (y + bh / 2) + ' H190 V' + (x.input === 1 ? 64 : 86) + ' H210', i ? '' : 'DC 4 mm²' + L('dc'), 164, y + bh / 2 - 6); });
     o += box(210, 52, 80, 46, 'DC isolator', '2-pole · 600 V') + wire('M290 75 H330', '', 0, 0);
     o += box(330, 40, 120, 70, P.inv + ' kW hybrid', '2 MPPT · AS/NZS 4777.2') + (P.bat ? wire('M390 110 V160', 'DC battery cable' + L('bat'), 396, 140) + box(330, 160, 120, 46, P.bat + ' kWh battery', 'LFP · AS/NZS 5139') : '');
     o += wire('M450 75 H480', 'AC 6 mm²' + L('ac'), 452, 69) + box(480, 52, 70, 46, 'AC isolator', '') + wire('M550 75 H570 V150', '', 0, 0);
     o += box(500, 150, 130, 50, 'Main switchboard', 'solar main switch · RCBO') + (P.ev ? wire('M500 190 H470 V250', L('ev') ? 'charger' + L('ev') : '', 404, 236) + box(400, 250, 120, 40, 'Car charger', '7 kW · own RCBO') : '');
     o += wire('M565 200 V230', '', 0, 0) + box(530, 230, 70, 34, 'Meter', 'import / export') + wire('M565 264 V284 H620', 'grid · export limit 5 kW', 540, 296);
-    o += '<text x="10" y="170" font-size="10" fill="' + ink + '" opacity=".75">Cold Voc ' + Math.round(S.vocA) + ' V &lt; 600 V · hot Vmp ' + Math.round(S.vmpB) + ' V &gt; 80 V · ' + (S.ok ? 'strings fit' : 'check the strings') + '</text>';
-    o += '<text x="10" y="186" font-size="10" fill="' + ink + '" opacity=".75">Voltage rise 0.9 % · earthing per AS/NZS 3000 · labels per AS/NZS 5033</text>';
+    o += '<text x="10" y="' + ty + '" font-size="10" fill="' + ink + '" opacity=".75">Cold Voc ' + Math.round(S.vocMax) + ' V ' + (S.vocMax < 600 ? '&lt;' : '&gt;') + ' 600 V · hot Vmp ' + Math.round(S.vmpMin) + ' V ' + (S.vmpMin > 80 ? '&gt;' : '&lt;') + ' 80 V · ' + (S.ok ? 'strings fit' : 'check the strings') + (S.matched ? '' : ' · unequal strings share an input') + '</text>';
+    o += '<text x="10" y="' + (ty + 16) + '" font-size="10" fill="' + ink + '" opacity=".75">Voltage rise 0.9 % · earthing per AS/NZS 3000 · labels per AS/NZS 5033</text>';
     return o + '</svg>';
   };
 
+  // where the modules stand, in a few words: the roof, then each zone the installer confirmed
+  FN.whereMods = function (P) {
+    var zs = P.zones || []; if (!zs.length) return P.n + ' modules on the north face';
+    return P.n + ' modules: ' + P.nRoof + ' on the north face, ' + zs.map(function (z) { return z.n + ' on the ' + FN.ZONENAME[z.k]; }).join(', ');
+  };
   // what each section says in one line: read first, the detail under it
   FN.quoteLead = function (key, P) {
     var u = (P.unc || 12) / 100;
     return { cover: 'You can cancel within 10 business days. ' + P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + ' for ' + FN.money(P.total) + '.',
-      system: P.n + ' modules on the north face, ' + Math.round(P.kwp / P.inv * 100) + ' % of a ' + P.inv + ' kW inverter.',
+      system: FN.whereMods(P) + '; ' + Math.round(P.kwp / P.inv * 100) + ' % of a ' + P.inv + ' kW inverter.',
       measures: 'Measured on site: a 15.00 × 10.00 m ' + FN.ROOFS[P.roof || 'hip'].en.toLowerCase() + ' roof at ' + FN.ROOFS[P.roof || 'hip'].pitch + '°; the array takes ' + FN.arrayBox(P).w.toFixed(2) + ' × ' + FN.arrayBox(P).h.toFixed(2) + ' m.',
       notes: (P.notes || []).length + ' things the installer saw on site and what was done about them.',
       equipment: 'Every product itemised, CEC-listed, with its warranty.',
-      wiring: 'Two strings, inside the inverter\'s voltage window, hot and cold.',
+      wiring: (function (S) { return ['', 'One string', 'Two strings', 'Three strings', 'Four strings', 'Five strings', 'Six strings'][S.list.length] || S.list.length + ' strings'; })(FN.strings(P)) + (FN.strings(P).ok ? ', inside the inverter\'s voltage window, hot and cold.' : ': one falls outside the inverter\'s voltage window, to fix before the work.'),
       savings: Math.round(P.kwh).toLocaleString('en-AU') + ' kWh a year; ' + FN.money(P.save * (1 - u)) + '–' + FN.money(P.save * (1 + u)) + ' off your bills.',
       price: FN.money(P.total) + ' after ' + FN.money(P.stc * FN.STC + (P.bat ? FN.rebate(P.bat) : 0)) + ' of certificates, GST included.',
       terms: 'Warranties, timeline, paperwork, and who to call.' }[key];
@@ -3689,11 +3827,15 @@
       o += h('In one line') + row('System', P.kwp.toFixed(2) + ' kWp solar' + (P.bat ? ' + ' + P.bat + ' kWh battery' : '') + (P.ev ? ' + car charger' : ''), true) + row('Price after certificates', FN.money(P.total) + ', GST included', true) + row('Savings, on your bill', FN.money(P.save * (1 - u)) + '–' + FN.money(P.save * (1 + u)) + ' a year');
     } else if (key === 'system') {
       o += '<svg width="100%" height="200" viewBox="150 120 740 470" role="img" aria-label="Layout of the modules on your roof">' + Object.keys(FN.ROOFS[P.roof || 'hip'].faces).map(function (k) { return '<path d="' + FN.ROOFS[P.roof || 'hip'].faces[k] + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') + '" stroke="var(--c-roofLine)"></path>'; }).join('') + (P.mods || []).map(function (m) { return '<rect x="' + m.x + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="1.5" fill="#2B3A4A" stroke="#55667A"></rect>'; }).join('') + '<text x="518" y="580" font-size="16" text-anchor="middle" fill="var(--c-muted)">N ↑ · our drawing from LiDAR, checked on site 30 Oct 2026</text></svg>';
-      o += row('Array', P.n + ' × ' + P.modW + ' W = ' + P.kwp.toFixed(2) + ' kWp, north face, ' + FN.ROOFS[P.roof || 'hip'].pitch + '° tilt, azimuth 0°', true) + row('Roof', 'concrete tile, single storey · setbacks 0.40 m from every edge') + row('Mounting', 'rail kit for wind region A, terrain category 3, per AS/NZS 1170.2') + row('Shade', P.shaded ? P.shaded + ' modules shaded by the chimney in winter mornings' : 'no shading object on the north face') + row('Inverter sizing', 'panels at ' + Math.round(P.kwp / P.inv * 100) + ' % of the inverter (limit 133 %)') + row('Export limit', '5 kW, set by the network at pre-approval');
+      var zsP = P.zones || [];
+      o += row('Array', (zsP.length ? P.nRoof + ' × ' + P.modW + ' W = ' + (P.nRoof * P.modW / 1000).toFixed(2) + ' kWp' : P.n + ' × ' + P.modW + ' W = ' + P.kwp.toFixed(2) + ' kWp') + ', north face, ' + FN.ROOFS[P.roof || 'hip'].pitch + '° tilt, azimuth 0°', true);
+      zsP.forEach(function (z) { o += row(z.k === 'carport' ? 'Carport' : 'Custom zone', z.n + ' × ' + P.modW + ' W = ' + (z.n * P.modW / 1000).toFixed(2) + ' kWp, ' + (z.k === 'carport' ? 'on a new steel carport over the driveway, 5° pitch' : 'where you marked it') + '; confirmed on site, its tilt and azimuth measured before the work', true); });
+      if (zsP.length) o += row('In all', P.n + ' modules, ' + P.kwp.toFixed(2) + ' kWp; the zones counted at the roof\'s yield per kWp until measured');
+      o += row('Roof', 'concrete tile, single storey · setbacks 0.40 m from every edge') + row('Mounting', 'rail kit for wind region A, terrain category 3, per AS/NZS 1170.2') + row('Shade', P.shaded ? P.shaded + ' modules shaded by the chimney in winter mornings' : 'no shading object on the north face') + row('Inverter sizing', 'panels at ' + Math.round(P.kwp / P.inv * 100) + ' % of the inverter (limit 133 %)') + row('Export limit', '5 kW, set by the network at pre-approval');
       var X = FN.offerSite(P);
       if (X) {
-        o += h('Your site') + row('Site', X.type.toLowerCase() + ', confirmed by you' + (X.zones.length ? '; ' + X.zones.map(function (z) { return (z.k === 'carport' ? 'a carport' : 'a custom zone') + ' of ' + z.n + ' modules'; }).join(' and ') + ', priced once checked on site' : ''));
-        o += row('Capacity on the site', X.cats.kwp.toFixed(2) + ' kWp summed over every zone · ' + X.cats.kva + ' kVA inverter') + row('Certificates', X.cats.support) + row('Planning', X.cats.planning) + row('Network connection', X.cats.connection);
+        o += h('Your site') + row('Site', X.type.toLowerCase() + ', confirmed by you' + (X.zones.length ? '; ' + X.zones.map(function (z, i) { return (z.k === 'carport' ? 'a carport' : 'a custom zone') + ' of ' + z.n + ' modules, ' + ((P.zok ? P.zok[i] : z.ok) ? 'confirmed on site and priced here' : 'priced once checked on site'); }).join('; ') : ''));
+        o += row('Capacity on the site', X.cats.kwp.toFixed(2) + ' kWp summed over the roof and every zone · ' + X.cats.kva + ' kVA inverter') + row('Certificates', X.cats.support) + row('Planning', X.cats.planning) + row('Network connection', X.cats.connection);
       }
     } else if (key === 'measures') {
       var A = FN.arrayBox(P);
@@ -3705,16 +3847,20 @@
         ['Inverter', P.invP.name + ' · HYB-' + P.inv + 'K', '2 MPPT inputs, 80–550 V, max 600 V DC; AS/NZS 4777.2, CSIP-AUS ready', '10-year product'],
         P.bat ? ['Battery', 'LFP ' + P.bat + ' kWh · BAT-' + P.bat, 'usable ' + P.bat + ' kWh, 5 kW, AS/NZS 5139, VPP-capable', '10 years or 70 % capacity'] : null,
         P.ev ? ['Car charger', 'EVC-7 · single phase', '7 kW, solar-follow mode, own RCBO', '3-year product'] : null,
-        ['Mounting', 'RAIL-A tile kit', 'certified for wind region A, AS/NZS 1170.2', '15-year product'],
+        ['Mounting', 'RAIL-A tile kit', 'certified for wind region A, AS/NZS 1170.2' + ((P.zones || []).some(function (z) { return z.k === 'custom'; }) ? '; the custom zone\'s mounting chosen once its surface is checked' : ''), '15-year product'],
+        (P.zones || []).some(function (z) { return z.k === 'carport'; }) ? ['Carport', 'CARPORT-1 · steel frame, one bay', 'four posts, 5° pitch, rails for 8 modules; engineered for wind region A, AS/NZS 1170.2', 'builder\'s structural warranty', 'building approval and engineering to come'] : null,
         ['Protection', 'DC isolator, AC isolator, solar main switch', 'per AS/NZS 5033 and AS/NZS 3000', 'covered by workmanship']].filter(Boolean);
-      o += it.map(function (r) { return '<div style="display:grid;grid-template-columns:120px minmax(0,1fr) 150px;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--c-line2)"><b style="font-weight:600">' + r[0] + '</b><span>' + r[1] + '<br><span style="color:var(--c-muted);font-size:11.5px">' + r[2] + '</span></span><span style="font-size:11.5px;color:var(--c-ink2)">' + r[3] + '<br><span style="color:var(--c-gain)">✓ CEC-listed, not expired</span></span></div>'; }).join('');
+      o += it.map(function (r) { return '<div style="display:grid;grid-template-columns:120px minmax(0,1fr) 150px;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--c-line2)"><b style="font-weight:600">' + r[0] + '</b><span>' + r[1] + '<br><span style="color:var(--c-muted);font-size:11.5px">' + r[2] + '</span></span><span style="font-size:11.5px;color:var(--c-ink2)">' + r[3] + '<br>' + (r[4] ? '<span style="color:var(--c-sunText)">' + r[4] + '</span>' : '<span style="color:var(--c-gain)">✓ CEC-listed, not expired</span>') + '</span></div>'; }).join('');
       o += '<span style="font-size:11.5px;color:var(--c-muted);margin-top:6px">Brands and models are placeholders in this prototype; the real quote names each manufacturer and its Australian warranty contact.</span>';
     } else if (key === 'wiring') {
       var s = FN.strings(P);
       o += FN.sld(P, 'var(--c-ink)', 'var(--c-line)', 'var(--c-paper2)');
-      o += row('Strings', s.a + ' + ' + s.b + ' modules on two MPPT inputs') + row('Cold open-circuit voltage', Math.round(s.vocA) + ' V at 0 °C, under the 600 V maximum ✓') + row('Hot operating voltage', Math.round(s.vmpB) + ' V at 70 °C cell, above the 80 V start ✓') + row('DC current', s.isc.toFixed(1) + ' A design current per string; 4 mm² solar cable') + row('AC side', '6 mm² to the switchboard, voltage rise 0.9 % (limit 2 %)') + row('Standards', 'AS/NZS 5033 (DC), AS/NZS 4777.1 (grid connection), AS/NZS 5139 (battery), AS/NZS 3000 (wiring rules)');
+      o += row('Strings', s.list.map(function (x) { return x.n; }).join(' + ') + ' modules on two MPPT inputs' + (s.split ? '; at most ' + s.max + ' modules a string stay under 600 V cold, so ' + ((P.zones || []).length ? 'the roof keeps input 1 and the zones, at another tilt, share input 2' : 'the roof is cut into equal strings in parallel') : ''), true);
+      o += s.list.map(function (x) { return row('String ' + x.id + ' · input ' + x.input, x.n + ' × ' + P.modW + ' W on the ' + (x.from === 'roof' ? 'north face' : x.from) + ' · ' + Math.round(x.voc) + ' V cold, ' + Math.round(x.vmp) + ' V hot ' + (x.ok ? '✓' : '✗ outside 80–600 V')); }).join('');
+      o += row('Cold open-circuit voltage', Math.round(s.vocMax) + ' V at 0 °C on the longest string, ' + (s.vocMax < 600 ? 'under the 600 V maximum ✓' : 'over the 600 V maximum ✗')) + row('Hot operating voltage', Math.round(s.vmpMin) + ' V at 70 °C cell on the shortest string, ' + (s.vmpMin > 80 ? 'above the 80 V start ✓' : 'under the 80 V start ✗'));
+      o += row('DC current', s.isc.toFixed(1) + ' A design current per string; ' + s.inputs.map(function (x) { return 'input ' + x.input + ' ' + x.strings + (x.strings > 1 ? ' strings in parallel, ' : ' string, ') + x.isc.toFixed(1) + ' A'; }).join('; ') + '; 4 mm² solar cable') + (s.matched ? '' : row('Matching', 'strings of different lengths share an input: the installer evens them out or fits optimisers on site')) + row('AC side', '6 mm² to the switchboard, voltage rise 0.9 % (limit 2 %)') + row('Standards', 'AS/NZS 5033 (DC), AS/NZS 4777.1 (grid connection), AS/NZS 5139 (battery), AS/NZS 3000 (wiring rules)');
       var XW = FN.offerSite(P);
-      if (XW && XW.wires.length) o += h('Cable runs') + XW.wires.map(function (w) { return row(w.name, '≈ ' + w.len.toFixed(1) + ' m, of which ' + w.vert.toFixed(1) + ' m vertical; ' + FN.EQD[w.to].n.toLowerCase() + ' on the ' + FN.WALLNAME[XW.pos[w.to].w] + ' wall' + (XW.ok[w.to] ? ', confirmed on site' : '')); }).join('') + row('Total', '≈ ' + XW.wires.reduce(function (a, w) { return a + w.len; }, 0).toFixed(1) + ' m, estimated along the walls from where the units stand; measured again before the work', true);
+      if (XW && XW.wires.length) o += h('Cable runs') + XW.wires.map(function (w) { return row(w.name, '≈ ' + w.len.toFixed(1) + ' m, of which ' + w.vert.toFixed(1) + ' m vertical; ' + FN.EQD[w.to].n.toLowerCase() + ' on the ' + XW.names[XW.pos[w.to].w] + ' wall' + (XW.ok[w.to] ? ', confirmed on site' : '')); }).join('') + row('Total', '≈ ' + XW.wires.reduce(function (a, w) { return a + w.len; }, 0).toFixed(1) + ' m, estimated along the walls from where the units stand; measured again before the work', true);
     } else if (key === 'savings') {
       var max = 1.3, bars = MONTH.map(function (f, i) { var v = P.kwh / 365 * f, hh = f / max * 80; return '<rect x="' + (30 + i * 46) + '" y="' + (96 - hh) + '" width="30" height="' + hh + '" rx="3" fill="var(--c-sun)" opacity=".8"></rect><text x="' + (45 + i * 46) + '" y="' + (90 - hh) + '" font-size="10" text-anchor="middle" fill="var(--c-ink)">' + v.toFixed(0) + '</text><text x="' + (45 + i * 46) + '" y="112" font-size="10" text-anchor="middle" fill="var(--c-muted)">' + 'JFMAMJJASOND'[i] + '</text>'; }).join('');
       o += '<span style="font-size:12px;color:var(--c-muted)">Average daily kWh by month, as the SAA design gives it</span><svg width="100%" height="118" viewBox="0 0 590 118">' + bars + '</svg>';
@@ -3722,6 +3868,8 @@
     } else if (key === 'price') {
       o += P.lines.map(function (l) { return '<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 100px;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span>' + l[0] + '</span><span style="color:var(--c-muted)">' + l[1] + '</span><b style="text-align:right;font-weight:600;color:' + (l[2] < 0 ? 'var(--c-gain)' : 'var(--c-ink)') + '">' + (l[2] < 0 ? '−' : '') + FN.money(l[2]) + '</b></div>'; }).join('');
       o += '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;padding:8px 0">You pay, GST included<span>' + FN.money(P.total) + '</span></div>';
+      if ((P.zones || []).length) o += row('Your zones', P.zones.map(function (z) { return z.n + ' modules on the ' + FN.ZONENAME[z.k]; }).join(', ') + ', confirmed on site and priced at the roof\'s module price, installation counted per module');
+      if (P.cost.carport) o += row('Carport structure', 'from our price list, like every line here: a steel single-bay frame with its engineering, from a builder at our usual margin; an illustrative figure in this prototype, confirmed once the council approves the structure');
       o += row('Solar certificates', 'floor(' + P.kwp.toFixed(2) + ' kWp × 1.382 zone rating × 5 deeming years) = ' + P.stc + ' STCs × $39.90') + (P.bat ? row('Battery certificates', P.bat + ' kWh by tier (full to 14 kWh, 60 % to 28) × factor 6.8 = ' + P.bc + ' × $39.90; factor 5.7 from 1 Jan 2027, so install before then') : '') + row('Who claims', 'we claim the certificates as your agent and take them off the price; you assign them when you sign') + row('Payment', '10 % deposit after the cooling-off period, the rest on commissioning; no payment before the network pre-approval') + row('Extra costs', 'none expected: the switchboard was checked on site and needs no upgrade; any change is quoted and agreed in writing before work');
     } else if (key === 'terms') {
       o += h('Warranties') + row('Modules', spec.warranty) + row('Inverter', '10-year product') + (P.bat ? row('Battery', '10 years or 70 % of its capacity') : '') + row('Workmanship', '10 years, from us, on top of the product warranties') + row('Claims', 'call us first; we handle the manufacturer, who has an Australian contact');
@@ -3733,9 +3881,9 @@
   // files: built in the browser from the same data, in standard formats
   FN.download = function (name, type, text) { var a = doc.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; doc.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); };
   FN.exportQuote = function (kind, P) {
-    if (kind === 'bom') { var rows = [['item', 'model', 'quantity', 'unit', 'price_aud_incl_gst']], sp = FN.SPEC[P.modW]; rows.push(['solar module', sp.model, P.n, 'each', (P.cost.modules / P.n).toFixed(2)], ['hybrid inverter', 'HYB-' + P.inv + 'K', 1, 'each', P.cost.inverter.toFixed(2)]); if (P.bat) rows.push(['battery', 'BAT-' + P.bat, 1, 'each', P.cost.battery.toFixed(2)]); if (P.ev) rows.push(['car charger', 'EVC-7', 1, 'each', P.cost.charger.toFixed(2)]); var XB = FN.offerSite(P); if (XB) XB.wires.forEach(function (w) { rows.push(['cable run · ' + w.name.toLowerCase(), 'estimated along the walls', w.len.toFixed(1), 'm', 'in installation']); }); rows.push(['installation and design', '', 1, 'job', P.cost.install.toFixed(2)], ['solar certificates (STC)', '', P.stc, 'certificate', (-FN.STC).toFixed(2)]); if (P.bat) rows.push(['battery certificates', '', P.bc, 'certificate', (-FN.STC).toFixed(2)]); FN.download('Q-2026-0148-bom.csv', 'text/csv', rows.map(function (r) { return r.map(function (c) { return /[",]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n') + '\n'); }
+    if (kind === 'bom') { var rows = [['item', 'model', 'quantity', 'unit', 'price_aud_incl_gst']], sp = FN.SPEC[P.modW]; rows.push(['solar module', sp.model, P.n, 'each', (P.cost.modules / P.n).toFixed(2)]); if (P.cost.carport) rows.push(['carport structure', 'CARPORT-1 · steel, one bay (illustrative price)', 1, 'each', P.cost.carport.toFixed(2)]); rows.push(['hybrid inverter', 'HYB-' + P.inv + 'K', 1, 'each', P.cost.inverter.toFixed(2)]); if (P.bat) rows.push(['battery', 'BAT-' + P.bat, 1, 'each', P.cost.battery.toFixed(2)]); if (P.ev) rows.push(['car charger', 'EVC-7', 1, 'each', P.cost.charger.toFixed(2)]); var XB = FN.offerSite(P); if (XB) XB.wires.forEach(function (w) { rows.push(['cable run · ' + w.name.toLowerCase(), 'estimated along the walls', w.len.toFixed(1), 'm', 'in installation']); }); rows.push(['installation and design', '', 1, 'job', P.cost.install.toFixed(2)], ['solar certificates (STC)', '', P.stc, 'certificate', (-FN.STC).toFixed(2)]); if (P.bat) rows.push(['battery certificates', '', P.bc, 'certificate', (-FN.STC).toFixed(2)]); FN.download('Q-2026-0148-bom.csv', 'text/csv', rows.map(function (r) { return r.map(function (c) { return /[",]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n') + '\n'); }
     if (kind === 'sld') FN.download('Q-2026-0148-single-line.svg', 'image/svg+xml', FN.sld(P));
-    if (kind === 'json') FN.download('Q-2026-0148.json', 'application/json', JSON.stringify({ quote: 'Q-2026-0148', date: '2026-10-31', validUntil: '2026-11-07', site: (function () { var X = FN.offerSite(P), o = { address: '14 Wattle Lane, Marrickville NSW 2204', network: 'Ausgrid' }; if (X) { o.type = X.type; o.zones = X.zones; o.categories = { kwp: +X.cats.kwp.toFixed(2), support: X.cats.support, planning: X.cats.planning, connection: X.cats.connection }; o.equipment = X.pos; o.cables = X.wires.map(function (w) { return { circuit: w.id, m: +w.len.toFixed(1), vertical: +w.vert.toFixed(1), estimated: true }; }); } return o; })(), design: { modules: { count: P.n, watts: P.modW, kwp: +P.kwp.toFixed(2), tilt: 22, azimuth: 0 }, inverterKw: P.inv, batteryKwh: P.bat, carCharger: !!P.ev, strings: FN.strings(P) }, yieldKwh: Math.round(P.kwh), lines: P.lines.map(function (l) { return { item: l[0], source: l[1], aud: +l[2].toFixed(2) }; }), totalAud: +P.total.toFixed(2), certificates: { stc: P.stc, battery: P.bc, spotAud: FN.STC }, engine: 'open-energy (prototype)' }, null, 2));
+    if (kind === 'json') FN.download('Q-2026-0148.json', 'application/json', JSON.stringify({ quote: 'Q-2026-0148', date: '2026-10-31', validUntil: '2026-11-07', site: (function () { var X = FN.offerSite(P), o = { address: '14 Wattle Lane, Marrickville NSW 2204', network: 'Ausgrid' }; if (X) { o.type = X.type; o.zones = X.zones; o.categories = { kwp: +X.cats.kwp.toFixed(2), support: X.cats.support, planning: X.cats.planning, connection: X.cats.connection }; o.equipment = X.pos; o.cables = X.wires.map(function (w) { return { circuit: w.id, m: +w.len.toFixed(1), vertical: +w.vert.toFixed(1), estimated: true }; }); } return o; })(), design: { modules: { count: P.n, watts: P.modW, kwp: +P.kwp.toFixed(2), tilt: 22, azimuth: 0, roof: P.nRoof != null ? P.nRoof : P.n, zones: (P.zones || []).map(function (z) { return { zone: z.k, count: z.n, confirmedOnSite: true }; }) }, structures: P.cost.carport ? [{ item: 'carport', aud: +P.cost.carport.toFixed(2), illustrative: true }] : [], inverterKw: P.inv, batteryKwh: P.bat, carCharger: !!P.ev, strings: FN.strings(P) }, yieldKwh: Math.round(P.kwh), lines: P.lines.map(function (l) { return { item: l[0], source: l[1], aud: +l[2].toFixed(2) }; }), totalAud: +P.total.toFixed(2), certificates: { stc: P.stc, battery: P.bc, spotAud: FN.STC }, engine: 'open-energy (prototype)' }, null, 2));
     if (kind === 'print') { var w = window.open('', '_blank'); if (!w) return; var t = FN.tokens(), css = ':root{' + FN.vars(t) + '}body{font:13px/1.45 Inter,system-ui,sans-serif;color:#1D2026;max-width:760px;margin:24px auto;padding:0 16px}h2{font-size:15px;margin:22px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px}div,span{box-sizing:border-box}'; w.document.write('<!doctype html><meta charset="utf-8"><title>Quote Q-2026-0148</title><style>' + css + '</style><h1 style="font-size:20px">Quote Q-2026-0148 · 14 Wattle Lane</h1>' + FN.SECTIONS.map(function (s) { return '<h2>' + s[1] + '</h2><div style="display:flex;flex-direction:column">' + FN.quoteSection(s[0], P) + '</div>'; }).join('')); w.document.close(); w.focus(); w.print(); }
   };
   // the exports card, shared by both screens
