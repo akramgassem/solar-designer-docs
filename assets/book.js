@@ -1326,7 +1326,7 @@
       top.position.set(0, 60, 0); top.up.set(0, 0, -1); top.lookAt(0, 0, 0);
       var txSun = FN.panelTex(T, false), txShade = FN.panelTex(T, true);
       var pm = mat('#FFFFFF', { map: txSun, roughness: 0.24, metalness: 0.22 }), pmShade = mat('#FFFFFF', { map: txShade, roughness: 0.35, metalness: 0.15 });
-      var mFrame = mat('#8A94A0', { roughness: 0.38, metalness: 0.55 }), mFrameShade = mat('#5F6975', { roughness: 0.45, metalness: 0.4 }), mRail = mat('#39414C', { roughness: 0.5, metalness: 0.5 });
+      var mFrame = mat('#8A94A0', { roughness: 0.38, metalness: 0.55 }), mFrameShade = mat('#5F6975', { roughness: 0.45, metalness: 0.4 }), mRail = mat('#39414C', { roughness: 0.5, metalness: 0.5 }), mBallast = mat('#8E969F', { roughness: 0.9 });
       var H = { gnd: gnd, drive: drive, plinth: plinth, walls: walls, gables: gables, roof: roof, hr: 15, T: T, r: r, scene: sc, cam: cam, iso: iso, top: top, useTop: false, useIso: false, theta: 0.75, radius: 40, zoom: 1, tx: 0, tz: -0.3, space: false, panels: panels, bat: bat, car: car, hp: hp, chim: chim, sun: sun, hemi: hemi, w: 0, h: 0, dead: false };
       var raf = 0;
       H.frame = function () {
@@ -1366,6 +1366,16 @@
             -7.5, 3, 5, 7.5, 3, 5, 7.5, ws, 5, -7.5, 3, 5, 7.5, ws, 5, -7.5, ws, 5
           ];
           ridges.add(beam([-X, ys + 0.01, Z], [X, ys + 0.01, Z], 0.15, 0.05, mRidge));
+        } else if (type === 'flat') {
+          var yf = 3.02;
+          rpos = prism([[-X, yf, -Z], [-X, yf, Z], [X, yf, Z], [X, yf, -Z]], th);
+          gpos = [];
+          // Parapet around flat roof
+          var ph = 0.22, pw = 0.18;
+          ridges.add(beam([-X, yf + ph / 2, -Z], [X, yf + ph / 2, -Z], pw, ph, mRidge));
+          ridges.add(beam([-X, yf + ph / 2, Z], [X, yf + ph / 2, Z], pw, ph, mRidge));
+          ridges.add(beam([-X, yf + ph / 2, -Z], [-X, yf + ph / 2, Z], pw, ph, mRidge));
+          ridges.add(beam([X, yf + ph / 2, -Z], [X, yf + ph / 2, Z], pw, ph, mRidge));
         } else {
           var yh = 3 + 5 * t + 0.02;
           rpos = [].concat(
@@ -1404,7 +1414,10 @@
       };
       // obstacles from plan px ({ type, x, y, h }): all 6 trade shapes (chimney, skylight, antenna, box, vent, prism/dormer)
       H.setObstacles = function (list) {
-        while (obsG.children.length) obsG.remove(obsG.children[0]);
+        var key = JSON.stringify([H.type, list || []]);
+        if (key === H.obsKey) return;
+        H.obsKey = key;
+        clear(obsG);
         chim.visible = false;
         (list || []).forEach(function (o) {
           var Ty = FN.OBST[o.type] || FN.OBST.chimney, z = (o.y - 356) / 40, x = (518 - o.x) / 40, y0 = H.yAt(z), hh = Math.max(o.h !== undefined ? o.h : Ty.h, 0.06), m;
@@ -1471,20 +1484,107 @@
         });
         H.frame();
       };
+      // a group's meshes go, and their geometries with them (the materials are shared)
+      var clear = function (g) {
+        while (g.children.length) { var c = g.children[0]; c.traverse(function (n) { if (n.geometry) n.geometry.dispose(); }); g.remove(c); }
+      };
       H.setPanels = function (mods) {
-        while (panels.children.length) panels.remove(panels.children[0]);
+        // the studio places the scene at every render: build the modules again only when they changed
+        var key = JSON.stringify([H.type, mods || []]);
+        if (key === H.panelsKey) return;
+        H.panelsKey = key;
+        clear(panels);
+        var isFlat = H.type === 'flat';
         var tan = Math.tan(H.pitch * Math.PI / 180), cos = Math.cos(H.pitch * Math.PI / 180), ang = -H.pitch * Math.PI / 180;
+        var yRoof = 3.02;
         (mods || []).forEach(function (m) {
-          var cx = m.x + m.w / 2, cy = m.y + m.h / 2, z = (cy - 356) / 40, x = (518 - cx) / 40, y = 3 + (z + 5) * tan + 0.075;
-          var W = m.w / 40 - 0.02, L = m.h / 40 / cos - 0.02, grp = new T.Group();
-          var frame = new T.Mesh(new T.BoxGeometry(W, 0.038, L), m.shaded ? mFrameShade : mFrame);
-          var glass = new T.Mesh(new T.PlaneGeometry(W - 0.05, L - 0.05), m.shaded ? pmShade : pm);
-          glass.rotation.x = -Math.PI / 2; glass.position.y = 0.020;
-          var r1 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail), r2 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail);
-          r1.position.set(0, -0.032, -L * 0.28); r2.position.set(0, -0.032, L * 0.28);
-          frame.castShadow = true; frame.receiveShadow = true;
-          grp.add(frame); grp.add(glass); grp.add(r1); grp.add(r2);
-          grp.position.set(x, y, z); grp.rotation.x = ang; panels.add(grp);
+          var cx = m.x + m.w / 2, cy = m.y + m.h / 2, z = (cy - 356) / 40, x = (518 - cx) / 40;
+          var grp = new T.Group();
+          if (isFlat) {
+            var isEW = m.mode === 'ew10';
+            var rackTilt = (m.tilt || 10) * Math.PI / 180;
+            if (isEW) {
+              // East-West tent pair: slant along East-West, ridge along North-South
+              var W = 1.134 - 0.02, L = 1.722 - 0.02;
+              var Hridge = W * Math.sin(rackTilt);
+              var yC = yRoof + 0.05 + Hridge / 2;
+              var isW = m.facing === 'W';
+              var frame = new T.Mesh(new T.BoxGeometry(W, 0.038, L), m.shaded ? mFrameShade : mFrame);
+              var glass = new T.Mesh(new T.PlaneGeometry(W - 0.05, L - 0.05), m.shaded ? pmShade : pm);
+              glass.rotation.x = -Math.PI / 2; glass.position.y = 0.020;
+              var r1 = new T.Mesh(new T.BoxGeometry(0.035, 0.028, L), mRail), r2 = new T.Mesh(new T.BoxGeometry(0.035, 0.028, L), mRail);
+              r1.position.set(-W * 0.28, -0.032, 0); r2.position.set(W * 0.28, -0.032, 0);
+              frame.castShadow = true; frame.receiveShadow = true;
+              grp.add(frame); grp.add(glass); grp.add(r1); grp.add(r2);
+              grp.position.set(x, yC, z);
+              // West module tilts -rackTilt around Z (facing West); East module tilts +rackTilt (facing East)
+              grp.rotation.z = isW ? -rackTilt : rackTilt;
+              panels.add(grp);
+
+              // Support frame under the module (strictly beneath, resting on the roof deck)
+              var xOuter = isW ? (x + W * 0.38 * Math.cos(rackTilt)) : (x - W * 0.38 * Math.cos(rackTilt));
+              var xInner = isW ? (x - W * 0.38 * Math.cos(rackTilt)) : (x + W * 0.38 * Math.cos(rackTilt));
+              var footH = 0.05, ridgeLegH = footH + Hridge * 0.78;
+              [-L * 0.32, L * 0.32].forEach(function (dz) {
+                var foot = new T.Mesh(new T.BoxGeometry(0.035, footH, 0.035), mRail);
+                foot.position.set(xOuter, yRoof + footH / 2, z + dz);
+                var rLeg = new T.Mesh(new T.BoxGeometry(0.035, ridgeLegH, 0.035), mRail);
+                rLeg.position.set(xInner, yRoof + ridgeLegH / 2, z + dz);
+                var baseRail = new T.Mesh(new T.BoxGeometry(Math.abs(xOuter - xInner) + 0.1, 0.02, 0.035), mRail);
+                baseRail.position.set((xOuter + xInner) / 2, yRoof + 0.01, z + dz);
+                panels.add(foot); panels.add(rLeg); panels.add(baseRail);
+              });
+              var ballast = new T.Mesh(new T.BoxGeometry(0.18, 0.07, 0.28), mBallast);
+              ballast.position.set(xInner, yRoof + 0.035, z);
+              panels.add(ballast);
+            } else {
+              // Equator rack: portrait modules facing North (low at -z, high at +z)
+              var W = 1.134 - 0.02, L = 1.722 - 0.02;
+              var Htilt = L * Math.sin(rackTilt);
+              var yC = yRoof + 0.05 + Htilt / 2;
+              var frame = new T.Mesh(new T.BoxGeometry(W, 0.038, L), m.shaded ? mFrameShade : mFrame);
+              var glass = new T.Mesh(new T.PlaneGeometry(W - 0.05, L - 0.05), m.shaded ? pmShade : pm);
+              glass.rotation.x = -Math.PI / 2; glass.position.y = 0.020;
+              var r1 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail), r2 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail);
+              r1.position.set(0, -0.032, -L * 0.28); r2.position.set(0, -0.032, L * 0.28);
+              frame.castShadow = true; frame.receiveShadow = true;
+              grp.add(frame); grp.add(glass); grp.add(r1); grp.add(r2);
+              grp.position.set(x, yC, z);
+              grp.rotation.x = -rackTilt;
+              panels.add(grp);
+
+              // Triangular support frame underneath the module
+              var zFront = z - (L * 0.32) * Math.cos(rackTilt);
+              var zRear = z + (L * 0.32) * Math.cos(rackTilt);
+              var footH = 0.05, rearLegH = footH + Htilt * 0.78;
+              [-W * 0.35, W * 0.35].forEach(function (dx) {
+                var fFoot = new T.Mesh(new T.BoxGeometry(0.035, footH, 0.035), mRail);
+                fFoot.position.set(x + dx, yRoof + footH / 2, zFront);
+                var rLeg = new T.Mesh(new T.BoxGeometry(0.035, rearLegH, 0.035), mRail);
+                rLeg.position.set(x + dx, yRoof + rearLegH / 2, zRear);
+                var baseRail = new T.Mesh(new T.BoxGeometry(0.03, 0.02, (zRear - zFront) + 0.15), mRail);
+                baseRail.position.set(x + dx, yRoof + 0.01, (zFront + zRear) / 2);
+                panels.add(fFoot); panels.add(rLeg); panels.add(baseRail);
+              });
+              var ballast = new T.Mesh(new T.BoxGeometry(0.32, 0.07, 0.22), mBallast);
+              ballast.position.set(x, yRoof + 0.035, zRear);
+              panels.add(ballast);
+            }
+          } else {
+            // Standard pitched roof: flush modules
+            var y = 3 + (z + 5) * tan + 0.075;
+            var W = m.w / 40 - 0.02, L = m.h / 40 / cos - 0.02;
+            var frame = new T.Mesh(new T.BoxGeometry(W, 0.038, L), m.shaded ? mFrameShade : mFrame);
+            var glass = new T.Mesh(new T.PlaneGeometry(W - 0.05, L - 0.05), m.shaded ? pmShade : pm);
+            glass.rotation.x = -Math.PI / 2; glass.position.y = 0.020;
+            var r1 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail), r2 = new T.Mesh(new T.BoxGeometry(W, 0.028, 0.035), mRail);
+            r1.position.set(0, -0.032, -L * 0.28); r2.position.set(0, -0.032, L * 0.28);
+            frame.castShadow = true; frame.receiveShadow = true;
+            grp.add(frame); grp.add(glass); grp.add(r1); grp.add(r2);
+            grp.position.set(x, y, z);
+            grp.rotation.x = ang;
+            panels.add(grp);
+          }
         });
         H.frame();
       };
@@ -1598,17 +1698,28 @@
   // the installer's catalogue, from its price list (illustrative prices, excluding GST)
   FN.CAT = {
     modules: [{ w: 400, name: '400 W mono, budget', price: 150, warranty: '12 / 25 years' }, { w: 440, name: '440 W mono, tier 1', price: 185, warranty: '25 / 30 years' }, { w: 475, name: '475 W n-type, premium', price: 230, warranty: '25 / 30 years' }],
-    inverters: [{ kw: 5, name: '5 kW hybrid', price: 1650 }, { kw: 6, name: '6 kW hybrid', price: 1900 }, { kw: 8, name: '8 kW hybrid', price: 2600 }]
+    inverters: [{ kw: 5, name: '5 kW hybrid', price: 1650 }, { kw: 6, name: '6 kW hybrid', price: 1900 }, { kw: 8, name: '8 kW hybrid', price: 2600 }, { kw: 10, name: '10 kW hybrid', price: 3300 }, { kw: 15, name: '15 kW hybrid, three-phase', price: 4900 }, { kw: 20, name: '20 kW hybrid, three-phase', price: 6400 }]
+  };
+  // the smallest inverter that keeps the panels under the 133 % limit (the largest when none does)
+  FN.invFor = function (kwp) {
+    var L = FN.CAT.inverters;
+    for (var i = 0; i < L.length; i++) if (kwp / L[i].kw <= 1.33) return L[i].kw;
+    return L[L.length - 1].kw;
+  };
+  // the three inverters the studio offers: the one that fits, the size below and the size above
+  FN.invChoices = function (kwp) {
+    var L = FN.CAT.inverters, i = L.map(function (x) { return x.kw; }).indexOf(FN.invFor(kwp)), a = Math.max(0, Math.min(i - 1, L.length - 3));
+    return L.slice(a, a + 3);
   };
   FN.studio = function (el, opts) {
     opts = opts || {};
     var J = !!opts.site, S = opts.site;
     (function () {
       var H = null, t3 = null, tChip = null, tToast = null;
-      var HOME = { tools: [12, 60], notes: [1108, 60], read: [84, 60], changes: [826, 132], coach: [84, 590], v3: [768, 556] };
-      var st = { level: 1, mode: 1, tool: 'select', selFace: false, preview: false, filled: false, variant: 'portrait', chimney: false, chimH: '1.00', pad: false, fresh: true, removed: [], bat: 13.5,
+      var HOME = { tools: [12, 60], notes: [1108, 60], read: [84, 60], racks: [84, 136], changes: [826, 132], coach: [84, 590], v3: [768, 556] };
+      var st = { level: 1, mode: 1, tool: 'select', selFace: false, preview: false, filled: false, variant: 'portrait', flatMode: J && S.flatMode ? S.flatMode : null, flatRule: J && S.flatRule ? S.flatRule : FN.PACK.rule, typedEdges: true, chimney: false, chimH: '1.00', pad: false, fresh: true, removed: [], bat: 13.5,
         sheet: false, present: false, imagery: true, shade: true, notesOn: true, hist: [], rhist: [], log: [], touches: [0, 0, 0, 0, 0], task: 0, toast: '', busy: false, chip: null, hover: null, notif: false, settings: false, layers: false, mods: true, mod25d: true, grid: 'dots', zoom: 1, panX: 0, panY: 0, space: false, chOpen: false, snapOn: true,
-        pos: JSON.parse(JSON.stringify(HOME)), swapped: false, iso: true, hour3: 9, modW: 440, inv: 6, qs: 'cover', qseen: {}, qnotes: [], roof: J ? (S.roof || 'hip') : 'hip', cx: 520, cy: 198, obs: [], otype: 'chimney', selObs: '', guides: null,
+        pos: JSON.parse(JSON.stringify(HOME)), swapped: false, iso: true, hour3: 9, modW: 440, inv: 6, qs: 'cover', qseen: {}, qnotes: [], qopts: [], roof: J ? (S.roof || 'hip') : 'hip', cx: 520, cy: 198, obs: [], otype: 'chimney', selObs: '', guides: null,
         pts: [], curPt: null, zones: [], dims: [], pins: [], selPin: '', pinTxt: '', vtx: null, selVtx: 0, dynLen: '', dynAng: '', dynField: 0, lastMeas: null };
       // in the journey the studio starts on its inbox, and the household's draft (16 portrait modules) comes with the site
       if (J) { st.mode = -1; st.filled = true; st.bat = S.measures.bat ? 13.5 : 0; }
@@ -1625,21 +1736,25 @@
       function shadows(s) { return obstaclesOf(s).filter(function (o) { return o.h > 0.3; }).map(function (o) { var T = FN.OBST[o.type], hw = (T.shape ? T.a : T.a / 2) * 40; return { x: o.x - hw * 0.9, y: o.y, w: hw * 1.8, h: o.h * 64 }; }); }
       // the layout, from studio-draw (or its fallback): modules, removed by hand or not, shaded or not
       function draw(s) {
-        var res = FN.draw.compute(s.roof, obstaclesOf(s).map(function (o) { return { type: o.type, x: Math.round(o.x), y: Math.round(o.y) }; }), s.variant);
+        var rackOpt = s.roof === 'flat' ? { mode: rackMode(s), rule: s.flatRule || FN.PACK.rule } : null;
+        var res = FN.draw.compute(s.roof, obstaclesOf(s).map(function (o) { return { type: o.type, x: Math.round(o.x), y: Math.round(o.y) }; }), s.variant, rackOpt);
         if (!s.vtx) return res;
         var vp = s.vtx, kept = res.mods.filter(function (m) {
           return FN.draw.inside(vp, m.x + 4, m.y + 4) && FN.draw.inside(vp, m.x + m.w - 4, m.y + 4) && FN.draw.inside(vp, m.x + m.w - 4, m.y + m.h - 4) && FN.draw.inside(vp, m.x + 4, m.y + m.h - 4);
         });
-        return { rings: res.rings, mods: kept, n: kept.length, ms: res.ms, live: res.live };
+        return { rings: res.rings, mods: kept, n: kept.length, geom: res.geom, ms: res.ms, live: res.live };
       }
       function mods(s) {
         var sh = shadows(s);
-        return draw(s).mods.map(function (m) { return { id: m.id, x: m.x, y: m.y, w: m.w, h: m.h, blocked: false, removed: s.removed.indexOf(m.id) >= 0, shaded: sh.some(function (b) { return inter(m, b); }) }; });
+        return draw(s).mods.map(function (m) { return { id: m.id, x: m.x, y: m.y, w: m.w, h: m.h, tilt: m.tilt, mode: m.mode, facing: m.facing, blocked: false, removed: s.removed.indexOf(m.id) >= 0, shaded: sh.some(function (b) { return inter(m, b); }) }; });
       }
+      // a flat roof's rack variant: the one chosen, else the one with the most energy under the rule (D-70)
+      function rackMode(s) { return s.flatMode || FN.draw.rackVariants([], s.flatRule)[0].id; }
       function energy(s) {
         if (!s.filled) return { n: 0, kwp: 0, kwh: 0, save: 0, eff: 0 };
-        var M = mods(s).filter(function (m) { return !m.blocked && !m.removed; }), n = M.length, loss = M.reduce(function (a, m) { return a + (m.shaded ? 0.15 : 0); }, 0), eff = (n - loss) * s.modW / 1000;
-        return { n: n, kwp: n * s.modW / 1000, kwh: eff * 1460, eff: eff, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: eff, cap: s.bat, ev: J ? S.measures.ev : true, hp: J && S.measures.hp }).total };
+        // on racks, the variant's yield per kWp (chapter 6) instead of FN.sim's own
+        var M = mods(s).filter(function (m) { return !m.blocked && !m.removed; }), n = M.length, loss = M.reduce(function (a, m) { return a + (m.shaded ? 0.15 : 0); }, 0), eff = (n - loss) * s.modW / 1000, y = s.roof === 'flat' ? FN.RACKS[rackMode(s)].yield : FN.YIELD;
+        return { n: n, kwp: n * s.modW / 1000, kwh: eff * y, eff: eff, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: eff * y / FN.YIELD, cap: s.bat, ev: J ? S.measures.ev : true, hp: J && S.measures.hp }).total };
       }
       function touch() { if (st.task < 5) st.touches[st.task]++; }
       function check() {
@@ -1649,7 +1764,7 @@
       function commit(patch, label, chip) {
         var before = energy(st), next = {}; for (var k in st) next[k] = st[k]; for (k in patch) next[k] = patch[k];
         var after = energy(next), dk = after.kwh - before.kwh, dm = after.save - before.save;
-        st.hist.push({ snap: JSON.stringify({ filled: st.filled, variant: st.variant, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx }), label: label });
+        st.hist.push({ snap: JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx }), label: label });
         st.rhist = [];
         st.log.unshift({ label: label, delta: (dk >= 0 ? '+' : '−') + FN.n(Math.abs(dk)) + ' kWh/yr · ' + after.n + ' modules', money: (dm >= 0 ? '+' : '−') + FN.money(dm) + '/yr', color: Math.abs(dm) < 1 ? 'var(--c-muted)' : dm > 0 ? 'var(--c-gain)' : 'var(--c-loss)' });
         st.log = st.log.slice(0, 5);
@@ -1717,7 +1832,7 @@
         O.forEach(function (ob) { o += FN.draw.shapes(st.roof, ob, st.selObs === ob.id); });
         var cur = st.drag ? O.filter(function (ob) { return ob.id === st.drag.id; })[0] : null;
         if (cur) o += FN.draw.guides(st.roof, cur, st.guides);
-        o += FN.draw.ridges(st.roof);
+        o += FN.draw.ridges(st.roof, st.typedEdges);
         // Edit vertices handles & live edge lengths on the North face (fig-4.svg: Sommets · A)
         if (st.tool === 'vertex') {
           var cPitchV = Math.cos(R.pitch * Math.PI / 180);
@@ -1862,7 +1977,7 @@
               ((st.filled || st.preview) && st.mods ? mods(st).filter(function (m) { return !m.blocked && !m.removed; }).map(function (m) { return FN.draw.modSvg(m, st.preview && !st.filled, m.shaded && st.shade, st.mod25d); }).join('') : '') +
               O3.map(function (ob) { return FN.draw.shapes(st.roof, ob, st.selObs === ob.id); }).join('') +
               st.zones.map(function (z) { return '<path d="M' + z.pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L') + ' Z" fill="var(--c-sel)" fill-opacity=".11" stroke="var(--c-sel)" stroke-width="1.8" stroke-dasharray="6 4"></path>'; }).join('') +
-              FN.draw.ridges(st.roof) + '</svg>';
+              FN.draw.ridges(st.roof, st.typedEdges) + '</svg>';
           })() : '') + (H ? '' : '<div style="height:212px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--c-ink2)">3D loading…</div>') + '</div>';
         if (st.swapped) o += '<span style="position:absolute;left:92px;bottom:14px;font-size:12px;padding:5px 9px;border-radius:7px;background:var(--c-paper);border:1px solid var(--c-line);color:var(--c-ink2);z-index:3">3D interactive · click the roof to place or edit · ⇄ to swap back</span>';
         // the roof type, as the survey found it: hip, gable or skillion
@@ -1909,9 +2024,33 @@
         if (st.notif) o += '<div style="position:absolute;right:120px;top:52px;width:320px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;overflow:hidden"><b style="display:block;padding:10px 12px;font-size:12px;font-weight:600;border-bottom:1px solid var(--c-line2)">Notifications</b>' + [['Rebate steps down on 1 January', '2 quotes in flight need re-pricing.', 'var(--c-sun)'], ['Survey photos arrived', '12 photos from the phone, attached to this site.', 'var(--c-sel)'], ['Household opened proposal v0', 'Unit 4, 22 Ash Street, yesterday 19:40.', 'var(--c-muted)']].map(function (n) { return '<div style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-line2);font-size:12px;line-height:1.45"><span style="width:3px;border-radius:2px;background:' + n[2] + '"></span><span><b style="font-weight:600">' + n[0] + '</b><br><span style="color:var(--c-ink2)">' + n[1] + '</span></span></div>'; }).join('') + '</div>';
         if (st.settings) o += '<div style="position:absolute;right:80px;top:52px;width:280px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:12px;display:flex;flex-direction:column;gap:10px"><b style="font-size:12px;font-weight:600">View settings</b><span style="font-size:12px;color:var(--c-muted)">Disclosure level</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px">' + ['Guided', 'Standard', 'Expert'].map(function (l, k) { return '<button type="button" data-a="level" data-v="' + k + '" style="flex:1;min-height:36px;border:none;border-radius:6px;background:' + (k === st.level ? 'var(--c-paper)' : 'transparent') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + l + '</button>'; }).join('') + '</div>' + '<button type="button" data-a="reset" style="min-height:40px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:13px;cursor:pointer">Reset panels to the F layout</button></div>';
         if (st.layers) { var ln = P.notes, li = right.indexOf('layers'); o += '<div style="position:absolute;left:' + (ln[0] - 262) + 'px;top:' + Math.max(56, ln[1] + 16 + li * 48 - 8) + 'px;width:250px;' + FN.card + ';box-shadow:0 12px 32px rgba(29,32,38,.16);z-index:7;padding:8px;display:flex;flex-direction:column"><b style="font-size:12px;font-weight:600;color:var(--c-muted);padding:6px 8px;display:flex;align-items:center;gap:6px">' + FN.icon('layers', 'var(--c-muted)', 16) + 'Layers · L</b>' +
-          [['Imagery · Mar 2026', 'imagery'], ['Modules', 'mods'], ['Modules · 2.5D relief', 'mod25d'], ['Notes & dimensions', 'notesOn'], ['Shade, 9 am in June', 'shade']].map(function (r) { var onL = !!st[r[1]]; return '<button type="button" data-a="layer" data-v="' + r[1] + '" aria-pressed="' + onL + '" style="min-height:38px;display:flex;justify-content:space-between;align-items:center;border:none;border-radius:7px;background:transparent;color:var(--c-ink);font:inherit;font-size:12.5px;padding:0 8px;cursor:pointer"><span style="display:inline-flex;align-items:center;gap:8px;opacity:' + (onL ? 1 : 0.5) + '">' + FN.icon('eye', onL ? 'var(--c-sel)' : 'var(--c-faint)', 17) + r[0] + '</span><span style="font-size:11.5px;color:' + (onL ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (onL ? 'shown' : 'hidden') + '</span></button>'; }).join('') +
+          [['Imagery · Mar 2026', 'imagery'], ['Modules', 'mods'], ['Modules · 2.5D relief', 'mod25d'], ['Edge types · Ch. 3', 'typedEdges'], ['Notes & dimensions', 'notesOn'], ['Shade, 9 am in June', 'shade']].map(function (r) { var onL = !!st[r[1]]; return '<button type="button" data-a="layer" data-v="' + r[1] + '" aria-pressed="' + onL + '" style="min-height:38px;display:flex;justify-content:space-between;align-items:center;border:none;border-radius:7px;background:transparent;color:var(--c-ink);font:inherit;font-size:12.5px;padding:0 8px;cursor:pointer"><span style="display:inline-flex;align-items:center;gap:8px;opacity:' + (onL ? 1 : 0.5) + '">' + FN.icon('eye', onL ? 'var(--c-sel)' : 'var(--c-faint)', 17) + r[0] + '</span><span style="font-size:11.5px;color:' + (onL ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (onL ? 'shown' : 'hidden') + '</span></button>'; }).join('') +
           '<div style="border-top:1px solid var(--c-line2);margin-top:4px;padding:8px 8px 4px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--c-muted)">Grid · 1 m / 5 m</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px">' +
           [['dots', 'Dots'], ['lines', 'Lines'], ['off', 'Off']].map(function (g) { var on = st.grid === g[0]; return '<button type="button" data-a="grid" data-v="' + g[0] + '" aria-pressed="' + on + '" style="flex:1;min-height:30px;border:none;border-radius:6px;background:' + (on ? 'var(--c-paper)' : 'transparent') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';font:inherit;font-size:12px;font-weight:' + (on ? 600 : 400) + ';cursor:pointer">' + g[1] + '</button>'; }).join('') + '</div></div></div>'; }
+        if (st.roof === 'flat') {
+          var Dflat = draw(st), Gflat = Dflat.geom, curMode = rackMode(st), curRule = st.flatRule || FN.PACK.rule, K = FN.RACKS[curMode];
+          var m2 = function (x) { return x.toFixed(2) + ' m'; };
+          var gapTxt = Gflat ? (K.mode ? m2(Gflat.gap) + ' aisle' : m2(Gflat.gap)) : '—', pitchTxt = Gflat ? m2(Gflat.pitch) : '—', gcrTxt = Gflat ? Math.round(Gflat.gcr * 100) + ' %' : '—', hTxt = Gflat ? m2(Gflat.height) : '—';
+          var ballast = '~' + K.kg + ' kg/module · ~' + FN.n(K.kg * Dflat.n) + ' kg for ' + Dflat.n + ' modules';
+          if (Dflat.err) ballast = '—';
+          var P_rk = P.racks || [84, 136];
+          o += '<div style="position:absolute;left:' + P_rk[0] + 'px;top:' + P_rk[1] + 'px;width:340px;' + FN.card + ';box-shadow:0 8px 24px rgba(29,32,38,.10);z-index:4;overflow:hidden">' +
+            '<div data-grip="racks" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--c-line2);cursor:grab"><b style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#0e7c86"></span>Tilt frames & racks (D-70)</b><span style="font-size:11px;color:var(--c-muted)">Flat roof · ' + FN.PACK.place + ' ' + Math.abs(FN.PACK.lat).toFixed(1) + '°' + (FN.PACK.lat < 0 ? 'S' : 'N') + '</span></div>' +
+            '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">' + (Dflat.err ? '<div role="alert" style="font-size:12px;color:var(--c-loss);line-height:1.4">' + FN.esc(Dflat.err) + '</div>' : '') +
+            '<div style="display:flex;flex-direction:column;gap:4px"><span style="' + FN.kick + '">Rack layout & tilt</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px;gap:2px">' +
+            Object.keys(FN.RACKS).map(function (k) { return [k, FN.RACKS[k].en]; }).map(function (m) { var onM = curMode === m[0]; return '<button type="button" data-a="flatMode" data-v="' + m[0] + '" style="flex:1;min-height:30px;border:none;border-radius:6px;background:' + (onM ? 'var(--c-paper)' : 'transparent') + ';color:' + (onM ? 'var(--c-sel)' : 'var(--c-ink)') + ';font:inherit;font-size:11px;font-weight:' + (onM ? 600 : 400) + ';cursor:pointer;' + (onM ? 'box-shadow:0 1px 3px rgba(29,32,38,.08)' : '') + '">' + m[1] + '</button>'; }).join('') + '</div></div>' +
+            (curMode !== 'ew10' ? '<div style="display:flex;flex-direction:column;gap:4px"><span style="' + FN.kick + '">Winter solstice shade rule</span><div style="display:flex;background:var(--c-ground);border-radius:8px;padding:3px;gap:2px">' +
+            Object.keys(FN.RULES).map(function (k) { return [k, FN.RULES[k][0]]; }).map(function (ru) { var onR = curRule === ru[0]; return '<button type="button" data-a="flatRule" data-v="' + ru[0] + '" style="flex:1;min-height:28px;border:none;border-radius:6px;background:' + (onR ? 'var(--c-paper)' : 'transparent') + ';color:' + (onR ? 'var(--c-sel)' : 'var(--c-ink)') + ';font:inherit;font-size:11px;font-weight:' + (onR ? 600 : 400) + ';cursor:pointer;' + (onR ? 'box-shadow:0 1px 3px rgba(29,32,38,.08)' : '') + '">' + ru[1] + '</button>'; }).join('') + '</div></div>' : '<div style="font-size:11px;color:var(--c-muted);line-height:1.4">East-West tent pairs: shade-free from 7:50 am on winter solstice (Fig. 6.7).</div>') +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding:6px 0;border-top:1px solid var(--c-line2);border-bottom:1px solid var(--c-line2);font-size:12px">' +
+            '<div><span style="color:var(--c-muted)">Gap D:</span> <b style="font-weight:600">' + gapTxt + '</b></div>' +
+            '<div><span style="color:var(--c-muted)">Pitch P:</span> <b style="font-weight:600">' + pitchTxt + '</b></div>' +
+            '<div><span style="color:var(--c-muted)">GCR:</span> <b style="font-weight:600">' + gcrTxt + '</b></div>' +
+            '<div><span style="color:var(--c-muted)">Height H:</span> <b style="font-weight:600">' + hTxt + '</b></div>' +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:2px"><span style="' + FN.kick + '">Estimated ballast [I]</span><span style="font-size:12px;font-weight:600;color:var(--c-ink)">' + ballast + '</span><span style="font-size:11px;color:var(--c-muted)">The frame maker\'s calculator decides, from the tilt, the height and the wind zone (AS/NZS 1170.2).</span></div>' +
+            '<div style="font-size:11px;color:var(--c-muted);display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#0e7c86;flex:none"></span>' + (FN.draw.edges('flat') ? FN.draw.edges('flat').filter(function (e) { return e.kind === 'flat'; }).length + ' flat-roof edges, typed by studio-draw' : 'Flat-roof edges') + ' · ' + FN.PACK.flatZone.toFixed(2) + ' m edge zone</div>' +
+            '</div></div>';
+        }
         if (st.toast) o += '<div style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--c-tip);color:var(--c-paper);font-size:13px;padding:9px 14px;border-radius:10px;z-index:8">' + st.toast + '</div>';
         if (st.sheet) {
           var sizes = [0, 10, 13.5, 20, 28], ratio = E.kwp / st.inv, okRatio = ratio <= 1.33;
@@ -1919,16 +2058,27 @@
           o += '<div style="position:absolute;left:84px;right:84px;bottom:12px;' + FN.card + ';border-radius:16px;padding:12px 16px;box-shadow:0 14px 36px rgba(29,32,38,.18);display:flex;flex-direction:column;gap:9px;z-index:7">' +
             '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:14px;font-weight:600">Equipment · from your catalogue and price list</b><span style="font-size:12px;color:var(--c-muted)">every choice recomputes yield, savings and incentives</span></div>' +
             '<div style="display:grid;grid-template-columns:110px repeat(3,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Modules</span>' + FN.CAT.modules.map(function (m) { return pick('modw', m.w, st.modW === m.w, m.name, '$' + m.price + ' each · warranty ' + m.warranty + ' · ' + (E.n * m.w / 1000).toFixed(2) + ' kWp'); }).join('') + '</div>' +
-            '<div style="display:grid;grid-template-columns:110px repeat(3,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Inverter</span>' + FN.CAT.inverters.map(function (x) { var r = E.kwp / x.kw, ok = r <= 1.33; return pick('inv', x.kw, st.inv === x.kw, x.name, '$' + x.price + ' · panels at ' + Math.round(r * 100) + ' %', '<span style="font-size:11px;font-weight:600;color:' + (ok ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (ok ? '✓ under the 133 % limit' : '✗ over the 133 % limit') + '</span>'); }).join('') + '</div>' +
+            '<div style="display:grid;grid-template-columns:110px repeat(3,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Inverter</span>' + FN.invChoices(E.kwp).map(function (x) { var r = E.kwp / x.kw, ok = r <= 1.33; return pick('inv', x.kw, st.inv === x.kw, x.name, '$' + x.price + ' · panels at ' + Math.round(r * 100) + ' %', '<span style="font-size:11px;font-weight:600;color:' + (ok ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (ok ? '✓ under the 133 % limit' : '✗ over the 133 % limit') + '</span>'); }).join('') + '</div>' +
             '<div style="display:grid;grid-template-columns:110px repeat(5,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Battery</span>' + sizes.map(function (z, i) {
               var sv = FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: z, ev: J ? S.measures.ev : true }).total, pv0 = i ? FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: sizes[i - 1], ev: J ? S.measures.ev : true }).total : 0;
               return pick('bat', z, st.bat === z, z ? z + ' kWh' : 'None', z ? 'rebate ' + FN.money(FN.rebate(z)) + ' · saves ' + FN.money(sv) + '/yr' : 'saves ' + FN.money(sv) + '/yr', z ? '<span style="font-size:11px;color:' + (z > 14 ? 'var(--c-loss)' : 'var(--c-muted)') + '">+' + FN.money((sv - pv0) / (z - sizes[i - 1])) + '/yr per kWh</span>' : '');
             }).join('') + '</div>' +
             '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;padding-top:2px"><span style="color:' + (okRatio ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (okRatio ? '✓' : '✗') + ' DC/AC ' + ratio.toFixed(2) + '</span><span style="color:var(--c-gain)">✓ battery and inverter compatible (hybrid)</span><span style="color:var(--c-gain)">✓ CEC-listed</span><span style="color:var(--c-gain)">✓ VPP-capable: rebate eligible</span><span style="color:var(--c-muted)">export limit 5 kW · rebate tiers 14 · 28 · 50 kWh</span></div></div>';
         }
-        if (st.present) { var vs = ['mixed', 'portrait', 'landscape'].map(function (vv) { var s2 = {}; for (var k in st) s2[k] = st[k]; s2.variant = vv; s2.removed = []; s2.filled = true; return { v: vv, e: energy(s2) }; }).sort(function (a5, b5) { return b5.e.save - a5.e.save; });
+        if (st.present) {
+          var vs = st.roof === 'flat' ? Object.keys(FN.RACKS).map(function (vv) {
+            var s2 = {}; for (var k in st) s2[k] = st[k]; s2.flatMode = vv; s2.removed = []; s2.filled = true;
+            return { v: vv, e: energy(s2), label: FN.RACKS[vv].en };
+          }).sort(function (a5, b5) { return b5.e.save - a5.e.save; }) :
+          ['mixed', 'portrait', 'landscape'].map(function (vv) {
+            var s2 = {}; for (var k in st) s2[k] = st[k]; s2.variant = vv; s2.removed = []; s2.filled = true;
+            return { v: vv, e: energy(s2), label: vv.charAt(0).toUpperCase() + vv.slice(1) };
+          }).sort(function (a5, b5) { return b5.e.save - a5.e.save; });
+          var curVar = st.roof === 'flat' ? rackMode(st) : st.variant;
+          // with options in the proposal, Present shows them, face to face (D-71)
+          var PO = J && S.options ? S.options : st.qopts.map(function (x) { return x.P; });
           o += '<div style="position:absolute;inset:0;background:var(--c-ground);display:flex;flex-direction:column;z-index:9"><div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:var(--c-paper);border-bottom:1px solid var(--c-line)"><b style="font-size:14px;font-weight:600">Your home · 14 Wattle Lane</b><span style="display:flex;gap:8px"><button type="button" data-a="unpresent" style="min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">Back to design</button>' + (J ? (function (g) { return '<button type="button" data-a="mode" data-v="' + g.v + '" style="min-height:36px;padding:0 16px;border-radius:8px;' + gateStyle(g) + ';font:inherit;font-weight:600;cursor:pointer">' + g.l + '</button>'; })(gate(E)) : '') + '</span></div><div style="flex:1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;padding:20px">' +
-            '<div style="' + FN.card + ';border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:var(--c-muted)">Three layouts, ranked on your own bill</span>' + vs.map(function (x) { var on = st.variant === x.v; return '<button type="button" data-a="pvariant" data-v="' + x.v + '" style="min-height:72px;border-radius:12px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:10px 14px;text-align:left;display:flex;justify-content:space-between;align-items:center;font:inherit;cursor:pointer"><span><b style="font-size:15px;font-weight:600">' + x.v.charAt(0).toUpperCase() + x.v.slice(1) + ' · ' + x.e.n + ' modules</b><br><span style="font-size:12px;color:var(--c-muted)">' + x.e.kwp.toFixed(2) + ' kWp · ' + FN.n(x.e.kwh) + ' kWh/yr</span></span><b style="font-size:15px;font-weight:600;color:var(--c-gain)">' + FN.money(x.e.save * 0.85) + '–' + FN.money(x.e.save * 1.1) + '</b></button>'; }).join('') + '</div>' +
+            '<div style="' + FN.card + ';border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">' + (PO.length ? '<span style="font-size:13px;color:var(--c-muted)">The options of this proposal, on your own bill</span>' + PO.map(function (Q, k) { return '<div style="min-height:72px;border-radius:12px;border:1px solid var(--c-line);background:var(--c-paper2);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px"><span><b style="font-size:15px;font-weight:600">Option ' + 'ABC'[k] + ' · ' + FN.money(Q.total) + '</b><br><span style="font-size:12px;color:var(--c-muted)">' + FN.optLabel(Q) + '</span></span><b style="font-size:15px;font-weight:600;color:var(--c-gain);white-space:nowrap">' + FN.money(Q.save * 0.85) + '–' + FN.money(Q.save * 1.1) + '</b></div>'; }).join('') + '<span style="font-size:12px;color:var(--c-muted)">Add or change options in Proposal; the household signs one.</span></div>' : '<span style="font-size:13px;color:var(--c-muted)">Three layouts, ranked on your own bill</span>' + vs.map(function (x) { var on = curVar === x.v; return '<button type="button" data-a="pvariant" data-v="' + x.v + '" style="min-height:72px;border-radius:12px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:10px 14px;text-align:left;display:flex;justify-content:space-between;align-items:center;font:inherit;cursor:pointer"><span><b style="font-size:15px;font-weight:600">' + x.label + ' · ' + x.e.n + ' modules</b><br><span style="font-size:12px;color:var(--c-muted)">' + x.e.kwp.toFixed(2) + ' kWp · ' + FN.n(x.e.kwh) + ' kWh/yr</span></span><b style="font-size:15px;font-weight:600;color:var(--c-gain)">' + FN.money(x.e.save * 0.85) + '–' + FN.money(x.e.save * 1.1) + '</b></button>'; }).join('') + '</div>') +
             '<div style="' + FN.card + ';border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:var(--c-muted)">You save, a year</span><b style="font-size:38px;font-weight:600;color:var(--c-gain)">' + (st.filled ? FN.money(E.save * 0.85) + '–' + FN.money(E.save * 1.1) : '—') + '</b><span style="font-size:13px;color:var(--c-ink2)">With ' + E.kwp.toFixed(2) + ' kWp and a ' + (st.bat ? st.bat + ' kWh' : 'no') + ' battery.</span><b style="font-size:13px;font-weight:600;margin-top:8px">What it depends on</b><span style="font-size:13px;color:var(--c-ink2)">Sunshine year to year ±8 % · evening use ±10 % · plan prices · ' + (st.chimney ? mods(st).filter(function (m) { return m.shaded; }).length + ' modules in the chimney’s winter shade' : 'no obstacle drawn') + '</span><span style="font-size:11px;color:var(--c-muted);margin-top:auto">Indicative estimate. The signed proposal freezes these numbers with the engine version.</span></div></div></div>'; }
         if (J && st.mode === -1) o += inbox();
         if (J && st.mode === 3) o += proposal(E);
@@ -1948,7 +2098,7 @@
         return o + '<span style="font-size:13px;color:var(--c-muted);line-height:1.5">You see the place and the needs as totals, never the meter readings, and never another installer’s proposal. The household’s draft design comes with the site.</span></div>';
       }
       function gate(E) {
-        if (S && S.signed) return { k: 'done', l: 'Signed by the household ✓', v: 3 };
+        if (S && S.signed) return { k: 'done', l: 'Signed by the household' + (S.options && S.options.length > 1 ? ', option ' + 'ABC'[S.pick] : '') + ' ✓', v: 3 };
         if (S && S.proposal) return { k: 'done', l: 'Proposal sent ✓', v: 3 };
         if (!st.filled) return { k: 'todo', l: 'Fill a face first ›', v: 1 };
         if (!st.eqSeen) return { k: 'todo', l: 'Check the equipment ›', v: 2 };
@@ -1965,7 +2115,7 @@
         if (st.removed.length) notes.push(['Modules', st.removed.length + ' taken off the layout by hand, to clear a vent or a shaded corner', false]);
         notes.push(['Switchboard', 'circuit breakers with room for two more; no upgrade needed', false], ['Meter', 'smart meter, import and export; the network keeps it', false]);
         st.qnotes.forEach(function (i) { notes.push([QNOTES[i][0], QNOTES[i][1], false]); });
-        return FN.offer({ n: E.n, kwp: E.kwp, eff: E.eff, kwh: E.kwh, modW: st.modW, inv: st.inv, bat: st.bat, ev: S.measures.ev, hp: S.measures.hp, save: E.save, unc: S.profile.unc, badge: S.profile.badge, roof: st.roof, obstacles: obstaclesOf(st), mods: ms.map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h }; }), chimney: st.chimney ? (parseFloat(st.chimH) || 1).toFixed(2) : 0, shaded: ms.filter(function (m) { return m.shaded && st.shade; }).length, notes: notes });
+        return FN.offer({ n: E.n, kwp: E.kwp, eff: E.eff, kwh: E.kwh, modW: st.modW, inv: st.inv, bat: st.bat, ev: S.measures.ev, hp: S.measures.hp, save: E.save, simKwp: E.kwh / FN.YIELD, rack: st.roof === 'flat' ? rackMode(st) : null, unc: S.profile.unc, badge: S.profile.badge, roof: st.roof, obstacles: obstaclesOf(st), mods: ms.map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h }; }), chimney: st.chimney ? (parseFloat(st.chimH) || 1).toFixed(2) : 0, shaded: ms.filter(function (m) { return m.shaded && st.shade; }).length, notes: notes });
       }
       function proposal(E) {
         var P = quoteData(E), u = S.profile.unc, sent = !!S.proposal, i = FN.SECTIONS.map(function (x) { return x[0]; }).indexOf(st.qs), seen = Object.keys(st.qseen).length, N = FN.SECTIONS.length;
@@ -1979,13 +2129,30 @@
           '<div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;padding-right:4px">' + FN.quoteSection(st.qs, P) +
           (st.qs === 'notes' ? '<span style="font-size:12px;color:var(--c-muted);margin-top:10px">Add what the household should know:</span><span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + QNOTES.map(function (n, k) { var on = st.qnotes.indexOf(k) >= 0; return '<button type="button" data-a="qnote" data-v="' + k + '" style="min-height:30px;padding:0 10px;border-radius:15px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:12px;cursor:pointer">' + (on ? '✓ ' : '+ ') + n[0] + '</button>'; }).join('') + '</span>' : '') + '</div>' +
           '<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--c-line2)"><button type="button" data-a="qprev"' + (i ? '' : ' disabled') + ' style="min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer;opacity:' + (i ? 1 : 0.4) + '">‹ Back</button>' + (i < N - 1 ? '<button type="button" data-a="qnext" style="min-height:36px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-weight:600;cursor:pointer">Next: ' + FN.SECTIONS[i + 1][1] + ' ›</button>' : '<span style="font-size:12.5px;color:var(--c-gain);align-self:center">Last section ✓</span>') + '</div></div>';
+        // the options the proposal holds: the design as it stands, added; then another layout, equipment or battery (D-71)
+        var key = FN.optLabel(P) + '|' + Math.round(P.total), has = st.qopts.some(function (x) { return x.key === key; });
+        var qo = sent ? S.options : st.qopts, L = 'ABC';
+        var optCard = '<div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;align-items:baseline"><span style="' + FN.kick + '">Options in this proposal</span><span style="font-size:11.5px;color:var(--c-muted)">' + qo.length + ' of 3</span></span>' +
+          qo.map(function (x, k) {
+            var Q = x.P || x, signedHere = S.signed && S.pick === k;
+            return '<span style="display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;border-bottom:1px solid var(--c-line2)"><b style="width:20px;height:20px;flex:none;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;background:' + (signedHere ? 'var(--c-sel)' : 'var(--c-selSoft)') + ';color:' + (signedHere ? 'var(--c-paper)' : 'var(--c-sel)') + '">' + L[k] + '</b><span style="flex:1;min-width:0;line-height:1.3">' + FN.optLabel(Q) + '<br><span style="color:var(--c-muted)">' + FN.money(Q.total) + (signedHere ? ' · signed ✓' : '') + '</span></span>' + (sent ? '' : '<button type="button" data-a="qdel" data-v="' + k + '" aria-label="Remove option ' + L[k] + '" style="border:none;background:transparent;color:var(--c-muted);font:inherit;font-size:14px;cursor:pointer">×</button>') + '</span>';
+          }).join('') +
+          (sent ? '' : (has ? '<span style="font-size:11.5px;color:var(--c-gain)">This design is option ' + L[st.qopts.map(function (x) { return x.key; }).indexOf(key)] + '.</span>' : st.qopts.length < 3 ? '<button type="button" data-a="qadd" style="min-height:34px;border-radius:8px;border:1px dashed var(--c-sel);background:var(--c-paper2);color:var(--c-sel);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer">+ Add this design as option ' + L[st.qopts.length] + '</button>' : '<span style="font-size:11.5px;color:var(--c-muted)">Three options at most: remove one to add this design.</span>') +
+          '<span style="font-size:11.5px;color:var(--c-muted);line-height:1.4">' + (st.qopts.length ? 'Change the layout, the equipment or the battery, then add the next. The household compares them and signs one.' : 'With none added, the proposal holds this design alone.') + '</span>') + '</div>';
         // what matters to send it: the number, the state, the files
-        o += '<div style="display:flex;flex-direction:column;gap:12px"><div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:var(--c-muted)">The household pays</span><b style="font-size:24px;font-weight:600">' + FN.money(P.total) + '</b><span style="font-size:12px;color:var(--c-gain);font-weight:600">saves ' + FN.money(E.save * (1 - u / 100)) + '–' + FN.money(E.save * (1 + u / 100)) + ' a year</span><span style="font-size:11.5px;color:var(--c-muted)">' + P.kwp.toFixed(2) + ' kWp' + (st.bat ? ' + ' + st.bat + ' kWh' : '') + ' · valid 7 days</span></div>' +
-          (function (g) { var ok = (g.k === 'go' && seen === N) || g.k === 'done', l = S.signed ? 'Signed by the household ✓' : sent ? 'Sent · on the household’s site' : g.k !== 'go' ? g.l : seen < N ? 'Review every section · ' + seen + ' of ' + N : 'Send to the household'; return '<button type="button" data-a="' + (ok ? 'send' : g.k !== 'go' ? 'mode' : 'qnext') + '" data-v="' + g.v + '" style="min-height:46px;border-radius:10px;' + gateStyle(ok || g.k === 'done' ? g : { k: 'todo' }) + ';font:inherit;font-size:14px;font-weight:600;cursor:pointer">' + l + '</button>' + (ok || sent ? '' : '<span style="font-size:11.5px;color:var(--c-muted);text-align:center;line-height:1.4">' + (g.v === 2 ? 'The household sees every line: check the equipment first.' : g.v === 1 ? 'Fill a face to price the modules.' : 'The household reads it section by section; so do you, once, before it goes.') + '</span>'); })(gate(E)) +
+        o += '<div style="display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto">' + optCard + '<div style="' + FN.card + ';padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:var(--c-muted)">The household pays</span><b style="font-size:24px;font-weight:600">' + FN.money(P.total) + '</b><span style="font-size:12px;color:var(--c-gain);font-weight:600">saves ' + FN.money(E.save * (1 - u / 100)) + '–' + FN.money(E.save * (1 + u / 100)) + ' a year</span><span style="font-size:11.5px;color:var(--c-muted)">' + P.kwp.toFixed(2) + ' kWp' + (st.bat ? ' + ' + st.bat + ' kWh' : '') + ' · valid 7 days</span></div>' +
+          (function (g) { var ok = (g.k === 'go' && seen === N) || g.k === 'done', l = S.signed ? 'Signed by the household' + (S.options && S.options.length > 1 ? ', option ' + 'ABC'[S.pick] : '') + ' ✓' : sent ? 'Sent · on the household’s site' : g.k !== 'go' ? g.l : seen < N ? 'Review every section · ' + seen + ' of ' + N : 'Send to the household'; return '<button type="button" data-a="' + (ok ? 'send' : g.k !== 'go' ? 'mode' : 'qnext') + '" data-v="' + g.v + '" style="min-height:46px;border-radius:10px;' + gateStyle(ok || g.k === 'done' ? g : { k: 'todo' }) + ';font:inherit;font-size:14px;font-weight:600;cursor:pointer">' + l + '</button>' + (ok || sent ? '' : '<span style="font-size:11.5px;color:var(--c-muted);text-align:center;line-height:1.4">' + (g.v === 2 ? 'The household sees every line: check the equipment first.' : g.v === 1 ? 'Fill a face to price the modules.' : 'The household reads it section by section; so do you, once, before it goes.') + '</span>'); })(gate(E)) +
           FN.exportsCard('installer') + '</div></div>';
         return o;
       }
       function place3d() {
+        placeBox3d();
+        if (H) { H.setRoof(st.roof, st.vtx);
+          H.setPanels(((st.filled || st.preview) && st.mods) ? mods(st).filter(function (m) { return !m.blocked && !m.removed; }).map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h, tilt: m.tilt, mode: m.mode, facing: m.facing, shaded: m.shaded && st.shade }; }) : []);
+          H.setObstacles(obstaclesOf(st)); H.bat.visible = st.bat > 0; H.setHour(st.hour3); }
+      }
+      // the 3D box and its controls, then its size and camera unless only the box moves (a drag)
+      function placeBox3d(boxOnly) {
         var b = q('.sd-3d'), c3 = q('.sd-3d-ctrl'), v = st.pos.v3;
         if (st.swapped) b.setAttribute('style', 'position:absolute;left:0;top:48px;width:1180px;height:772px;z-index:2;overflow:hidden;background:var(--c-canvas)');
         else b.setAttribute('style', 'position:absolute;left:' + (v[0] + 1) + 'px;top:' + (v[1] + 41) + 'px;width:328px;height:210px;z-index:5;overflow:hidden;background:var(--c-canvas)');
@@ -1994,16 +2161,19 @@
           c3.innerHTML = '<button type="button" data-a="proj3" title="Switch isometric and perspective" style="min-height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--c-sel);background:var(--c-selSoft);color:var(--c-sel);font:inherit;font-size:11px;font-weight:600;cursor:pointer">' + (st.iso ? 'Iso' : 'Persp') + '</button>' +
             '<button type="button" data-a="turn3" aria-label="Turn 90 degrees" title="Snap 90° around the four isometric corners" style="min-height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:11px;cursor:pointer">↻ 90°</button>';
         }
-        if (H) { H.useIso = st.iso && !st.present; H.size(st.swapped ? 1180 : 328, st.swapped ? 772 : 210); H.radius = st.swapped ? 34 : 38; H.place();
-          H.setRoof(st.roof, st.vtx);
-          H.setPanels(((st.filled || st.preview) && st.mods) ? mods(st).filter(function (m) { return !m.blocked && !m.removed; }).map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h, shaded: m.shaded && st.shade }; }) : []);
-          H.setObstacles(obstaclesOf(st)); H.bat.visible = st.bat > 0; H.setHour(st.hour3); }
+        if (H && !boxOnly) { H.useIso = st.iso && !st.present; H.size(st.swapped ? 1180 : 328, st.swapped ? 772 : 210); H.radius = st.swapped ? 34 : 38; H.place(); }
       }
       function render() { q('.sd-top').innerHTML = top(); q('.sd-plan').innerHTML = plan(); q('.sd-ui').innerHTML = ui(); place3d(); }
       // dragging bars and cards by their grip, in screen pixels whatever the scale
       var drag = null;
       el.addEventListener('pointerdown', function (e) { var g = e.target.closest('[data-grip]'); if (!g) return; var k = g.getAttribute('data-grip'), s = el.getBoundingClientRect().width / 1180; drag = { k: k, x: e.clientX, y: e.clientY, o: st.pos[k].slice(), s: s }; e.preventDefault(); });
-      window.addEventListener('pointermove', function (e) { if (!drag) return; st.pos[drag.k] = [Math.max(0, Math.min(1120, drag.o[0] + (e.clientX - drag.x) / drag.s)), Math.max(48, Math.min(780, drag.o[1] + (e.clientY - drag.y) / drag.s))]; q('.sd-ui').innerHTML = ui(); place3d(); });
+      // a card follows the pointer once a frame; the plan and the scene do not change while it moves
+      var dragFrame = 0;
+      window.addEventListener('pointermove', function (e) {
+        if (!drag) return;
+        st.pos[drag.k] = [Math.max(0, Math.min(1120, drag.o[0] + (e.clientX - drag.x) / drag.s)), Math.max(48, Math.min(780, drag.o[1] + (e.clientY - drag.y) / drag.s))];
+        if (!dragFrame) dragFrame = requestAnimationFrame(function () { dragFrame = 0; q('.sd-ui').innerHTML = ui(); placeBox3d(true); });
+      });
       window.addEventListener('pointerup', function () { drag = null; });
       var vtxDrag = null;
       el.addEventListener('pointerdown', function (e) {
@@ -2288,7 +2458,22 @@
         else if (a === 'odel') { var dl = st.selObs; if (dl === 'chim') commit({ chimney: false, selObs: '' }, 'Chimney removed'); else commit({ obs: st.obs.filter(function (o) { return o.id !== dl; }), selObs: '' }, 'Obstacle removed'); return; }
         else if (a === 'oh') { st.obs = st.obs.map(function (o) { return o.id === st.selObs ? { id: o.id, type: o.type, x: o.x, y: o.y, h: Math.max(0, Math.round((o.h + +v) * 10) / 10) } : o; }); }
         else if (a === 'ochange') { commit({ obs: st.obs.map(function (o) { return o.id === st.selObs ? { id: o.id, type: v, x: o.x, y: o.y, h: FN.OBST[v].h } : o; }) }, 'Obstacle: ' + FN.OBST[v].en); return; }
-        else if (a === 'roof') { if (v === st.roof) return; commit({ roof: v, removed: [], obs: [], chimney: false, selObs: '', vtx: null }, 'Roof type: ' + FN.ROOFS[v].en, { t: FN.ROOFS[v].en + ' roof', b: FN.ROOFS[v].say, c: 'var(--c-ink)', x: 560, y: 250 }); if (J) { S.roof = v; if (opts.onChange) opts.onChange(); } return; }
+        else if (a === 'roof') {
+          if (v === st.roof) return;
+          commit({ roof: v, removed: [], obs: [], chimney: false, selObs: '', vtx: null }, 'Roof type: ' + FN.ROOFS[v].en, { t: FN.ROOFS[v].en + ' roof', b: FN.ROOFS[v].say, c: 'var(--c-ink)', x: 560, y: 250 });
+          if (J) { S.roof = v; if (opts.onChange) opts.onChange(); }
+          return;
+        }
+        else if (a === 'flatMode') {
+          commit({ flatMode: v }, 'Rack layout: ' + FN.RACKS[v].en);
+          if (J) { S.flatMode = v; if (opts.onChange) opts.onChange(); }
+          return;
+        }
+        else if (a === 'flatRule') {
+          commit({ flatRule: v }, 'Solstice window: ' + FN.RULES[v][0]);
+          if (J) { S.flatRule = v; if (opts.onChange) opts.onChange(); }
+          return;
+        }
         else if (a === 'keep') { commit({ filled: true, preview: false }, 'Zone filled · ' + st.variant, { t: 'Zone filled', b: 'Setbacks 0.40 m from eaves and hips', c: 'var(--c-gain)', x: 420, y: 250 }); return; }
         else if (a === 'mod') { if (st.tool !== 'panel' || !st.filled) return; var r = st.removed.slice(), i = r.indexOf(v), was = i >= 0; if (was) r.splice(i, 1); else r.push(v);
           var m = mods(st).filter(function (x) { return x.id === v; })[0]; commit({ removed: r }, was ? 'Module added' : 'Module removed', { t: was ? '+1 module' : '−1 module', b: (was ? '+' : '−') + '0.44 kWp', c: was ? 'var(--c-gain)' : 'var(--c-loss)', x: Math.round(m.x + 30 + m.w + 8), y: m.y + 148 }); return; }
@@ -2303,11 +2488,17 @@
         else if (a === 'modw') { commit({ modW: +v }, 'Modules ' + v + ' W'); return; }
         else if (a === 'inv') { commit({ inv: +v }, 'Inverter ' + v + ' kW'); return; }
         else if (a === 'mode') { if (J && !S.shared && +v !== -1) return; st.mode = +v; st.present = false; if (+v === 2) st.eqSeen = true; st.sheet = +v === 2; if (J && +v === 1) S.opened = true; }
-        else if (a === 'open') { if (!S.opened) { st.roof = S.roof || 'hip'; st.inv = (S.kwp || 7.04) / 6 <= 1.33 ? 6 : 8; } if (S.proposal) { st.mode = 3; } else { st.mode = 1; if (!S.opened) st.bat = S.measures.bat ? 13.5 : 0; S.opened = true; } if (opts.onChange) opts.onChange(); }
-        else if (a === 'send') { if (!S.proposal && st.lastOffer) { S.proposal = st.lastOffer; if (opts.onChange) opts.onChange(); } }
+        else if (a === 'open') { if (!S.opened) { st.roof = S.roof || 'hip'; if (S.roof === 'flat') { st.flatMode = S.flatMode || null; st.flatRule = S.flatRule || FN.PACK.rule; } st.inv = FN.invFor(S.kwp || 7.04); } if (S.proposal) { st.mode = 3; } else { st.mode = 1; if (!S.opened) st.bat = S.measures.bat ? 13.5 : 0; S.opened = true; } if (opts.onChange) opts.onChange(); }
+        else if (a === 'send') { if (!S.proposal && st.lastOffer) { S.options = st.qopts.length ? st.qopts.map(function (x) { return x.P; }) : [st.lastOffer]; S.pick = 0; S.proposal = S.options[0]; if (opts.onChange) opts.onChange(); } }
+        else if (a === 'qadd') { if (st.lastOffer && st.qopts.length < 3) { var P1 = st.lastOffer; st.qopts.push({ P: P1, key: FN.optLabel(P1) + '|' + Math.round(P1.total) }); } }
+        else if (a === 'qdel') { st.qopts.splice(+v, 1); }
         else if (a === 'present') { touch(); st.present = true; st.sheet = false; st.notif = false; st.settings = false; check(); }
         else if (a === 'unpresent') st.present = false;
-        else if (a === 'pvariant') { st.variant = v; st.removed = []; }
+        else if (a === 'pvariant') {
+          if (st.roof === 'flat') { st.flatMode = v; if (J) S.flatMode = v; }
+          else st.variant = v;
+          st.removed = [];
+        }
         else if (a === 'notif') { st.notif = !st.notif; st.settings = false; st.layers = false; }
         else if (a === 'settings') { st.settings = !st.settings; st.notif = false; st.layers = false; }
         else if (a === 'level') st.level = +v;
@@ -2339,7 +2530,7 @@
         }
         else if (a === 'undo') {
           if (!st.hist.length) return;
-          var curSnap = JSON.stringify({ filled: st.filled, variant: st.variant, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
+          var curSnap = JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
           var last = st.hist.pop(), sn = JSON.parse(last.snap);
           st.rhist.push({ snap: curSnap, label: last.label, logItem: st.log[0] });
           for (var k in sn) st[k] = sn[k];
@@ -2347,7 +2538,7 @@
         }
         else if (a === 'redo') {
           if (!st.rhist.length) return;
-          var curSnap2 = JSON.stringify({ filled: st.filled, variant: st.variant, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
+          var curSnap2 = JSON.stringify({ filled: st.filled, variant: st.variant, flatMode: st.flatMode, flatRule: st.flatRule, chimney: st.chimney, chimH: st.chimH, removed: st.removed, bat: st.bat, roof: st.roof, cx: st.cx, cy: st.cy, obs: st.obs, zones: st.zones, dims: st.dims, pins: st.pins, vtx: st.vtx });
           var nxt = st.rhist.pop(), sn2 = JSON.parse(nxt.snap);
           st.hist.push({ snap: curSnap2, label: nxt.label });
           for (var k2 in sn2) st[k2] = sn2[k2];
@@ -2461,10 +2652,15 @@
     function unc() { var P = st.prof, u = 30; [['people', 6], ['home', 4], ['hvac', 4], ['hw', 4], ['cook', 1], ['pool', 2], ['have', 1]].forEach(function (k) { if (P.ans[k[0]] !== undefined) u -= k[1]; }); if (P.bill) u = Math.min(u, 12); if (P.meter) u = 5; return u; }
     function badge() { return st.prof.meter ? 'Measured' : st.prof.bill ? 'From your bills' : 'Estimated'; }
     function filled() { return S.measures.solar; }
+    // a flat roof's rack variants, most energy first, and the one the household has (the first until it picks, D-70)
+    function racksOf() { return FN.draw.rackVariants([], FN.PACK.rule); }
+    function rackOf() { return S.flatMode || racksOf()[0].id; }
     // the north face's layout for the household's roof type, from studio-draw (or its fallback)
-    function fillOf() { return FN.draw.compute(S.roof || 'hip', [], 'portrait'); }
+    function fillOf() { return S.roof === 'flat' ? FN.draw.compute('flat', [], null, { mode: rackOf(), rule: FN.PACK.rule }) : FN.draw.compute(S.roof || 'hip', [], 'portrait'); }
     function kwpOf() { return S.measures.solar && S.kwp ? S.kwp : fillOf().n * 0.44; }
-    function opt(m) { return { plan: m.plan ? 'best' : 'flat', kwp: m.solar ? kwpOf() : 0, cap: m.bat ? 13.5 : 0, ev: m.ev, hp: m.hp }; }
+    // the kWp FN.sim needs: on racks, each variant's yield per kWp (chapter 6) instead of FN.sim's own
+    function simKwp(kwp) { return S.roof === 'flat' ? kwp * FN.RACKS[rackOf()].yield / FN.YIELD : kwp; }
+    function opt(m) { return { plan: m.plan ? 'best' : 'flat', kwp: m.solar ? simKwp(kwpOf()) : 0, cap: m.bat ? 13.5 : 0, ev: m.ev, hp: m.hp }; }
     function done(i) { return [!!st.chosen, filled(), st.max > 2, S.shared, S.signed][i]; }
     function reach(i) { for (var k = 0; k < i; k++) if (!done(k)) return false; return i < 4 || !!S.proposal; }
     function P0() { var P = S.proposal; return P ? P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + ' · ' + FN.money(P.total) : ''; }
@@ -2492,7 +2688,7 @@
       var bestPlan = ['Simple Saver', 'Time of Use Saver'].sort(function (a, b) { return cost(a) - cost(b); })[0];
       if (!st.chosen) return { t: 'Switch to ' + bestPlan, g: '−' + FN.money(cost('Flat Rate') - cost(bestPlan)) + ' a year', e: '2 minutes, nothing to install', why: 'every kWh costs 5 c less, and nothing changes at home', act: 'plan', v: bestPlan, lab: 'Choose it' };
       if (!known() && s === 0) return { t: 'Add your bill', g: 'your own ranking, ±12 % instead of ±30 %', e: 'one photo', why: 'plans are priced on when you use energy, and only your bill or meter knows', act: 'src', v: 'bill', lab: 'Add a photo' };
-      if (!S.measures.solar) return { t: 'Your roof', g: 'about −' + FN.money(seg('solar').d) + ' a year', e: '3 touches', why: Math.round(share(7, 17) / 15 * 100) + ' % of your use falls when the sun shines, and your north face takes ' + fillOf().n + ' modules', act: s === 1 ? '' : 'go', v: 1, lab: 'Go there ›', here: 'confirm the faces, then fill the north face' };
+      if (!S.measures.solar) return { t: 'Your roof', g: 'about −' + FN.money(seg('solar').d) + ' a year', e: '3 touches', why: Math.round(share(7, 17) / 15 * 100) + ' % of your use falls when the sun shines, and your ' + (S.roof === 'flat' ? 'roof' : 'north face') + ' takes ' + fillOf().n + ' modules', act: s === 1 ? '' : 'go', v: 1, lab: 'Go there ›', here: 'confirm the faces, then fill the north face' };
       var left = ['bat', 'ev', 'hp'].filter(function (k) { return !S.measures[k]; }).map(function (k) { var d = seg(k).d; return { k: k, d: d, pay: d > 0 ? INFO[k][2] / d : 99 }; }).filter(function (m) { return m.pay < 15; }).sort(function (a, b) { return a.pay - b.pay; });
       if (left.length && !S.shared) {
         var m = left[0], why = { bat: share(17, 23).toFixed(1) + ' kWh of your day falls between 5 and 11 pm, after the sun', ev: 'your petrol costs about $2,044 a year, and the car would charge at noon on your own solar', hp: 'your gas hot water costs $520 a year; a heat pump heats it at noon on solar' }[m.k];
@@ -2500,7 +2696,7 @@
       }
       if (!S.shared) return { t: 'Share your project', g: 'a real quote on your own roof', e: 'you choose who sees it', why: 'an installer starts from your roof and your draft, not from a phone call', act: s === 3 ? '' : 'go', v: 3, lab: 'Go there ›', here: 'name who receives it, then share' };
       if (!S.proposal) return { t: 'Installer 1 is designing', g: 'its proposal comes back to step 5', e: 'nothing to do', why: 'it adds what the survey finds, then prices the equipment', act: '', v: 0 };
-      if (!S.signed) { var gap = S.proposal.save - (FN.TODAY() - FN.sim(opt(S.measures)).total); return { t: 'Read the proposal', g: '−' + FN.money(S.proposal.save) + ' a year promised', e: '9 short sections', why: Math.abs(gap) < 60 ? 'it matches our independent estimate' : 'it differs from our estimate by ' + FN.money(gap) + ', and step 5 says why', act: s === 4 ? '' : 'go', v: 4, lab: 'Open it ›', here: 'read it section by section, then sign' }; }
+      if (!S.signed) { var gap = S.proposal.save - (FN.TODAY() - FN.sim(opt(S.measures)).total); return { t: 'Read the proposal', g: '−' + FN.money(S.proposal.save) + ' a year promised', e: (S.options && S.options.length > 1 ? S.options.length + ' options, ' : '') + '9 short sections', why: Math.abs(gap) < 60 ? 'it matches our independent estimate' : 'it differs from our estimate by ' + FN.money(gap) + ', and step 5 says why', act: s === 4 ? '' : 'go', v: 4, lab: 'Open it ›', here: 'read it section by section, then sign' }; }
       return { t: 'Signed', g: '−' + FN.money(S.proposal.save) + ' a year promised', e: 'done', why: 'after installation, this card will put what your meter measures beside what was promised', act: '', v: 0 };
     }
     function progressCard() {
@@ -2650,25 +2846,58 @@
     // step 2 · roof
     // the roof type, asked in pictures: the 3D home and the fill follow it
     function roofPick() {
-      var pic = { hip: 'M4 22 L14 10 H26 L36 22 Z', gable: 'M4 22 L8 10 H32 L36 22 Z M8 10 V22 M32 10 V22', skillion: 'M4 22 V14 L36 8 V22 Z' };
+      var pic = {
+        hip: 'M4 22 L14 10 H26 L36 22 Z',
+        gable: 'M4 22 L8 10 H32 L36 22 Z M8 10 V22 M32 10 V22',
+        skillion: 'M4 22 V14 L36 8 V22 Z',
+        flat: 'M4 18 H36 V22 H4 Z'
+      };
       return '<span style="font-size:12px;color:var(--c-muted)">What does your roof look like?</span><span style="display:flex;gap:6px;margin-bottom:4px">' + Object.keys(FN.ROOFS).map(function (k) { var on = (S.roof || 'hip') === k; return '<button type="button" data-a="roof" data-v="' + k + '" aria-pressed="' + on + '" style="flex:1;min-height:58px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:' + (on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;font-size:11.5px;cursor:pointer"><svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true"><path d="' + pic[k] + '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>' + FN.ROOFS[k].en + '</button>'; }).join('') + '</span>';
     }
     function stepRoof() {
+      var isFlat = (S.roof === 'flat');
       var R = FN.ROOFS[S.roof || 'hip'], all3 = R.pv.every(function (k) { return st.conf[k]; }), F0 = fillOf(), mods = F0.mods, f = filled();
       var o = '<div style="position:absolute;left:12px;top:12px;bottom:12px;width:80px;' + FN.card + ';display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px" role="toolbar">' + [['confirm', 'Confirm', false], ['fill', 'Fill zone', !all3]].map(function (t) { var on = st.tool === t[0]; return '<button type="button" data-a="tool" data-v="' + t[0] + '"' + (t[2] ? ' disabled' : '') + ' style="width:64px;min-height:64px;border:none;border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (t[2] ? 'var(--c-faint)' : on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;font:inherit;cursor:pointer">' + FN.icon(t[0]) + '<span style="font-size:11px">' + t[1] + '</span></button>'; }).join('') + '</div>';
       o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 480" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + FN.draw.defs() + '<rect x="150" y="110" width="740" height="480" fill="url(#sd-grid-dots)"></rect><rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".13"></rect>' + Object.keys(R.faces).map(function (k) { var pv = R.pv.indexOf(k) >= 0, c = pv && st.conf[k], hi = pv && !c; return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') : k === 'S' ? 'var(--c-roofS)' : 'var(--c-selSoft)') + '" stroke="' + (hi ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (hi ? 2.5 : 1.1) + '" style="cursor:pointer"></path><path d="' + R.faces[k] + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" pointer-events="none"></path>'; }).join('') +
         ((f || st.preview) ? mods.map(function (m) { return FN.draw.modSvg(m, !f, false, true); }).join('') : '') + FN.draw.ridges(S.roof || 'hip') + '</svg>' +
         '<span style="position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">LiDAR-measured · 0.91 · our drawing, not a photo</span>' +
         (st.preview && !f ? '<div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);' + FN.card + ';padding:6px;display:flex;gap:6px;align-items:center"><span style="font-size:13px;color:var(--c-muted);padding:0 8px">' + F0.n + ' modules · ' + (F0.n * 0.44).toFixed(2) + ' kWp · ' + FN.n(F0.n * 0.44 * 1460) + ' kWh/yr</span><button type="button" data-a="keep" style="min-height:42px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-size:13px;font-weight:600;cursor:pointer">✓ Keep</button></div>' : '') + '</div>';
-      o += '<div style="position:absolute;right:12px;top:12px;bottom:12px;width:328px;' + FN.card + ';padding:16px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px;font-weight:600">' + (!all3 ? 'Is this your roof?' : !f ? 'Fill your roof' : 'Your roof is ready') + '</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">' + (!all3 ? (R.pv.length > 1 ? 'Tap each face to confirm it: north, west and east. The south face gets no panels.' : 'Tap the north face to confirm it: it is the one that takes the panels.') : !f ? 'Fill zone, the north face, then ✓ Keep: three touches.' : F0.n + ' modules on the north face after 0.40 m setbacks from the edges. Next: what solar, a battery, a car or a heat pump would change.') + '</span>' +
-        roofPick() + R.pv.map(function (k) { return '<span style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span>' + { N: 'North', W: 'West', E: 'East' }[k] + ' · ' + R.pitch + '°</span><b style="color:' + (st.conf[k] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st.conf[k] ? 'confirmed' : 'to confirm') + '</b></span>'; }).join('') + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">Faces fitted from open LiDAR by our API when the site was created; your confirmation goes into the place layer of your site.</span></div>';
+
+      var sideHeader = !all3 ? 'Is this your roof?' : !f ? (isFlat ? 'Choose rack variant' : 'Fill your roof') : 'Your roof is ready';
+      var sideText = !all3 ? (R.pv.length > 1 ? 'Tap each face to confirm it: north, west and east. The south face gets no panels.' : 'Tap the roof to confirm it: modules stand on tilted racks.') : !f ? (isFlat ? 'Your roof takes modules on tilted racks, no angle to choose: the layout with the most energy is selected. Compare, then Fill zone and ✓ Keep.' : 'Fill zone, the north face, then ✓ Keep: three touches.') : (F0.n + (isFlat ? ' modules on tilted racks, ' + FN.PACK.flatZone.toFixed(2) + ' m inside the roof\'s edges' : ' modules on the north face after 0.40 m setbacks from the edges') + '. Next: what solar, a battery, a car or a heat pump would change.');
+
+      // the variants as cards, money first: each laid out by studio-draw, the one with the most energy preselected (D-70)
+      var rackCards = '';
+      if (isFlat && all3) {
+        var V = racksOf(), top = V[0], cur = rackOf(), u = unc(), o0 = opt(S.measures);
+        o0.kwp = 0;
+        var without = FN.sim(o0).total;
+        var why = function (v) {
+          if (v === top) return 'The most energy on your roof: ' + v.n + ' modules' + (FN.RACKS[v.id].mode ? ' in back-to-back pairs, a 30 cm aisle between them.' : ', rows ' + v.geom.gap.toFixed(2) + ' m apart so none shades the next in winter.');
+          var per = Math.round((v.yield / top.yield - 1) * 100), more = v.n - top.n;
+          if (more > 0) return more + ' more modules fit, but each makes ' + -per + ' % less: less energy in all.';
+          return (per > 0 ? per + ' % more per module, but ' : per < 0 ? -per + ' % less per module, and ' : '') + (more < 0 ? -more + ' fewer modules fit' + (v.geom && v.geom.gap > 1 ? ': steeper rows need ' + v.geom.gap.toFixed(2) + ' m between them.' : '.') : 'as many modules.');
+        };
+        rackCards = '<div style="display:flex;flex-direction:column;gap:6px;margin:4px 0">' + V.map(function (v) {
+          var sel = cur === v.id, o1 = opt(S.measures);
+          o1.kwp = v.simKwp;
+          var d = without - FN.sim(o1).total;
+          return '<button type="button" data-a="rackMode" data-v="' + v.id + '" aria-pressed="' + sel + '" style="text-align:left;padding:8px 10px;border-radius:8px;border:1px solid ' + (sel ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (sel ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';font:inherit;cursor:pointer">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:12.5px;color:var(--c-ink)">' + v.label + (v === top ? ' · <span style="color:var(--c-gain)">the most energy</span>' : '') + '</b><span style="font-size:12px;font-weight:600;color:var(--c-gain);white-space:nowrap">saves ' + FN.money(d * (1 - u / 100)) + '–' + FN.money(d * (1 + u / 100)) + '/yr</span></div>' +
+            '<div style="font-size:11.5px;color:var(--c-muted);margin-top:2px">' + v.n + ' modules · ' + v.kwp.toFixed(2) + ' kWp · ' + (v.kwh / 1000).toFixed(1) + ' MWh/yr</div>' +
+            '<div style="font-size:11px;color:var(--c-ink2);margin-top:2px">' + why(v) + '</div></button>';
+        }).join('') + '</div>';
+      }
+
+      o += '<div style="position:absolute;right:12px;top:12px;bottom:12px;width:328px;' + FN.card + ';padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto"><b style="font-size:16px;font-weight:600">' + sideHeader + '</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">' + sideText + '</span>' +
+        roofPick() + rackCards + (!isFlat ? R.pv.map(function (k) { return '<span style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span>' + { N: 'North', W: 'West', E: 'East' }[k] + ' · ' + R.pitch + '°</span><b style="color:' + (st.conf[k] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st.conf[k] ? 'confirmed' : 'to confirm') + '</b></span>'; }).join('') : '') + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">Faces fitted from open LiDAR by our API when the site was created; your confirmation goes into the place layer of your site.</span></div>';
       return o;
     }
     // what the household gets, and the incentives that come with it (design/markets/incentives)
     function equipment(M) {
       var r = [];
-      if (M.solar) r.push(['pv', 'Solar panels', fillOf().n + ' × 440 W monocrystalline · ' + kwpOf().toFixed(2) + ' kWp', '25-year warranty', 'fits the north face after 0.40 m setbacks']);
-      if (M.solar || M.bat) { var kv = kwpOf(), iv = kv / 6 <= 1.33 ? 6 : 8; r.push(['plan', 'Hybrid inverter', iv + ' kW, battery-ready', '10 years', 'panels at ' + Math.round(kv / iv * 100) + ' % of the inverter, under the 133 % limit']); }
+      if (M.solar) r.push(['pv', 'Solar panels', fillOf().n + ' × 440 W monocrystalline · ' + kwpOf().toFixed(2) + ' kWp', '25-year warranty', S.roof === 'flat' ? 'on tilted racks, ' + FN.RACKS[rackOf()].en : 'fits the north face after 0.40 m setbacks']);
+      if (M.solar || M.bat) { var kv = kwpOf(), iv = FN.invFor(kv); r.push(['plan', 'Hybrid inverter', iv + ' kW, battery-ready', '10 years', 'panels at ' + Math.round(kv / iv * 100) + ' % of the inverter, under the 133 % limit']); }
       if (M.bat) r.push(['battery', 'Home battery', '13.5 kWh lithium iron phosphate, VPP-ready', '10 years', 'carries most of your evening']);
       if (M.ev) r.push(['car', 'Car charger', '7 kW single phase, charges on solar', '3 years', '40 km a day, charged at noon']);
       if (M.hp) r.push(['heat', 'Heat-pump water heater', '270 L', '7 years', 'replaces gas; runs at midday']);
@@ -2717,7 +2946,7 @@
       var o = '<div style="position:absolute;inset:12px;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px"><div style="' + FN.card + ';padding:20px;display:flex;flex-direction:column;gap:12px"><b style="font-size:22px;font-weight:600">Who installs it?</b>' +
         [['An installer I choose', 'You pick; they receive your home after you consent.'], ['Let Solar Designer propose', 'Matched on area and skills. You see who before they see you.'], ['Keep it for now', 'Saved in My home.']].map(function (n, i) { return '<button type="button" data-a="who" data-v="' + i + '" style="min-height:68px;border-radius:12px;border:1px solid ' + (st.next === i ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (st.next === i ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);text-align:left;padding:10px 14px;display:flex;flex-direction:column;gap:3px;font:inherit;cursor:pointer"><b style="font-size:15px;font-weight:600">' + n[0] + '</b><span style="font-size:13px;color:var(--c-muted)">' + n[1] + '</span></button>'; }).join('') + '</div>';
       o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:18px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px;font-weight:600">Before anyone sees your home</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5"><b>Installer 1</b> (9 km, batteries) would receive:</span>' +
-        [['Your roof', '3 faces confirmed, our drawing'], ['Your needs', '15 kWh a day, as totals · ' + badge()], ['Your draft', w.join(' · ')], ['Never', 'your meter readings, another installer’s proposal, a phone call you did not ask for']].map(function (r) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;text-align:right">' + r[1] + '</b></span>'; }).join('') +
+        [['Your roof', (S.roof === 'flat' ? 'flat roof confirmed, ' + FN.RACKS[rackOf()].en + ' racks' : FN.ROOFS[S.roof || 'hip'].pv.length + (FN.ROOFS[S.roof || 'hip'].pv.length > 1 ? ' faces' : ' face') + ' confirmed') + ', our drawing'], ['Your needs', '15 kWh a day, as totals · ' + badge()], ['Your draft', w.join(' · ')], ['Never', 'your meter readings, another installer’s proposal, a phone call you did not ask for']].map(function (r) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;text-align:right">' + r[1] + '</b></span>'; }).join('') +
         '<button type="button" data-a="share" style="margin-top:auto;min-height:48px;border-radius:10px;border:none;background:' + (S.shared ? 'var(--c-selSoft)' : 'var(--c-live)') + ';color:' + (S.shared ? 'var(--c-sel)' : 'var(--c-onLive)') + ';font:inherit;font-size:15px;font-weight:600;cursor:pointer">' + (S.shared ? 'Shared with Installer 1 ✓ · see the installer’s screen' : 'Share my home with Installer 1') + '</button></div></div>';
       return o;
     }
@@ -2744,7 +2973,13 @@
       var signBtn = '<button type="button" data-a="' + (allRead || S.signed ? 'sign' : 'qopen') + '" style="min-height:46px;border-radius:10px;border:' + (allRead || S.signed ? 'none' : '1px solid var(--c-line)') + ';background:' + (S.signed ? 'var(--c-selSoft)' : allRead ? 'var(--c-live)' : 'var(--c-paper2)') + ';color:' + (S.signed ? 'var(--c-sel)' : allRead ? 'var(--c-onLive)' : 'var(--c-ink)') + ';font:inherit;font-size:15px;font-weight:600;cursor:pointer">' + (S.signed ? 'Signed ✓ · frozen with its engine version' : allRead ? 'Sign' : seenN ? 'Read on to sign · ' + seenN + ' of ' + N : 'Read the quote: ' + N + ' short sections ›') + '</button>';
       o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-height:0">';
       if (!st.qopen) {
-        o += '<span style="font-size:13px;color:var(--c-sel);font-weight:600">Installer 1 · proposal · Q-2026-0148</span><b style="font-size:22px;font-weight:600">' + P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + '</b>' +
+        // several options: side by side first, money first; the household reads and signs the one it picks (D-71)
+        var OP = S.options || [P], L = 'ABC';
+        if (OP.length > 1) o += '<span style="font-size:13px;color:var(--c-sel);font-weight:600">Installer 1 · ' + OP.length + ' options · pick one to read and sign</span><div role="radiogroup" aria-label="Options" style="display:grid;grid-template-columns:repeat(' + OP.length + ',minmax(0,1fr));gap:6px">' + OP.map(function (Q, k) {
+          var on = (S.pick || 0) === k, lock = S.signed && !on;
+          return '<button type="button" role="radio" aria-checked="' + on + '" data-a="qopt" data-v="' + k + '"' + (S.signed ? ' disabled' : '') + ' style="text-align:left;padding:8px 10px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;cursor:' + (S.signed ? 'default' : 'pointer') + ';opacity:' + (lock ? 0.5 : 1) + '"><b style="font-size:12px;color:var(--c-sel)">Option ' + L[k] + '</b><b style="display:block;font-size:15px;font-weight:600">' + FN.money(Q.total) + '</b><span style="display:block;font-size:11.5px;color:var(--c-gain);font-weight:600">saves ' + FN.money(Q.save * (1 - u / 100)) + '–' + FN.money(Q.save * (1 + u / 100)) + '/yr</span><span style="display:block;font-size:11px;color:var(--c-muted);line-height:1.3;margin-top:2px">' + FN.optLabel(Q) + '</span></button>';
+        }).join('') + '</div>';
+        o += '<span style="font-size:13px;color:var(--c-sel);font-weight:600">Installer 1 · proposal · Q-2026-0148' + (OP.length > 1 ? ' · option ' + L[S.pick || 0] : '') + '</span><b style="font-size:22px;font-weight:600">' + P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + '</b>' +
           [['You pay, after certificates', FN.money(P.total)], ['Savings, on your bill', FN.money(P.save * (1 - u / 100)) + '–' + FN.money(P.save * (1 + u / 100)) + ' a year'], ['Valid until', '7 Nov 2026']].map(function (r) { return '<span style="display:flex;justify-content:space-between;font-size:14px;padding:7px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600">' + r[1] + '</b></span>'; }).join('') +
           '<div style="border:2px solid var(--c-sel);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;background:var(--c-selSoft);margin-top:4px"><b>Your right to cancel.</b> If you did not ask to be contacted, you can cancel within 10 business days of signing, without penalty. No payment and no work in that time.</div>' +
           '<span style="font-size:12.5px;color:var(--c-ink2);line-height:1.5;margin-top:4px">The quote holds ' + N + ' short sections: ' + FN.SECTIONS.map(function (x) { return x[1].toLowerCase(); }).join(', ') + '. Each opens with one line; the detail is under it.</span>' +
@@ -2779,7 +3014,7 @@
       q('.hh-body').innerHTML = [stepEnergy, stepRoof, stepNext, stepShare, stepProposal][s]();
       var canNext = (s === 2 ? filled() : done(s)) && s < 4 && (s === 2 || reach(s + 1));
       var need = ['Pick a plan to go on', 'Confirm the faces, then fill', 'Next', 'Share to go on', ''][s];
-      q('.hh-foot').innerHTML = '<button type="button" data-a="back"' + (s ? '' : ' disabled') + ' style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:' + (s ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;cursor:pointer">Back</button><span style="flex:1;font-size:13px;color:var(--c-ink2)">' + ['Pick the plan you take; your bill makes the ranking yours.', 'Confirm the three faces, then fill the north face.', 'Add what you want; each move shows its effect on top of the others.', 'Name who receives your home, then share.', S.proposal ? 'Read the proposal, then sign.' : 'The installer works on its own screen.'][s] + '</span>' +
+      q('.hh-foot').innerHTML = '<button type="button" data-a="back"' + (s ? '' : ' disabled') + ' style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:' + (s ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;cursor:pointer">Back</button><span style="flex:1;font-size:13px;color:var(--c-ink2)">' + ['Pick the plan you take; your bill makes the ranking yours.', (FN.ROOFS[S.roof || 'hip'].pv.length > 1 ? 'Confirm the three faces, then fill the north face.' : S.roof === 'flat' ? 'Confirm the roof, compare the rack layouts, then fill it.' : 'Confirm the north face, then fill it.'), 'Add what you want; each move shows its effect on top of the others.', 'Name who receives your home, then share.', S.proposal ? 'Read the proposal, then sign.' : 'The installer works on its own screen.'][s] + '</span>' +
         (s < 4 ? '<button type="button" data-a="next"' + (canNext ? '' : ' disabled') + ' style="min-width:170px;min-height:44px;padding:0 18px;border-radius:10px;border:none;background:' + (canNext ? 'var(--c-live)' : 'var(--c-line)') + ';color:' + (canNext ? 'var(--c-onLive)' : 'var(--c-ink2)') + ';font:inherit;font-size:14px;font-weight:600;cursor:' + (canNext ? 'pointer' : 'default') + '">' + (canNext ? 'Next · ' + STEPS[s + 1] : need) + '</button>' : '');
       var box = q('.hh-3d'); box.style.display = s === 2 && st.view4 !== 'eq' ? 'block' : 'none'; box.style.top = '157px'; box.style.left = '385px'; box.style.width = '782px'; box.style.height = '526px';
       if (H) { H.size(782, 526); H.setRoof(S.roof || 'hip'); H.setPanels(S.measures.solar ? (S.layout || []) : []); H.bat.visible = S.measures.bat; H.car.visible = S.measures.ev; H.hp.visible = S.measures.hp; H.setHour(st.hour); H.useTop = st.top; }
@@ -2802,7 +3037,8 @@
       else if (a === 'ans') { var p = v.split('|'); P.ans[p[0]] = isNaN(+p[1]) ? p[1] : +p[1]; st.lens = 'use'; var nx = GROUPS.filter(function (g) { return P.ans[g[0]] === undefined; })[0]; st.openG = nx ? nx[0] : ''; }
       else if (a === 'season') st.season = v;
       else if (a === 'face') { if (FN.ROOFS[S.roof].pv.indexOf(v) >= 0 && !st.conf[v]) st.conf[v] = true; else if (st.tool === 'fill' && v === 'N' && !filled()) st.preview = true; }
-      else if (a === 'roof') { if (v !== S.roof) { S.roof = v; st.conf = {}; st.preview = false; S.measures.solar = false; S.layout = null; S.kwp = 0; st.tool = 'confirm'; } }
+      else if (a === 'rackMode') { S.flatMode = v; if (filled()) { var F = fillOf(); S.layout = F.mods; S.kwp = F.n * 0.44; } }
+      else if (a === 'roof') { if (v !== S.roof) { S.roof = v; st.conf = {}; st.preview = false; S.measures.solar = false; S.layout = null; S.kwp = 0; st.tool = 'confirm'; S.flatMode = null; } }
       else if (a === 'tool') { st.tool = v; st.preview = false; }
       else if (a === 'keep') { var F0 = fillOf(); S.measures.solar = true; S.layout = F0.mods; S.kwp = F0.n * 0.44; st.preview = false; }
       else if (a === 'move') S.measures[v] = !S.measures[v];
@@ -2812,7 +3048,8 @@
       else if (a === 'play') { if (timer) { clearInterval(timer); timer = null; } else timer = setInterval(function () { st.hour = (st.hour + 1) % 24; render(); }, 650); }
       else if (a === 'who') st.next = +v;
       else if (a === 'share') { if (!S.shared) { S.shared = true; S.sharedAt = 'today'; } }
-      else if (a === 'sign') { if (S.proposal) S.signed = true; }
+      else if (a === 'sign') { if (S.proposal) { S.signed = true; S.pick = S.pick || 0; } }
+      else if (a === 'qopt') { if (S.options && !S.signed) { S.pick = +v; S.proposal = S.options[S.pick]; } }
       else if (a === 'qopen') { st.qopen = true; var ks = FN.SECTIONS.map(function (x) { return x[0]; }); st.qs = ks.filter(function (k) { return !st.qseen[k]; })[0] || st.qs; }
       else if (a === 'qclose') st.qopen = false;
       else if (a === 'qs') { st.qopen = true; st.qs = v; }
@@ -2870,7 +3107,9 @@
     if (d.ev) lines.push(['Car charger, 7 kW', 'price list', c.charger]);
     lines.push(['Installation and design', 'price list', c.install], [stc + ' solar certificates (STC)', 'open-energy', -stc * FN.STC]);
     if (d.bat) lines.push([bc + ' battery certificates', 'open-energy', -FN.rebate(d.bat)]);
-    var o = { plan: 'best', kwp: d.eff, ev: d.ev, hp: d.hp }, solo = FN.sim(o), withB = d.bat ? FN.sim({ plan: 'best', kwp: d.eff, ev: d.ev, hp: d.hp, cap: d.bat }) : solo;
+    // on racks, FN.sim gets the kWp that gives the variant's own yield (chapter 6)
+    var kw = d.simKwp != null ? d.simKwp : d.eff;
+    var o = { plan: 'best', kwp: kw, ev: d.ev, hp: d.hp }, solo = FN.sim(o), withB = d.bat ? FN.sim({ plan: 'best', kwp: kw, ev: d.ev, hp: d.hp, cap: d.bat }) : solo;
     var self = function (r) { var pv = 0, ex = 0; for (var h = 0; h < 24; h++) { pv += r.pv[h]; ex += r.exp[h]; } return pv ? (pv - ex) / pv : 0; };
     var solarSave = FN.TODAY() - solo.total - (d.ev ? 2044 : 0) - (d.hp ? 520 : 0), batSave = d.bat ? solo.total - withB.total : 0;
     var p = {}; for (var k in d) p[k] = d[k];
@@ -2880,6 +3119,10 @@
     return p;
   };
 
+  // an option of a proposal in a few words: the rack layout on a flat roof, the modules, the battery (D-71)
+  FN.optLabel = function (P) {
+    return (P.rack && FN.RACKS[P.rack] ? FN.RACKS[P.rack].en + ' · ' : '') + P.n + ' × ' + P.modW + ' W · ' + P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : ', no battery');
+  };
   // strings: the north face split over the inverter's two MPPT inputs, checked hot and cold
   FN.strings = function (P) {
     var s = FN.SPEC[P.modW], a = Math.ceil(P.n / 2), b = P.n - a, cold = s.voc * (1 + 0.0026 * 25), hot = s.vmp * (1 - 0.0034 * 45);
@@ -3004,14 +3247,17 @@
   // otherwise. Geometry and counts only (ADR-001): the shade drawn behind tall obstacles is illustrative.
 
   // roof types: their faces in plan, the north face as studio-draw sees it (edge kinds: 0 eave, 1 ridge,
-  // 2 hip, 4 rake), its pitch, and how the 3D scene builds it
+  // 2 hip, 4 rake, 6 flat-roof edge), its pitch, how heights rise (to a ridge, or one plane rising to the
+  // south) for the edge typing, and how the 3D scene builds it
   FN.ROOFS = {
     hip: { en: 'Hip', fr: 'Croupe', pitch: 22, depth: 5, ridgeLen: 7.5, faces: { N: 'M218 156 L818 156 L668 356 L368 356 Z', S: 'M218 556 L818 556 L668 356 L368 356 Z', W: 'M218 156 L368 356 L218 556 Z', E: 'M818 156 L668 356 L818 556 Z' },
       north: [[218, 156, 0], [818, 156, 2], [668, 356, 1], [368, 356, 2]], ridge: [368, 356, 668, 356], pv: ['N', 'W', 'E'], say: 'four faces, three that can take panels' },
     gable: { en: 'Gable', fr: 'Deux pans', pitch: 22, depth: 5, ridgeLen: 15, faces: { N: 'M218 156 L818 156 L818 356 L218 356 Z', S: 'M218 556 L818 556 L818 356 L218 356 Z' },
       north: [[218, 156, 0], [818, 156, 4], [818, 356, 1], [218, 356, 4]], ridge: [218, 356, 818, 356], pv: ['N'], say: 'two faces and two gable ends, the north face takes the panels' },
     skillion: { en: 'Skillion', fr: 'Monopente', pitch: 10, depth: 10, ridgeLen: 15, faces: { N: 'M218 156 L818 156 L818 556 L218 556 Z' },
-      north: [[218, 156, 0], [818, 156, 4], [818, 556, 1], [218, 556, 4]], ridge: [218, 556, 818, 556], pv: ['N'], say: 'one face rising to the south, low eave on the north' }
+      north: [[218, 156, 0], [818, 156, 4], [818, 556, 1], [218, 556, 4]], ridge: [218, 556, 818, 556], rise: 'slope', pv: ['N'], say: 'one face rising to the south, low eave on the north' },
+    flat: { en: 'Flat', fr: 'Plat', pitch: 1, depth: 10, ridgeLen: 15, faces: { N: 'M218 156 L818 156 L818 556 L218 556 Z' },
+      north: [[218, 156, 6], [818, 156, 6], [818, 556, 6], [218, 556, 6]], ridge: [218, 556, 818, 556], rise: 'slope', pv: ['N'], say: 'a flat roof with a 1° fall: modules stand on tilted racks' }
   };
   // obstacle types: shape (0 rectangle a × b, 1 disc of radius a, 2 dormer polygon), keep-out margin (round join, §4.6), height above the roof
   FN.OBST = {
@@ -3023,9 +3269,21 @@
     prism: { en: 'Polygon (dormer)', icon: 'prism', shape: 0, a: 1.20, b: 1.10, margin: 0.30, h: 1.50, fill: '#A99C8E', line: '#6A5F54' }
   };
   FN.SETBACK = 0.4;
+  // the market pack the prototypes stand in: Australia. Its shading rule sizes the racks' row gap (D-70)
+  FN.PACK = { place: 'Adelaide', lat: -34.93, rule: '9-15', flatZone: 0.5 };
+  // FN.sim's yield: 4.0 kWh per kWp a day
+  FN.YIELD = 1460;
+  // the rack variants of a flat roof (chapter 6, §6.6): tilt, studio-draw's mode, PVGIS yield on the Adelaide
+  // roof in kWh/kWp, and an illustrative ballast per module [I] (the frame maker's calculator decides, §6.9)
+  FN.RACKS = {
+    eq10: { en: 'Equator 10°', tilt: 10, mode: 0, yield: 1504, kg: 35 },
+    eq20: { en: 'Equator 20°', tilt: 20, mode: 0, yield: 1570, kg: 62 },
+    ew10: { en: 'East–west 10°', tilt: 10, mode: 1, yield: 1393, kg: 23 }
+  };
+  FN.RULES = { '9-15': ['9 am–3 pm', 0], '10-14': ['10 am–2 pm', 1], noon: ['Solar noon', 2] };
   FN.MOD = { portrait: [1.134, 1.722], landscape: [1.722, 1.134] };
 
-  FN.draw = { fn: null, ms: 0, live: false, wait: [] };
+  FN.draw = { fn: null, fnEdges: null, fnRacks: null, ms: 0, live: false, wait: [] };
   FN.draw.load = function (done) {
     if (FN.draw.fn) { if (done) done(); return; }
     if (done) FN.draw.wait.push(done);
@@ -3034,7 +3292,10 @@
     var t0 = performance.now();
     import(BASE + 'wasm/studio_draw_wasm.js').then(function (mod) {
       return mod.default({ module_or_path: BASE + 'wasm/studio_draw_wasm_bg.wasm' }).then(function () {
-        FN.draw.fn = mod.layout; FN.draw.live = true; FN.draw.ms = performance.now() - t0; FN.draw.cache = {};
+        FN.draw.fn = mod.layout;
+        FN.draw.fnEdges = mod.classify_edges;
+        FN.draw.fnRacks = mod.layout_flat_racks;
+        FN.draw.live = true; FN.draw.ms = performance.now() - t0; FN.draw.cache = {};
       });
     }).catch(function () { FN.draw.live = false; }).then(function () { var w = FN.draw.wait; FN.draw.wait = []; w.forEach(function (f) { f(); }); });
   };
@@ -3052,13 +3313,64 @@
     return c;
   };
 
-  // the layout of the north face: modules as plan rectangles, the usable area's rings, the count
-  FN.draw.compute = function (type, obstacles, variant) {
-    var R = FN.ROOFS[type] || FN.ROOFS.hip, key = JSON.stringify([type, obstacles, variant, !!FN.draw.fn]);
-    if (FN.draw.cache && FN.draw.cache.key === key) return FN.draw.cache.val;
-    var val = FN.draw.fn ? FN.draw.wasm(R, obstacles, variant) : FN.draw.js(R, type, obstacles, variant);
-    FN.draw.cache = { key: key, val: val };
-    return val;
+  // the layout of the north face: modules as plan rectangles, the usable area's rings, the count. A flat roof
+  // takes rack options ({ mode, rule }) instead of a variant. Results are kept by their inputs: the variant
+  // cards ask for three layouts at every render
+  FN.draw.compute = function (type, obstacles, variant, rackOpt) {
+    var R = FN.ROOFS[type] || FN.ROOFS.hip, flat = type === 'flat', key = JSON.stringify([type, obstacles, flat ? rackOpt : variant, !!FN.draw.fn]);
+    var C = FN.draw.cache || (FN.draw.cache = {});
+    if (C[key]) return C[key];
+    if (Object.keys(C).length > 64) C = FN.draw.cache = {};
+    return (C[key] = flat ? FN.draw.computeFlat(R, obstacles, rackOpt || {}) : FN.draw.fn ? FN.draw.wasm(R, obstacles, variant) : FN.draw.js(R, type, obstacles, variant));
+  };
+  // the three rack variants of a flat roof, each laid out by studio-draw under the rule, most energy first:
+  // modules, kWp, kWh a year from the chapter 6 yields, and the kWp FN.sim needs to give that energy
+  FN.draw.rackVariants = function (obstacles, rule) {
+    return Object.keys(FN.RACKS).map(function (id) {
+      var K = FN.RACKS[id], d = FN.draw.compute('flat', obstacles || [], null, { mode: id, rule: rule || FN.PACK.rule }), kwp = d.n * 0.44;
+      return { id: id, label: K.en, n: d.n, kwp: kwp, kwh: kwp * K.yield, simKwp: kwp * K.yield / FN.YIELD, geom: d.geom, err: d.err, yield: K.yield };
+    }).sort(function (a, b) { return b.kwh - a.kwh; });
+  };
+
+  // racks on the flat roof (chapter 6): studio-draw lays them out from the sun under the pack's rule; without
+  // the WebAssembly, rows of the chapter's Adelaide 9 am–3 pm geometry fill the same usable area
+  FN.draw.computeFlat = function (R, obstacles, opt) {
+    var id = FN.RACKS[opt.mode] ? opt.mode : 'eq10', K = FN.RACKS[id], rule = FN.RULES[opt.rule] ? opt.rule : FN.PACK.rule;
+    var face = [], obs = [], z = FN.PACK.flatZone, t0 = performance.now();
+    R.north.forEach(function (p) { var f = FN.draw.toFace(R, p[0], p[1]); face.push(f[0], f[1], p[2]); });
+    obstacles.forEach(function (o) { var T = FN.OBST[o.type] || FN.OBST.chimney, c = FN.draw.toFace(R, o.x, o.y); obs.push(T.shape, c[0], c[1], T.a, T.b, T.margin); });
+    var mod = function (u0, v0, u1, v1, i) {
+      var a = FN.draw.toPlan(R, u0, v0), b = FN.draw.toPlan(R, u1, v1);
+      return { id: u0.toFixed(2) + ',' + v0.toFixed(2), x: a[0], y: Math.min(a[1], b[1]), w: b[0] - a[0], h: Math.abs(b[1] - a[1]), tilt: K.tilt, mode: id, facing: K.mode ? (i % 2 ? 'E' : 'W') : 'N' };
+    };
+    if (FN.draw.fnRacks) {
+      var r;
+      try {
+        r = FN.draw.fnRacks(new Float64Array(face), new Float64Array([z, z, z, z, z]), new Float64Array(obs),
+          new Float64Array([1.722, 1.134, 0.02, FN.PACK.lat, K.mode, K.tilt, K.mode ? 0.30 : FN.RULES[rule][1]]));
+      } catch (e) { return { mods: [], rings: [], n: 0, err: String(e.message || e), ms: performance.now() - t0, live: true, variant: id }; }
+      var n = r[0], k = 8, mods = [], rings = [];
+      for (var i = 0; i < n; i++, k += 4) mods.push(mod(r[k], r[k + 1], r[k + 2], r[k + 3], i));
+      for (var j = 0; j < r[2]; j++) { var nk = r[k++], ring = []; for (var q = 0; q < nk; q++, k += 2) ring.push(FN.draw.toPlan(R, r[k], r[k + 1])); rings.push(ring); }
+      return { mods: mods, rings: rings, n: n, geom: { height: r[3], depth: r[4], gap: r[5], pitch: r[6], gcr: r[7] }, ms: performance.now() - t0, live: true, variant: id };
+    }
+    // fallback: the chapter's rows (depth, gap) on the rectangle inside the edge zone, minus what an obstacle's keep-out box touches
+    var G = { eq10: [1.696, 0.687], eq20: [1.618, 1.351], ew10: [2.284, 0.30] }[id], c = Math.cos(R.pitch * Math.PI / 180);
+    var u1 = (R.north[1][0] - 218) / 40 - z, v1 = (R.north[2][1] - 156) / 40 / c - z, pitch = G[0] + G[1], half = 1.134 * Math.cos(K.tilt * Math.PI / 180), out = [], cnt = 0;
+    var keep = obstacles.map(function (o) { var T = FN.OBST[o.type] || FN.OBST.chimney, p = FN.draw.toFace(R, o.x, o.y), hw = (T.shape ? T.a : T.a / 2) + T.margin, hh = (T.shape ? T.a : T.b / 2) + T.margin; return [p[0] - hw, p[1] - hh, p[0] + hw, p[1] + hh]; });
+    var free = function (b) { return !keep.some(function (q) { return b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1]; }); };
+    if (K.mode) {
+      for (var u = z; u + G[0] <= u1 + 1e-9; u += pitch) for (var v = z; v + 1.722 <= v1 + 1e-9; v += 1.742) {
+        if (free([u, v, u + G[0], v + 1.722])) { out.push(mod(u, v, u + half, v + 1.722, cnt++)); out.push(mod(u + G[0] - half, v, u + G[0], v + 1.722, cnt++)); }
+      }
+    } else {
+      for (var v2 = z; v2 + G[0] <= v1 + 1e-9; v2 += pitch) for (var u2 = z; u2 + 1.134 <= u1 + 1e-9; u2 += 1.154) {
+        if (free([u2, v2, u2 + 1.134, v2 + G[0]])) out.push(mod(u2, v2, u2 + 1.134, v2 + G[0], cnt++));
+      }
+    }
+    var ring = [FN.draw.toPlan(R, z, z), FN.draw.toPlan(R, u1, z), FN.draw.toPlan(R, u1, v1), FN.draw.toPlan(R, z, v1)];
+    var h = (K.mode ? 1.134 : 1.722) * Math.sin(K.tilt * Math.PI / 180);
+    return { mods: out, rings: [ring], n: out.length, geom: { height: h, depth: G[0], gap: G[1], pitch: pitch, gcr: (K.mode ? 2.268 : 1.722) / pitch }, ms: 0, live: false, variant: id };
   };
   FN.draw.wasm = function (R, obstacles, variant) {
     var face = [], obs = [], t0 = performance.now(), best = null;
@@ -3107,15 +3419,65 @@
       '<linearGradient id="sd-pv-sun" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1A2736"></stop><stop offset="55%" stop-color="#243548"></stop><stop offset="100%" stop-color="#15202D"></stop></linearGradient>' +
       '<linearGradient id="sd-pv-shade" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#35414E"></stop><stop offset="55%" stop-color="#3E4C5B"></stop><stop offset="100%" stop-color="#2D3843"></stop></linearGradient>' +
       '<pattern id="sd-cells" width="9" height="10.8" patternUnits="userSpaceOnUse"><path d="M9 0 H0 V10.8" fill="none" stroke="rgba(165,198,230,0.20)" stroke-width="0.55"></path></pattern>' +
+      '<style>' +
+      '.sd-edge{pointer-events:stroke;stroke-linecap:round}' +
+      '.sd-edge.k-eave{stroke:#0b7556}' +
+      '.sd-edge.k-ridge{stroke:#d47214}' +
+      '.sd-edge.k-hip{stroke:#2f6be3}' +
+      '.sd-edge.k-valley{stroke:#7836b8}' +
+      '.sd-edge.k-rake{stroke:#b83220}' +
+      '.sd-edge.k-skillion-top{stroke:#475467}' +
+      '.sd-edge.k-flat{stroke:#0e7c86;stroke-dasharray:7 4}' +
+      '@media (prefers-color-scheme:dark){' +
+      ':root:not([data-theme="light"]) .sd-edge.k-eave{stroke:#43c79a}' +
+      ':root:not([data-theme="light"]) .sd-edge.k-ridge{stroke:#f2a23c}' +
+      ':root:not([data-theme="light"]) .sd-edge.k-hip{stroke:#7fa8ff}' +
+      ':root:not([data-theme="light"]) .sd-edge.k-valley{stroke:#c39bf0}' +
+      ':root:not([data-theme="light"]) .sd-edge.k-rake{stroke:#ff7d6b}' +
+      ':root:not([data-theme="light"]) .sd-edge.k-skillion-top{stroke:#6b7a90}' +
+      ':root:not([data-theme="light"]) .sd-edge.k-flat{stroke:#4fc3cc}' +
+      '}' +
+      ':root[data-theme="dark"] .sd-edge.k-eave{stroke:#43c79a}' +
+      ':root[data-theme="dark"] .sd-edge.k-ridge{stroke:#f2a23c}' +
+      ':root[data-theme="dark"] .sd-edge.k-hip{stroke:#7fa8ff}' +
+      ':root[data-theme="dark"] .sd-edge.k-valley{stroke:#c39bf0}' +
+      ':root[data-theme="dark"] .sd-edge.k-rake{stroke:#ff7d6b}' +
+      ':root[data-theme="dark"] .sd-edge.k-skillion-top{stroke:#6b7a90}' +
+      ':root[data-theme="dark"] .sd-edge.k-flat{stroke:#4fc3cc}' +
+      '</style>' +
       '</defs>';
   };
-  // strong ridge and hip lines for the roof type
-  FN.draw.ridges = function (type) {
-    var R = FN.ROOFS[type] || FN.ROOFS.hip, s = '';
-    if (type === 'hip') {
-      s += '<path d="M218 156 L368 356 M818 156 L668 356 M218 556 L368 356 M818 556 L668 356" stroke="var(--c-ridge)" stroke-width="2.2" stroke-linecap="round" pointer-events="none"></path>';
-    }
-    s += '<path d="M' + R.ridge[0] + ' ' + R.ridge[1] + ' L' + R.ridge[2] + ' ' + R.ridge[3] + '" stroke="var(--c-ridge)" stroke-width="2.8" stroke-linecap="round" pointer-events="none"></path>';
+  // a vertex's height for the edge typing: hip and gable eaves at 0 and the ridge at the top; a skillion or a
+  // flat roof is one plane rising to the south
+  FN.draw.height = function (R, x, y) {
+    var t = Math.tan(R.pitch * Math.PI / 180), g = R.ridge;
+    if (R.rise === 'slope') return (y - 156) / 40 * t;
+    return g && y === g[1] && x >= g[0] && x <= g[2] ? R.depth * t : 0;
+  };
+  // the roof's edges typed by studio-draw from its faces' geometry (chapter 3, D-69): nothing is typed by hand.
+  // Plan metres east and north, z up; null without the WebAssembly
+  FN.draw.KINDS = ['eave', 'ridge', 'hip', 'valley', 'rake', 'skillion-top', 'flat'];
+  FN.draw.edges = function (type) {
+    if (!FN.draw.fnEdges) return null;
+    var C = FN.draw.edgeCache || (FN.draw.edgeCache = {});
+    if (C[type]) return C[type];
+    var R = FN.ROOFS[type] || FN.ROOFS.hip, flat = [];
+    Object.keys(R.faces).forEach(function (k) {
+      var pts = R.faces[k].match(/-?[0-9.]+ -?[0-9.]+/g).map(function (p) { return p.split(' ').map(Number); });
+      flat.push(pts.length);
+      pts.forEach(function (p) { flat.push(p[0] / 40, -p[1] / 40, FN.draw.height(R, p[0], p[1])); });
+    });
+    var r, out = [];
+    try { r = FN.draw.fnEdges(new Float64Array(flat)); } catch (e) { return null; }
+    for (var i = 0, k = 1; i < r[0]; i++, k += 8) out.push({ x1: r[k] * 40, y1: -r[k + 1] * 40, x2: r[k + 3] * 40, y2: -r[k + 4] * 40, kind: FN.draw.KINDS[r[k + 6]] });
+    return (C[type] = out);
+  };
+  // the roof's lines in the plan: typed and coloured by kind (the Edge types layer), otherwise the ridge and hips
+  FN.draw.ridges = function (type, typed) {
+    var R = FN.ROOFS[type] || FN.ROOFS.hip, E = typed === false ? null : FN.draw.edges(type), s = '';
+    if (E) return E.map(function (e) { return '<line class="sd-edge k-' + e.kind + '" x1="' + e.x1.toFixed(1) + '" y1="' + e.y1.toFixed(1) + '" x2="' + e.x2.toFixed(1) + '" y2="' + e.y2.toFixed(1) + '" stroke-width="' + ({ ridge: 3, hip: 2.5, flat: 2.8 }[e.kind] || 2.3) + '"></line>'; }).join('');
+    if (type === 'hip') s += '<path d="M218 156 L368 356 M818 156 L668 356 M218 556 L368 356 M818 556 L668 356" stroke="var(--c-ridge)" stroke-width="2.2" stroke-linecap="round" pointer-events="none"></path>';
+    if (type !== 'flat') s += '<path d="M' + R.ridge[0] + ' ' + R.ridge[1] + ' L' + R.ridge[2] + ' ' + R.ridge[3] + '" stroke="var(--c-ridge)" stroke-width="2.8" stroke-linecap="round" pointer-events="none"></path>';
     return s;
   };
   // 2.5D or flat module rendering in the 2D plan

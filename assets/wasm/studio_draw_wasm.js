@@ -1,4 +1,25 @@
 /**
+ * The type of every edge of a roof's faces, from their geometry (chapter 3, D-69).
+ *
+ * # Errors
+ *
+ * A JavaScript `Error` when a face's vertex count runs past the end of the array.
+ * @param {Float64Array | number[]} faces
+ * @returns {Float64Array}
+ */
+export function classify_edges(faces) {
+    const ptr0 = passArrayF64ToWasm0(faces, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.classify_edges(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v2;
+}
+
+/**
  * The layout of a face, flat in and flat out (see the crate's documentation).
  *
  * # Errors
@@ -30,6 +51,46 @@ export function layout(face, setbacks, obstacles, grid) {
         throw e;
     }
     const ret = wasm.layout(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v5 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v5;
+}
+
+/**
+ * Racks on a flat face, laid out from the sun (chapter 6, D-70).
+ *
+ * # Errors
+ *
+ * A JavaScript `Error` with the reason when an array has the wrong length, a code is
+ * unknown, the face is not a valid polygon, or the rule leaves no sun to size the row gap.
+ * @param {Float64Array | number[]} face
+ * @param {Float64Array | number[]} setbacks
+ * @param {Float64Array | number[]} obstacles
+ * @param {Float64Array | number[]} rack
+ * @returns {Float64Array}
+ */
+export function layout_flat_racks(face, setbacks, obstacles, rack) {
+    let ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3;
+    try {
+        ptr0 = passArrayF64ToWasm0(face, wasm.__wbindgen_malloc);
+        len0 = WASM_VECTOR_LEN;
+        ptr1 = passArrayF64ToWasm0(setbacks, wasm.__wbindgen_malloc);
+        len1 = WASM_VECTOR_LEN;
+        ptr2 = passArrayF64ToWasm0(obstacles, wasm.__wbindgen_malloc);
+        len2 = WASM_VECTOR_LEN;
+        ptr3 = passArrayF64ToWasm0(rack, wasm.__wbindgen_malloc);
+        len3 = WASM_VECTOR_LEN;
+    } catch (e) {
+        if (ptr3) { wasm.__wbindgen_free(ptr3, len3 * 8, 8); }
+        if (ptr2) { wasm.__wbindgen_free(ptr2, len2 * 8, 8); }
+        if (ptr1) { wasm.__wbindgen_free(ptr1, len1 * 8, 8); }
+        if (ptr0) { wasm.__wbindgen_free(ptr0, len0 * 8, 8); }
+        throw e;
+    }
+    const ret = wasm.layout_flat_racks(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
     if (ret[3]) {
         throw takeFromExternrefTable0(ret[2]);
     }
