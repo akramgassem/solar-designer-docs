@@ -3550,6 +3550,968 @@
     s += dim(top, o.y, w.ridge.toFixed(2) + ' m ↑') + dim(o.y, eave, w.eave.toFixed(2) + ' m ↓');
     return s;
   };
+  /* ---------- widgets: the schematic site (design/site-model) ---------- */
+  // The site as the studio would draw it around the measured roof, for three site types: a house,
+  // a commercial building with a flat roof, and a car park with canopies. Each object carries its
+  // fidelity (measured, declared, schematic) and the Fidelity button paints the scene by it.
+  // Equipment is anchored to a wall (wall, distance along it), so it follows when the footprint
+  // is corrected; cables run along the walls and their lengths are the output. The capacity is
+  // summed over every zone of the site and gives the official categories of each market, as the
+  // raw report on site types read them on 2026-11-02. Sizes are illustrative; the battery zones
+  // follow AS/NZS 5139 as secondary sources read it, to verify against the standard.
+  var SMT = {
+    en: { site: 'Site type', house: 'House', ci: 'Commercial roof', park: 'Car park',
+      plan: 'Plan', iso: 'Isometric', turn: 'Turn 90°', fid: 'Fidelity',
+      layers: 'Layers', mods: 'Modules', dims: 'Dimensions', bg: 'Ground', plain: 'Plain', dots: 'Dots', lines: 'Lines',
+      rbat: 'Battery zones', redge: 'Roof edge 1 m', raper: 'Coverage', carport: 'Carport', canopy3: 'Third canopy',
+      flow: 'Energy flow', off: 'Off', noon: 'Midday', eve: 'Evening',
+      measured: 'Measured', declared: 'Declared', schematic: 'Schematic',
+      leg: {
+        house: ['roof faces, footprint, eave height, lot boundary: from LiDAR, survey or cadastre, dimensioned with their tolerance',
+          'garage, doors, equipment: placed by the installer or the household, dimensioned, its cable lengths estimated',
+          'windows, carport, car, tree, street: generated to make the site readable, never dimensioned'],
+        ci: ['footprint, roof height, parapet, roof units, lot boundary: from LiDAR or survey',
+          'module rows, loading doors, equipment: placed by the installer, cable lengths estimated',
+          'windows, cars, trucks’ yard, trees: generated to make the site readable'],
+        park: ['car park surface, lot boundary: from the cadastre and imagery',
+          'canopies, technical room, equipment: designed and placed by the installer, cable lengths estimated',
+          'bay lines, cars, trees: generated to make the site readable'] },
+      inv: 'Inverter', bat: 'Battery', sb: 'Switchboard', evc: 'Charger', hp: 'Heat pump', pv: 'Array',
+      cDc: 'Strings', cBat: 'Battery', cAc: 'Inverter to board', cEv: 'Charger', cHp: 'Heat pump',
+      th: ['Circuit', 'From → to', 'Length', 'Vertical'], est: 'route estimated along the walls',
+      batOk: 'Battery: outside the zones drawn around doors and windows.',
+      batBad: 'Battery: inside the zone of {o}. AS/NZS 5139 keeps a battery 600 mm from an exit, and 600 mm beside and 900 mm below a window of a habitable room (as secondary sources read it, to verify).',
+      door: 'a door', win: 'a window',
+      reach: 'Tethered cable from the charger to the car inlet: about {d} m of {m} m.', reachBad: 'The charger’s {m} m tethered cable does not reach the car inlet ({d} m): move the charger.',
+      hpDist: 'Heat pump: {d} m from the nearest boundary (the input of a noise check, MCS 020 in the United Kingdom).',
+      edge: 'Roof edge: no module within 1 m of the parapet (Class J in England; the wind edge zones of AS/NZS 1170.2 in Australia).',
+      aper: 'Car park of {a} m²: the canopies cover {p} %. France’s loi APER asks for half of an outdoor car park over 1,500 m².',
+      hint: 'Drag an equipment label along the walls, or focus it and use the arrow keys; the selected equipment shows its cable lengths on the stage. Cables, lengths, checks and categories follow.',
+      total: 'Total', zNorth: 'north face', zCarport: 'carport', zFlat: 'flat roof', zCanopy: 'canopies',
+      mods: '{list}: {n} modules, {k} kWc summed over the site',
+      cats: 'Official categories for this site', catTh: ['Market', 'Support', 'Planning', 'Connection'],
+      catNote: 'Rules as the raw report read them on 2 November 2026, illustrative. The capacity is summed over every zone of the site: a carport or a third canopy can move the site into the next category.',
+      mFR: 'France', mAU: 'Australia', mUK: 'United Kingdom' },
+    fr: { site: 'Type de site', house: 'Maison', ci: 'Toiture tertiaire', park: 'Parking',
+      plan: 'Plan', iso: 'Isométrique', turn: 'Pivoter de 90°', fid: 'Fidélité',
+      layers: 'Calques', mods: 'Modules', dims: 'Cotes', bg: 'Sol', plain: 'Uni', dots: 'Points', lines: 'Lignes',
+      rbat: 'Zones batterie', redge: 'Rive 1 m', raper: 'Couverture', carport: 'Carport', canopy3: 'Troisième ombrière',
+      flow: 'Flux d’énergie', off: 'Arrêt', noon: 'Midi', eve: 'Soir',
+      measured: 'Mesuré', declared: 'Déclaré', schematic: 'Schématique',
+      leg: {
+        house: ['pans de toit, emprise, hauteur d’égout, limite de parcelle : du LiDAR, d’un relevé ou du cadastre, cotés avec leur tolérance',
+          'garage, portes, équipements : placés par l’installateur ou le ménage, cotés, leurs longueurs de câble estimées',
+          'fenêtres, carport, voiture, arbre, rue : générés pour rendre le site lisible, jamais cotés'],
+        ci: ['emprise, hauteur de toiture, acrotère, équipements de toiture, limite de parcelle : du LiDAR ou d’un relevé',
+          'rangées de modules, portes de quai, équipements : placés par l’installateur, longueurs de câble estimées',
+          'fenêtres, voitures, cour, arbres : générés pour rendre le site lisible'],
+        park: ['surface du parking, limite de parcelle : du cadastre et de l’imagerie',
+          'ombrières, local technique, équipements : conçus et placés par l’installateur, longueurs de câble estimées',
+          'marquage des places, voitures, arbres : générés pour rendre le site lisible'] },
+      inv: 'Onduleur', bat: 'Batterie', sb: 'Tableau', evc: 'Borne', hp: 'Pompe à chaleur', pv: 'Champ',
+      cDc: 'Strings', cBat: 'Batterie', cAc: 'Onduleur vers tableau', cEv: 'Borne', cHp: 'Pompe à chaleur',
+      th: ['Circuit', 'De → à', 'Longueur', 'Vertical'], est: 'tracé estimé le long des murs',
+      batOk: 'Batterie : hors des zones dessinées autour des portes et fenêtres.',
+      batBad: 'Batterie : dans la zone {o}. L’AS/NZS 5139 tient une batterie à 600 mm d’une issue, et à 600 mm sur le côté et 900 mm sous une fenêtre de pièce habitable (selon des sources secondaires, à vérifier).',
+      door: 'd’une porte', win: 'd’une fenêtre',
+      reach: 'Câble attaché de la borne à la prise de la voiture : environ {d} m sur {m} m.', reachBad: 'Le câble attaché de {m} m de la borne n’atteint pas la prise de la voiture ({d} m) : déplacez la borne.',
+      hpDist: 'Pompe à chaleur : à {d} m de la limite la plus proche (l’entrée d’un contrôle de bruit, MCS 020 au Royaume-Uni).',
+      edge: 'Rive : aucun module à moins de 1 m de l’acrotère (Class J en Angleterre ; zones de rive au vent de l’AS/NZS 1170.2 en Australie).',
+      aper: 'Parking de {a} m² : les ombrières en couvrent {p} %. La loi APER demande la moitié d’un parking extérieur de plus de 1 500 m².',
+      hint: 'Faites glisser l’étiquette d’un équipement le long des murs, ou donnez-lui le focus et utilisez les flèches ; l’équipement choisi montre ses longueurs de câble sur la scène. Câbles, longueurs, contrôles et catégories suivent.',
+      total: 'Total', zNorth: 'pan nord', zCarport: 'carport', zFlat: 'toit plat', zCanopy: 'ombrières',
+      mods: '{list} : {n} modules, {k} kWc additionnés sur le site',
+      cats: 'Catégories officielles de ce site', catTh: ['Marché', 'Soutien', 'Urbanisme', 'Raccordement'],
+      catNote: 'Règles telles que le rapport brut les a lues le 2 novembre 2026, à titre d’illustration. La puissance s’additionne sur toutes les zones du site : un carport ou une troisième ombrière peut faire passer le site dans la catégorie suivante.',
+      mFR: 'France', mAU: 'Australie', mUK: 'Royaume-Uni' }
+  };
+  // fidelity colours (Fidelity view) and the maquette palette (normal view)
+  var SMF = { measured: '#1F6F5C', declared: '#C27C0E', schematic: '#B9BDC2' };
+  var SMC = { ground: '#E3DFD7', lot: '#DCE0D3', drive: '#CFCAC0', asphalt: '#C4C0B8', street: '#B7B3AB', walls: '#F1EDE6', plinth: '#CFC8BC',
+    roof: '#9A9184', garageRoof: '#A79F92', flatRoof: '#C9C5BC', parapet: '#E2DED6', fascia: '#E9E5DD', glass: '#5D6B78', door: '#8C7B68', frame: '#FBFAF7',
+    ink: '#2B2F35', carport: '#C9C4BA', steel: '#B8BCC0', car: '#C9CDD2', tyre: '#2E3136', trunk: '#7A6A58', leaf: '#9DAE93', line: '#F7F5F0',
+    dc: '#E8A800', ac: '#3D4650', bat: '#7A5BD0', ev: '#1F7A55', hpc: '#2457C5', zone: '#C8452E' };
+  var SMCARS = ['#C9CDD2', '#8E979F', '#E9E7E2', '#5F6B78', '#B8AFA3', '#3F4650'];
+  var SMKWC = 0.44; // kWc per module, 1.13 × 1.72 m
+  // the three sites, in metres in the local frame: x east, z south, y up; north is -z
+  var SMS = {
+    house: {
+      roof: 'hip', pitch: 22, eave: 3, over: 0.35, garageEave: 2.7, garagePitch: 15, run: 2.4, off: 0.06,
+      dims: [[-7.5, -5, 7.5, -5, 0, -1], [-7.5, 5, -7.5, -5, -1, 0]],
+      lot: [-11, -16, 15.5, 14.5], iso: { t: [3.5, 1.4, 0.8], h: 10.5 }, shadow: 24, ph: 1, rule: 'bat', tog: 'carport',
+      foot: [[-7.5, -5], [7.5, -5], [7.5, -1], [13.5, -1], [13.5, 6], [7.5, 6], [7.5, 5], [-7.5, 5]],
+      wallH: [3, 3, 2.7, 2.7, 2.7, 2.7, 3, 3],
+      bodies: [[-7.5, -5, 7.5, 5, 3, 'measured'], [7.5, -1, 13.5, 6, 2.7, 'declared']],
+      flats: [[8.1, 6, 13.4, 14.5, 'drive'], [-0.6, 5, 0.8, 14.5, 'drive']], street: true,
+      // openings: wall, from s0 to s1 along it; kind door (an exit), win (habitable room), gdoor (garage door)
+      open: [
+        { w: 0, s0: 1.5, s1: 3.3, k: 'win' }, { w: 0, s0: 5, s1: 7.5, k: 'win' }, { w: 0, s0: 9.5, s1: 11.3, k: 'win' }, { w: 0, s0: 12.6, s1: 13.5, k: 'door' },
+        { w: 3, s0: 0.8, s1: 1.7, k: 'door' }, { w: 4, s0: 0.5, s1: 5.3, k: 'gdoor' },
+        { w: 6, s0: 2.6, s1: 4.4, k: 'win' }, { w: 6, s0: 6.9, s1: 7.9, k: 'door' }, { w: 6, s0: 9.6, s1: 11.4, k: 'win' }, { w: 6, s0: 12.2, s1: 14, k: 'win' },
+        { w: 7, s0: 2, s1: 3.6, k: 'win' }
+      ],
+      canopies: [{ x0: 8.1, z0: 7.2, x1: 13.4, z1: 12.6, y: 2.55, tilt: 5, fid: 'schematic', tog: true, name: 'zCarport', posts: 'corners' }],
+      cars: [{ x: 10.75, z: 9.9 }], trees: [[-8.6, 10.5]],
+      equip: {
+        inv: { w: 3, s: 2.6, W: 0.45, H: 0.55, D: 0.2, y0: 1.3, c: '#D9D6CF' },
+        bat: { w: 3, s: 5.8, W: 0.75, H: 1.15, D: 0.15, y0: 0.15, c: '#F4F2EE' },
+        sb: { w: 6, s: 1.4, W: 0.5, H: 0.7, D: 0.2, y0: 1.2, c: '#CFCAC0' },
+        evc: { w: 4, s: 5.7, W: 0.25, H: 0.4, D: 0.15, y0: 1.0, c: '#33373D', cable: 5 },
+        hp: { w: 7, s: 8.5, W: 0.9, H: 0.7, D: 0.35, y0: 0, gap: 0.15, c: '#E7E4DD' }
+      },
+      circuits: [
+        { id: 'dc', a: 'pv', b: 'inv', c: 'dc', t: 'cDc' }, { id: 'bat', a: 'inv', b: 'bat', c: 'bat', t: 'cBat' },
+        { id: 'ac', a: 'inv', b: 'sb', c: 'ac', t: 'cAc' }, { id: 'ev', a: 'sb', b: 'evc', c: 'ev', t: 'cEv' },
+        { id: 'hp', a: 'sb', b: 'hp', c: 'hpc', t: 'cHp' }
+      ],
+      flow: { noon: { dc: 1, bat: 1, ac: 1, ev: 1, hp: 1 }, eve: { dc: 0, bat: -1, ac: 1, ev: 1, hp: 1 } }
+    },
+    ci: {
+      roof: 'flat', eave: 7, parapet: 0.6, run: 3.2, off: 0.08, tilt: 10, edge: 1,
+      dims: [[-20, -12, 20, -12, 0, -1], [-20, 12, -20, -12, -1, 0]],
+      lot: [-27, -19, 27, 27], iso: { t: [0, 2.5, 4], h: 21 }, shadow: 40, ph: 3, rule: 'edge',
+      foot: [[-20, -12], [20, -12], [20, 12], [-20, 12]], wallH: [7, 7, 7, 7],
+      bodies: [[-20, -12, 20, 12, 7, 'measured']],
+      flats: [[-24, 12, 24, 25, 'asphalt'], [20, -8, 26, 12, 'asphalt']], street: true, bays: [{ x0: -18, x1: 16, z0: 15, z1: 20, n: 13 }],
+      // roof units from LiDAR: keep-out boxes that the rows go around
+      units: [[-11, -3, 3.2, 1.6, 2.2], [9, 4, 2.4, 1.4, 2.4], [-2, 6.5, 1.6, 0.6, 1.6]],
+      open: [
+        { w: 2, s0: 3, s1: 9, k: 'win', y0: 1, y1: 2.4 }, { w: 2, s0: 11, s1: 17, k: 'win', y0: 1, y1: 2.4 }, { w: 2, s0: 19, s1: 21, k: 'door' },
+        { w: 2, s0: 23, s1: 29, k: 'win', y0: 1, y1: 2.4 }, { w: 2, s0: 31, s1: 37, k: 'win', y0: 1, y1: 2.4 },
+        { w: 1, s0: 13, s1: 17, k: 'gdoor', y1: 4.5 }, { w: 1, s0: 18.5, s1: 22.5, k: 'gdoor', y1: 4.5 }, { w: 1, s0: 10.6, s1: 11.6, k: 'door' }
+      ],
+      canopies: [], cars: [{ x: 15.25, z: 17.5 }], trees: [[-24, 16], [-24, 21], [23.5, 22]],
+      trucks: [[23, 15]],
+      equip: {
+        inv: { w: 1, s: 3.5, W: 0.9, H: 1.1, D: 0.3, y0: 1.0, c: '#D9D6CF' },
+        sb: { w: 1, s: 8.5, W: 1.4, H: 2.1, D: 0.5, y0: 0, c: '#CFCAC0' },
+        bat: { w: 2, s: 2.5, W: 2.2, H: 2.2, D: 1.1, y0: 0, gap: 1, c: '#F4F2EE' },
+        evc: { w: 2, s: 4.6, W: 0.3, H: 0.5, D: 0.18, y0: 1.0, c: '#33373D', cable: 5 }
+      },
+      circuits: [
+        { id: 'dc', a: 'pv', b: 'inv', c: 'dc', t: 'cDc' }, { id: 'bat', a: 'inv', b: 'bat', c: 'bat', t: 'cBat' },
+        { id: 'ac', a: 'inv', b: 'sb', c: 'ac', t: 'cAc' }, { id: 'ev', a: 'sb', b: 'evc', c: 'ev', t: 'cEv' }
+      ],
+      flow: { noon: { dc: 1, bat: 1, ac: 1, ev: 1 }, eve: { dc: 0, bat: -1, ac: 1, ev: 1 } }
+    },
+    park: {
+      roof: 'flat', eave: 3, parapet: 0.3, run: 2.4, off: 0.06,
+      dims: [[-28, -17, 28, -17, 0, -1], [-28, 17, -28, -17, -1, 0]],
+      lot: [-31, -20, 40, 20], iso: { t: [4, 1, 0], h: 22 }, shadow: 44, ph: 3, rule: 'aper', tog: 'canopy3',
+      foot: [[29, -4], [37, -4], [37, 3], [29, 3]], wallH: [3, 3, 3, 3],
+      bodies: [[29, -4, 37, 3, 3, 'declared']],
+      surface: [-28, -17, 28, 17], street: false,
+      bays: [{ x0: -25, x1: 25, z0: -17, z1: -12, n: 20 }, { x0: -25, x1: 25, z0: -6, z1: -1, n: 20 }, { x0: -25, x1: 25, z0: -1, z1: 4, n: 20 }, { x0: -25, x1: 25, z0: 10, z1: 15, n: 20 }],
+      open: [{ w: 2, s0: 3, s1: 4, k: 'door' }],
+      canopies: [
+        { x0: -25, z0: -16.8, x1: 25, z1: -9.2, y: 2.9, tilt: 5, fid: 'declared', name: 'zCanopy', posts: 'rows' },
+        { x0: -25, z0: -2.3, x1: 25, z1: 5.3, y: 2.9, tilt: 5, fid: 'declared', name: 'zCanopy', posts: 'rows' },
+        { x0: -25, z0: 8.6, x1: 25, z1: 16.2, y: 2.9, tilt: 5, fid: 'declared', name: 'zCanopy', posts: 'rows', tog: true }
+      ],
+      cars: [{ x: 26.6, z: 1.8 }], carFill: 0.55, trees: [[-30, -18], [-30, 18], [32, 15], [36, -15]],
+      equip: {
+        inv: { w: 0, s: 3, W: 0.9, H: 1.1, D: 0.3, y0: 0.9, c: '#D9D6CF' },
+        sb: { w: 1, s: 3.5, W: 1.4, H: 2.1, D: 0.5, y0: 0, c: '#CFCAC0' },
+        bat: { w: 2, s: 5.6, W: 2.2, H: 2.2, D: 1.1, y0: 0, gap: 0.6, c: '#F4F2EE' },
+        evc: { w: 3, s: 1.1, W: 0.3, H: 0.5, D: 0.18, y0: 1.0, c: '#33373D', cable: 5 }
+      },
+      circuits: [
+        { id: 'dc', a: 'pv', b: 'inv', c: 'dc', t: 'cDc' }, { id: 'bat', a: 'inv', b: 'bat', c: 'bat', t: 'cBat' },
+        { id: 'ac', a: 'inv', b: 'sb', c: 'ac', t: 'cAc' }, { id: 'ev', a: 'sb', b: 'evc', c: 'ev', t: 'cEv' }
+      ],
+      flow: { noon: { dc: 1, bat: 1, ac: 1, ev: 1 }, eve: { dc: 0, bat: -1, ac: 1, ev: 1 } }
+    }
+  };
+  var smQ = null;
+  function smThree(done) {
+    // one load of three.js for every widget of the page, whoever asks first
+    if (window.THREE) { done(); return; }
+    if (!smQ) { smQ = []; loadScript('vendor/three-0.186.1.min.js', function () { var q = smQ; smQ = null; q.forEach(function (f) { f(); }); }); }
+    smQ.push(done);
+  }
+  function smWalls(F, H) {
+    var W = [], cum = 0;
+    F.forEach(function (a, i) {
+      var b = F[(i + 1) % F.length], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz);
+      // the footprint runs clockwise seen from above, so the outward normal is (dz, -dx)
+      W.push({ a: a, b: b, L: L, dx: dx / L, dz: dz / L, nx: dz / L, nz: -dx / L, p0: cum, h: H[i] });
+      cum += L;
+    });
+    W.per = cum;
+    return W;
+  }
+  function smAt(W, w, s, off, y) { var q = W[w]; return [q.a[0] + q.dx * s + q.nx * off, y, q.a[1] + q.dz * s + q.nz * off]; }
+  // a cable from one wall anchor to another, along the walls at height y, the shorter way round
+  function smRoute(W, A, B, y, off) {
+    var n = W.length, per = W.per, pa = W[A.w].p0 + A.s, pb = W[B.w].p0 + B.s;
+    var fwd = ((pb - pa) % per + per) % per, pts = [smAt(W, A.w, A.s, off, y)], w = A.w, left, edge;
+    var corner = function (k) { var v = W[k].b, m = W[(k + 1) % n]; return [v[0] + (W[k].nx + m.nx) * off, y, v[1] + (W[k].nz + m.nz) * off]; };
+    if (fwd <= per - fwd) {
+      left = fwd; edge = W[w].L - A.s;
+      while (left > edge + 1e-6) { pts.push(corner(w)); left -= edge; w = (w + 1) % n; edge = W[w].L; }
+    } else {
+      left = per - fwd; edge = A.s;
+      while (left > edge + 1e-6) { w = (w - 1 + n) % n; pts.push(corner(w)); left -= edge; edge = W[w].L; }
+    }
+    pts.push(smAt(W, B.w, B.s, off, y));
+    return pts;
+  }
+  function smLen(pts) { var L = 0; for (var i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]); return L; }
+  function smVert(pts) { var L = 0; for (var i = 1; i < pts.length; i++) if (pts[i][0] === pts[i - 1][0] && pts[i][2] === pts[i - 1][2]) L += Math.abs(pts[i][1] - pts[i - 1][1]); return L; }
+  // the battery zones of AS/NZS 5139 around exits and windows of habitable rooms, on their wall
+  function smZones(D) {
+    if (D.rule !== 'bat') return [];
+    return D.open.filter(function (o) { return o.k === 'door' || o.k === 'win'; }).map(function (o) {
+      return { w: o.w, k: o.k, s0: o.s0 - 0.6, s1: o.s1 + 0.6, y0: 0, y1: o.k === 'win' ? 2.1 : 2.7 };
+    });
+  }
+  // the house's north face: portrait modules from 0.3 m above the wall line with 0.4 m off the hips
+  function smHipModules(D) {
+    var t = Math.tan(D.pitch * Math.PI / 180), c = Math.cos(D.pitch * Math.PI / 180), dep = 1.72 * c, out = [];
+    for (var d0 = 0.3; d0 + dep <= 5 - 0.4; d0 += dep + 0.02) {
+      var half = 7.5 - (d0 + dep) - 0.4, n = Math.floor((2 * half + 0.02) / 1.15);
+      for (var i = 0; i < n; i++) {
+        var x = -n * 1.15 / 2 + 0.575 + i * 1.15, dm = d0 + dep / 2;
+        out.push({ x: x, z: -5 + dm, y: D.eave + dm * t + 0.08 });
+      }
+    }
+    return out;
+  }
+  // a flat roof: rows tilted to the north, kept off the parapet by the edge setback and off the roof units
+  function smFlatModules(D) {
+    var F = D.bodies[0], tl = D.tilt * Math.PI / 180, dep = 1.72 * Math.cos(tl), pitch = 2.6, e = D.edge, out = [], rows = [];
+    var x0 = F[0] + e, x1 = F[2] - e, z0 = F[1] + e, z1 = F[3] - e, n = Math.floor((x1 - x0 + 0.02) / 1.15);
+    for (var z = z0; z + dep <= z1; z += pitch) {
+      var row = [];
+      for (var i = 0; i < n; i++) {
+        var x = (x0 + x1) / 2 - n * 1.15 / 2 + 0.575 + i * 1.15, zc = z + dep / 2;
+        var hit = D.units.some(function (u) { return Math.abs(x - u[0]) < u[2] / 2 + 0.575 + 0.5 && Math.abs(zc - u[1]) < u[3] / 2 + dep / 2 + 0.5; });
+        if (!hit) { var m = { x: x, z: zc, y: D.eave + 0.3 + dep / 2 * Math.tan(tl) }; out.push(m); row.push(m); }
+      }
+      if (row.length) rows.push(row);
+    }
+    out.rows = rows;
+    return out;
+  }
+  function smCanopyModules(c) {
+    var t = Math.tan(c.tilt * Math.PI / 180), w = c.x1 - c.x0, d = c.z1 - c.z0, cx = (c.x0 + c.x1) / 2, cz = (c.z0 + c.z1) / 2, out = [];
+    var n = Math.floor((w - 0.3) / 1.15), rows = Math.floor((d - 0.3) / (1.72 * Math.cos(c.tilt * Math.PI / 180) + 0.02));
+    for (var j = 0; j < rows; j++) for (var i = 0; i < n; i++) {
+      var x = cx - n * 1.15 / 2 + 0.575 + i * 1.15, z = cz - rows * 1.74 / 2 + 0.87 + j * 1.74;
+      out.push({ x: x, z: z, y: c.y + 0.09 + (z - cz) * t });
+    }
+    return out;
+  }
+  // the official categories of a site, per market, from its type and the capacity summed over it
+  function smCats(kind, s, fr, fmt) {
+    var L = function (en, f) { return fr ? f : en; }, k = s.kWc, a = s.kVA;
+    var frS = k <= 9 ? L('S21 open window, surplus sale only (≤ 9 kWc)', 'S21 guichet ouvert, vente du surplus seule (≤ 9 kWc)')
+      : k <= 100 ? L('S21 open window (P+Q ≤ 100 kWc)', 'S21 guichet ouvert (P+Q ≤ 100 kWc)')
+        : k <= 500 ? L('AOS, the CRE’s simplified tender (100–500 kWc)', 'AOS, appel d’offres simplifié de la CRE (100–500 kWc)')
+          : L('AO PPE2 Bâtiment tender (> 500 kWc)', 'Appel d’offres PPE2 Bâtiment (> 500 kWc)');
+    var frP = kind === 'house' ? L('Roof: prior declaration (DP)', 'Toiture : déclaration préalable') + (s.carport ? L('; carport: ground rules, DP', ' ; carport : règles du sol, DP') : '')
+      : kind === 'ci' ? L('Roof: DP; fire file if open to the public or classified', 'Toiture : DP ; dossier incendie si ERP ou ICPE')
+        : L('Canopies: ground rules, DP below 3 MWc; loi APER: ', 'Ombrières : règles du sol, DP sous 3 MWc ; loi APER : ') + Math.round(s.cover) + ' % / 50 %';
+    var frC = a <= 36 ? L('≤ 36 kVA: simplified', '≤ 36 kVA : simplifié') : a <= 250 ? L('36–250 kVA: technical and financial offer', '36–250 kVA : proposition technique et financière') : L('> 250 kVA: medium voltage', '> 250 kVA : HTA');
+    var auS = k <= 100 ? L('Small-scale STCs (≤ 100 kW)', 'STC petit solaire (≤ 100 kW)') : k <= 1000 ? L('Mid-scale STCs or REGO, the owner’s choice', 'STC mid-scale ou REGO, au choix du propriétaire') : 'REGO';
+    var auP = kind === 'house' ? L('Roof: exempt with flush rails (state rules)', 'Toiture : exemptée en surimposition (règles de l’État)') + (s.carport ? L('; carport: a new structure', ' ; carport : nouvelle structure') : '')
+      : kind === 'ci' ? L('Tilted frames: may exceed the exempt height (state rules)', 'Châssis inclinés : peuvent dépasser la hauteur exemptée (règles de l’État)')
+        : L('Canopies: new structures, no category of their own', 'Ombrières : nouvelles structures, sans catégorie propre');
+    var auC = a <= 30 ? L('Basic connection (≤ 30 kVA)', 'Raccordement de base (≤ 30 kVA)') : a <= 200 ? L('Negotiated connection (> 30 kVA)', 'Raccordement négocié (> 30 kVA)') : L('Central protection (> 200 kVA, AS/NZS 4777.1)', 'Protection centrale (> 200 kVA, AS/NZS 4777.1)');
+    var ukS = k <= 50 ? L('SEG, with MCS (≤ 50 kW)', 'SEG, avec MCS (≤ 50 kW)') : L('SEG through ROO-FIT (> 50 kW)', 'SEG par ROO-FIT (> 50 kW)');
+    var ukP = kind === 'house' ? 'Class A' + (s.carport ? L('; carport over 9 m²: planning permission (Class B)', ' ; carport de plus de 9 m² : permis (Class B)') : '')
+      : kind === 'ci' ? L('Class J: ≤ 1 m above the roof, 1 m from its edge', 'Class J : ≤ 1 m au-dessus du toit, 1 m de la rive')
+        : L('Class OA: non-domestic canopy ≤ 4 m, prior approval', 'Class OA : ombrière non domestique ≤ 4 m, accord préalable');
+    var ukC = a / s.ph <= 3.68 ? 'G98' : a >= 1000 ? L('G99 Type B', 'G99 type B') : kind !== 'house' ? 'G99' : L('G99, or G98 with export limited to 3.68 kW per phase', 'G99, ou G98 avec export limité à 3,68 kW par phase');
+    return [[fr ? SMT.fr.mFR : SMT.en.mFR, frS, frP, frC], [fr ? SMT.fr.mAU : SMT.en.mAU, auS, auP, auC], [fr ? SMT.fr.mUK : SMT.en.mUK, ukS, ukP, ukC]];
+  }
+  all('figure.bk-widget[data-widget="site-model"]').forEach(function (fig) {
+    var svg = fig.querySelector('svg'), out = fig.querySelector('.bk-widget-out');
+    if (!svg || !out) return;
+    var started = false;
+    var start = function () { if (started || fig.offsetParent === null) return; started = true; smThree(function () { smMount(fig, svg, out, 'house'); }); };
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { io.disconnect(); start(); } }); }, { rootMargin: '200px' });
+      io.observe(fig);
+    } else start();
+  });
+  function smMount(fig, svg, out, kind) {
+    var T = window.THREE, D = SMS[kind], fr = (fig.closest('[lang]') || root).getAttribute('lang') === 'fr', t = SMT[fr ? 'fr' : 'en'];
+    var W = smWalls(D.foot, D.wallH), Z = smZones(D);
+    var st = { view: 'iso', az: Math.PI * 0.75, fid: false, rules: false, tog: true, flow: 'noon', sel: 'bat', mods: true, dims: true, bg: 'dots' };
+    var deg = Math.PI / 180, dead = false;
+    var fmt = function (v) { return v.toFixed(1).replace('.', fr ? ',' : '.'); };
+
+    // the stage: the canvas, a layer of labels over it, the controls under it
+    var wrap = doc.createElement('div');
+    wrap.style.cssText = 'position:relative;width:100%;height:460px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:' + SMC.ground + ';touch-action:none';
+    var canvas = doc.createElement('canvas'); canvas.style.cssText = 'display:block;width:100%;height:100%';
+    var layer = doc.createElement('div'); layer.style.cssText = 'position:absolute;inset:0;pointer-events:none;font:500 11.5px/1.2 Inter,system-ui,sans-serif';
+    wrap.appendChild(canvas); wrap.appendChild(layer);
+    svg.style.display = 'none'; fig.insertBefore(wrap, out);
+
+    var r = new T.WebGLRenderer({ canvas: canvas, antialias: true });
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.NeutralToneMapping; r.toneMappingExposure = 1.02;
+    r.shadowMap.enabled = true; r.shadowMap.type = T.PCFShadowMap;
+    var sc = new T.Scene(); sc.background = new T.Color(SMC.ground);
+    var hemi = new T.HemisphereLight('#FFFFFF', '#B9B2A6', 1.5 * Math.PI / 2); sc.add(hemi);
+    var sun = new T.DirectionalLight('#FFF4DF', 2.2); sun.castShadow = true; sun.shadow.mapSize.set(D.shadow > 30 ? 4096 : 2048, D.shadow > 30 ? 4096 : 2048);
+    var shc = sun.shadow.camera, sh = D.shadow; shc.left = -sh; shc.right = sh; shc.top = sh; shc.bottom = -sh; shc.near = 1; shc.far = 160; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02; sun.shadow.radius = 5;
+    sc.add(sun); sc.add(sun.target);
+    var mid = [(D.lot[0] + D.lot[2]) / 2, (D.lot[1] + D.lot[3]) / 2];
+
+    // every object is registered with its fidelity: the Fidelity view swaps its material
+    var reg = [], fidMat = {}, edgeMat = {};
+    Object.keys(SMF).forEach(function (k) {
+      fidMat[k] = new T.MeshStandardMaterial({ color: SMF[k], roughness: 0.9, transparent: k === 'schematic', opacity: k === 'schematic' ? 0.55 : 1 });
+      edgeMat[k] = new T.LineBasicMaterial({ color: k === 'measured' ? '#2B2F35' : k === 'declared' ? '#6F6A62' : '#A9A59E', transparent: true, opacity: k === 'schematic' ? 0.35 : 0.9 });
+    });
+    var mat = function (c, x) { var m = { color: c, roughness: 0.85 }; for (var k in (x || {})) m[k] = x[k]; return new T.MeshStandardMaterial(m); };
+    var add = function (mesh, fid, parent, edges) {
+      mesh.castShadow = true; mesh.receiveShadow = true; mesh.userData.mat = mesh.material; mesh.userData.fid = fid;
+      reg.push(mesh); (parent || sc).add(mesh);
+      if (edges !== false) { var e = new T.LineSegments(new T.EdgesGeometry(mesh.geometry, 25), edgeMat[fid]); e.raycast = function () {}; mesh.add(e); }
+      return mesh;
+    };
+    var box = function (w, h, d) { return new T.BoxGeometry(w, h, d); };
+    // the maquette's surfaces: grey canvases multiplied by each material's colour
+    var canvasTex = function (w, h, paint, rep) {
+      var c = doc.createElement('canvas'); c.width = w; c.height = h; paint(c.getContext('2d'), w, h);
+      var tx = new T.CanvasTexture(c); tx.colorSpace = T.SRGBColorSpace; tx.anisotropy = 8;
+      if (rep) { tx.wrapS = tx.wrapT = T.RepeatWrapping; }
+      return tx;
+    };
+    // tile courses, one per texture height: a shadow line under a light lip
+    var courseTex = canvasTex(8, 32, function (g, w, h) { g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(0, h - 4, w, 4); g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(0, h - 6, w, 2); }, true);
+    // a roof membrane welded in 2 m strips
+    var seamTex = canvasTex(64, 64, function (g, w, h) { g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, 0, w, 2); }, true);
+    // the metric grid of D-68, 1 m minor and 5 m major, as dots or lines: one texture holds 5 m
+    var gridTex = function (kind) {
+      return canvasTex(320, 320, function (g, w) {
+        g.clearRect(0, 0, w, w); g.fillStyle = g.strokeStyle = SMC.ink;
+        for (var i = 0; i < 5; i++) for (var j = 0; j < 5; j++) {
+          var x = i * 64 + 0.5, y = j * 64 + 0.5, major = i === 0 && j === 0;
+          if (kind === 'dots') { g.globalAlpha = major ? 0.55 : 0.42; if (major) { g.fillRect(x - 6, y - 1, 12, 2); g.fillRect(x - 1, y - 6, 2, 12); } else { g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); } }
+        }
+        if (kind === 'lines') {
+          for (var k = 0; k < 5; k++) { g.globalAlpha = k ? 0.1 : 0.24; g.fillRect(k * 64, 0, k ? 1 : 2, w); g.fillRect(0, k * 64, w, k ? 1 : 2); }
+        }
+      }, true);
+    };
+    // walls darker at their foot, as daylight falls on a maquette
+    var shade = function (g) {
+      g.computeBoundingBox(); var p = g.attributes.position, y0 = g.boundingBox.min.y, y1 = g.boundingBox.max.y, c = [];
+      for (var i = 0; i < p.count; i++) { var f = 0.84 + 0.16 * (p.getY(i) - y0) / (y1 - y0 || 1); c.push(f, f, f); }
+      g.setAttribute('color', new T.Float32BufferAttribute(c, 3)); return g;
+    };
+    // contact shadows: a soft dark rectangle under whatever stands on the ground
+    var aoTex = canvasTex(128, 128, function (g) { g.shadowColor = 'rgba(0,0,0,1)'; g.shadowBlur = 26; g.shadowOffsetX = 1000; g.fillStyle = '#000'; g.fillRect(-1000 + 28, 28, 72, 72); });
+    var aoG = new T.Group(); sc.add(aoG);
+    var blob = function (x, z, w, d, op, ry, parent) {
+      var m = new T.Mesh(new T.PlaneGeometry(w * 128 / 72, d * 128 / 72), new T.MeshBasicMaterial({ map: aoTex, color: '#1E2124', transparent: true, opacity: op, depthWrite: false }));
+      m.rotation.set(-Math.PI / 2, ry || 0, 0, 'YXZ'); m.position.set(x, 0.035, z); m.renderOrder = 1; (parent || aoG).add(m); return m;
+    };
+    // a box with rounded vertical edges, for the equipment: extruded from its front outline
+    var rbox = function (w, h, d, rr) {
+      var s = new T.Shape(), x = w / 2, y = h / 2, q = Math.min(rr, x, y);
+      s.moveTo(-x + q, -y); s.lineTo(x - q, -y); s.quadraticCurveTo(x, -y, x, -y + q); s.lineTo(x, y - q); s.quadraticCurveTo(x, y, x - q, y);
+      s.lineTo(-x + q, y); s.quadraticCurveTo(-x, y, -x, y - q); s.lineTo(-x, -y + q); s.quadraticCurveTo(-x, -y, -x + q, -y);
+      var g = new T.ExtrudeGeometry(s, { depth: d - 0.02, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 1, curveSegments: 4 });
+      g.translate(0, 0, -d / 2 + 0.01); return g;
+    };
+
+    // ground: a wide plane fading out, the lot, the paved areas, the street
+    var fade = doc.createElement('canvas'); fade.width = fade.height = 256;
+    var fg = fade.getContext('2d'), grd = fg.createRadialGradient(128, 128, 40, 128, 128, 128);
+    grd.addColorStop(0, '#fff'); grd.addColorStop(1, '#000'); fg.fillStyle = grd; fg.fillRect(0, 0, 256, 256);
+    var gs = Math.max(D.lot[2] - D.lot[0], D.lot[3] - D.lot[1]) * 3.2;
+    var gnd = new T.Mesh(new T.PlaneGeometry(gs, gs), mat(SMC.ground, { alphaMap: new T.CanvasTexture(fade), transparent: true, roughness: 1 }));
+    gnd.rotation.x = -Math.PI / 2; gnd.position.set(mid[0], -0.02, mid[1]); gnd.receiveShadow = true; sc.add(gnd);
+    var flat = function (x0, z0, x1, z1, c, y, fid, parent) {
+      var m = new T.Mesh(new T.PlaneGeometry(x1 - x0, z1 - z0), mat(c, { roughness: 1 }));
+      m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2);
+      add(m, fid, parent, false); m.castShadow = false; return m;
+    };
+    flat(D.lot[0], D.lot[1], D.lot[2], D.lot[3], SMC.lot, 0, 'schematic');
+    (D.flats || []).forEach(function (f) { flat(f[0], f[1], f[2], f[3], SMC[f[4]], 0.01, 'schematic'); });
+    if (D.surface) flat(D.surface[0], D.surface[1], D.surface[2], D.surface[3], SMC.asphalt, 0.01, 'measured');
+    if (D.street) flat(D.lot[0] - 20, D.lot[3] + 0.2, D.lot[2] + 20, D.lot[3] + 7.5, SMC.street, -0.01, 'schematic');
+    // bay lines, painted: one thin strip per bay side
+    var lineMat = mat(SMC.line, { roughness: 1 });
+    (D.bays || []).forEach(function (b) {
+      var bw = (b.x1 - b.x0) / b.n;
+      for (var i = 0; i <= b.n; i++) { var m = add(new T.Mesh(new T.PlaneGeometry(0.1, b.z1 - b.z0), lineMat), 'schematic', null, false); m.rotation.x = -Math.PI / 2; m.position.set(b.x0 + i * bw, 0.02, (b.z0 + b.z1) / 2); m.castShadow = false; }
+    });
+    // the lot boundary from the cadastre: a dashed line
+    var lb = [[D.lot[0], D.lot[1]], [D.lot[2], D.lot[1]], [D.lot[2], D.lot[3]], [D.lot[0], D.lot[3]], [D.lot[0], D.lot[1]]].map(function (p) { return new T.Vector3(p[0], 0.03, p[1]); });
+    var lbl = new T.Line(new T.BufferGeometry().setFromPoints(lb), new T.LineDashedMaterial({ color: SMF.measured, dashSize: 0.6, gapSize: 0.35 }));
+    lbl.computeLineDistances(); sc.add(lbl);
+    // the metric grid over the ground, fading with it; whole metres fall on its lines
+    var gsz = Math.ceil(gs / 2 / 10) * 20, gc = [Math.round(mid[0] / 5) * 5, Math.round(mid[1] / 5) * 5];
+    var grids = { dots: gridTex('dots'), lines: gridTex('lines') };
+    Object.keys(grids).forEach(function (k) { grids[k].repeat.set(gsz / 5, gsz / 5); });
+    var gridM = new T.Mesh(new T.PlaneGeometry(gsz, gsz), new T.MeshBasicMaterial({ map: grids.dots, alphaMap: gnd.material.alphaMap, transparent: true, depthWrite: false }));
+    gridM.rotation.x = -Math.PI / 2; gridM.position.set(gc[0], 0.03, gc[1]); gridM.renderOrder = 2; sc.add(gridM);
+
+    // the buildings extruded from their footprints, a plinth, the openings
+    D.bodies.forEach(function (b) {
+      blob((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, b[2] - b[0] + 1.2, b[3] - b[1] + 1.2, 0.32);
+      add(new T.Mesh(shade(box(b[2] - b[0], b[4], b[3] - b[1])), mat(SMC.walls, { vertexColors: true })), b[5]).position.set((b[0] + b[2]) / 2, b[4] / 2, (b[1] + b[3]) / 2);
+      add(new T.Mesh(box(b[2] - b[0] + 0.06, 0.32, b[3] - b[1] + 0.06), mat(SMC.plinth)), b[5], null, false).position.set((b[0] + b[2]) / 2, 0.16, (b[1] + b[3]) / 2);
+    });
+    D.open.forEach(function (q) {
+      var wl = W[q.w], len = q.s1 - q.s0, y0 = q.y0 != null ? q.y0 : q.k === 'win' ? 0.9 : 0, y1 = q.y1 || (q.k === 'gdoor' ? 2.3 : 2.1), h = y1 - y0;
+      var fid = q.k === 'win' ? 'schematic' : 'declared', g = new T.Group();
+      var fill = add(new T.Mesh(box(len, h, 0.04), mat(q.k === 'win' ? SMC.glass : SMC.door, { roughness: q.k === 'win' ? 0.3 : 0.8 })), fid, g);
+      fill.castShadow = false;
+      if (q.k === 'win') { var sill = add(new T.Mesh(box(len + 0.16, 0.05, 0.12), mat(SMC.frame)), fid, g, false); sill.position.set(0, -h / 2 - 0.02, 0.04); }
+      var p = smAt(W, q.w, (q.s0 + q.s1) / 2, 0.02, y0 + h / 2);
+      g.position.set(p[0], p[1], p[2]); g.rotation.y = Math.atan2(wl.nx, wl.nz); sc.add(g);
+    });
+
+    // modules: a texture with the frame and the half-cut cells, one instanced mesh per zone
+    var mc = doc.createElement('canvas'); mc.width = 113; mc.height = 172;
+    var mg = mc.getContext('2d'); mg.fillStyle = '#E6E8EA'; mg.fillRect(0, 0, 113, 172); mg.fillStyle = '#26364A'; mg.fillRect(3, 3, 107, 166);
+    mg.strokeStyle = 'rgba(160,180,205,.45)'; mg.lineWidth = 1;
+    for (var ci = 1; ci < 6; ci++) { mg.beginPath(); mg.moveTo(3 + ci * 107 / 6, 3); mg.lineTo(3 + ci * 107 / 6, 169); mg.stroke(); }
+    for (var cj = 1; cj < 20; cj++) { mg.beginPath(); mg.moveTo(3, 3 + cj * 166 / 20); mg.lineTo(110, 3 + cj * 166 / 20); mg.stroke(); }
+    var mtex = new T.CanvasTexture(mc); mtex.colorSpace = T.SRGBColorSpace; mtex.anisotropy = 4;
+    var modMat = new T.MeshStandardMaterial({ map: mtex, roughness: 0.35, metalness: 0.1 }), modGeo = box(1.13, 0.04, 1.72);
+    // the box's top face carries the texture upright; its sides take the frame colour
+    var modL = [];
+    var instanced = function (list, tilt, fid, parent) {
+      var im = new T.InstancedMesh(modGeo, modMat, list.length), m4 = new T.Matrix4(), q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), -tilt * deg), one = new T.Vector3(1, 1, 1);
+      list.forEach(function (p, i) { im.setMatrixAt(i, m4.compose(new T.Vector3(p.x, p.y, p.z), q, one)); });
+      im.castShadow = true; im.receiveShadow = true; im.userData.mat = modMat; im.userData.fid = fid; reg.push(im); modL.push(im); (parent || sc).add(im); return im;
+    };
+    // the zones of the site with their modules: the capacity is their sum
+    var zones = [], togG = new T.Group(), PV, ye = 0, tp = 0, Z0 = 0;
+    sc.add(togG);
+
+    if (D.roof === 'hip') {
+      // the measured roof: a hip over the house, with its overhang and a fascia
+      var o = D.over; tp = Math.tan(D.pitch * deg);
+      var yr = D.eave + 5 * tp, X0 = -7.5 - o, X1 = 7.5 + o, Z1 = 5 + o; ye = D.eave - o * tp; Z0 = -5 - o;
+      var hipV = [[X0, ye, Z0], [X1, ye, Z0], [2.5, yr, 0], [-2.5, yr, 0], [X0, ye, Z1], [X1, ye, Z1]];
+      var roofGeo = function (pos) { var g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g; };
+      // faces with their tile courses: parallel to the eave, 0.31 m apart in plan
+      var faces = function (list) {
+        var pos = [], uv = [];
+        list.forEach(function (f) { f[2].forEach(function (i) { var v = f[0][i]; pos.push(v[0], v[1], v[2]); uv.push(f[1] === 'x' ? v[0] / 2 : v[2] / 2, f[1] === 'x' ? v[2] / 0.31 : v[0] / 0.31); }); });
+        var g = roofGeo(pos); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); return g;
+      };
+      var roofMat = mat(SMC.roof, { side: T.DoubleSide, map: courseTex }), gRoofMat = mat(SMC.garageRoof, { side: T.DoubleSide, map: courseTex });
+      add(new T.Mesh(faces([[hipV, 'x', [0, 2, 1, 0, 3, 2]], [hipV, 'x', [4, 5, 2, 4, 2, 3]], [hipV, 'z', [0, 4, 3]], [hipV, 'z', [1, 2, 5]]]), roofMat), 'measured');
+      // a ridge and hip caps: three strokes, as the plan draws them
+      var capMat = mat('#7E766B', { roughness: 0.7 });
+      [[hipV[2], hipV[3]], [hipV[0], hipV[3]], [hipV[4], hipV[3]], [hipV[1], hipV[2]], [hipV[5], hipV[2]]].forEach(function (s) {
+        var a = new T.Vector3().fromArray(s[0]), b = new T.Vector3().fromArray(s[1]), cap = add(new T.Mesh(new T.CylinderGeometry(0.07, 0.07, a.distanceTo(b), 6), capMat), 'measured', null, false);
+        cap.position.copy(a).add(b).multiplyScalar(0.5); cap.position.y += 0.03; cap.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+      });
+      [[X1 - X0, Z0, 0], [X1 - X0, Z1, 0], [Z1 - Z0, X0, 1], [Z1 - Z0, X1, 1]].forEach(function (f) {
+        var m = add(new T.Mesh(box(f[2] ? 0.04 : f[0], 0.14, f[2] ? f[0] : 0.04), mat(SMC.fascia)), 'measured', null, false);
+        if (f[2]) m.position.set(f[1], ye - 0.07, 0); else m.position.set(0, ye - 0.07, f[1]);
+      });
+      // the declared garage roof: a gable along the garage, 15°
+      var gt = Math.tan(D.garagePitch * deg), go = 0.3, gye = D.garageEave - go * gt, gyr = D.garageEave + 3 * gt;
+      var gV = [[7.5 - go, gye, -1 - go], [10.5, gyr, -1 - go], [13.5 + go, gye, -1 - go], [7.5 - go, gye, 6 + go], [10.5, gyr, 6 + go], [13.5 + go, gye, 6 + go]];
+      add(new T.Mesh(faces([[gV, 'z', [0, 1, 3, 1, 4, 3, 1, 2, 4, 2, 5, 4]]]), gRoofMat), 'declared');
+      var gr = add(new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 7 + 2 * go, 6), capMat), 'declared', null, false); gr.rotation.x = Math.PI / 2; gr.position.set(10.5, gyr + 0.03, 2.5);
+      var gable = roofGeo([7.5, D.garageEave, -1, 10.5, gyr, -1, 13.5, D.garageEave, -1, 7.5, D.garageEave, 6, 13.5, D.garageEave, 6, 10.5, gyr, 6]);
+      add(new T.Mesh(gable, mat(SMC.walls, { side: T.DoubleSide })), 'declared', null, false);
+      PV = smHipModules(D); instanced(PV, D.pitch, 'declared');
+      zones.push({ name: 'zNorth', n: PV.length });
+    } else {
+      // flat roofs: a membrane and a parapet on every body
+      D.bodies.forEach(function (b) {
+        var w = b[2] - b[0], d = b[3] - b[1], cx = (b[0] + b[2]) / 2, cz = (b[1] + b[3]) / 2, p = D.parapet, th = 0.25;
+        var mb = flat(b[0], b[1], b[2], b[3], SMC.flatRoof, b[4] + 0.01, b[5]), sx = seamTex.clone();
+        sx.repeat.set(w / 2, d / 2); sx.needsUpdate = true; mb.material.map = sx; mb.receiveShadow = true;
+        [[w, th, cx, b[1] + th / 2], [w, th, cx, b[3] - th / 2], [th, d, b[0] + th / 2, cz], [th, d, b[2] - th / 2, cz]].forEach(function (q) {
+          add(new T.Mesh(box(q[0], p, q[1]), mat(SMC.parapet)), b[5], null, false).position.set(q[2], b[4] + p / 2, q[3]);
+        });
+      });
+      (D.units || []).forEach(function (u) { add(new T.Mesh(box(u[2], 1.2, u[3]), mat('#D6D3CC', { roughness: 0.6 })), 'measured').position.set(u[0], D.eave + 0.6, u[1]); });
+      if (kind === 'ci') {
+        PV = smFlatModules(D); instanced(PV, D.tilt, 'declared');
+        // a ballast frame under each row
+        PV.rows.forEach(function (row) {
+          var xa = row[0].x - 0.6, xb = row[row.length - 1].x + 0.6;
+          var fr = add(new T.Mesh(box(xb - xa, 0.12, 1.5), mat(SMC.steel, { roughness: 0.5 })), 'declared', null, false); fr.position.set((xa + xb) / 2, D.eave + 0.07, row[0].z); modL.push(fr);
+        });
+        zones.push({ name: 'zFlat', n: PV.length });
+      } else PV = [];
+    }
+
+    // canopies and carports: a tilted slab on posts, with its own modules
+    var canopyArea = 0, CPm0 = null;
+    D.canopies.forEach(function (c) {
+      var g = new T.Group(), w = c.x1 - c.x0, d = c.z1 - c.z0, cx = (c.x0 + c.x1) / 2, cz = (c.z0 + c.z1) / 2, ct = Math.tan(c.tilt * deg);
+      var slab = add(new T.Mesh(box(w, 0.12, d / Math.cos(c.tilt * deg)), mat(c.fid === 'declared' ? SMC.steel : SMC.carport)), c.fid, g);
+      slab.position.set(cx, c.y, cz); slab.rotation.x = -c.tilt * deg;
+      var posts = c.posts === 'corners' ? [[c.x0 + 0.15, c.z0 + 0.15], [c.x1 - 0.15, c.z0 + 0.15], [c.x0 + 0.15, c.z1 - 0.15], [c.x1 - 0.15, c.z1 - 0.15]] : [];
+      if (c.posts === 'rows') for (var px = c.x0 + 2.5; px < c.x1; px += 7.5) posts.push([px, cz - 0.6]);
+      posts.forEach(function (p) {
+        var h = c.y + (p[1] - cz) * ct, post = add(new T.Mesh(box(0.2, h, 0.2), mat(c.fid === 'declared' ? SMC.steel : SMC.carport)), c.fid, g);
+        post.position.set(p[0], h / 2, p[1]); blob(p[0], p[1], 0.7, 0.7, 0.35, 0, g);
+      });
+      var mods = smCanopyModules(c); instanced(mods, c.tilt, c.fid, g);
+      if (!CPm0) CPm0 = { c: c, mods: mods };
+      zones.push({ name: c.name, n: mods.length, tog: !!c.tog, area: w * d });
+      (c.tog ? togG : sc).add(g);
+    });
+    if (!PV.length && CPm0) PV = CPm0.mods;
+
+    // cars: a body and a glass cabin extruded from their side profiles, wheels with rims, lights;
+    // the first one is the charging car. The front faces north (-z) before any turn.
+    var carBody = (function () {
+      var s = new T.Shape(), L = 4.4;
+      s.moveTo(-L / 2, 0.3); s.lineTo(-L / 2, 0.78); s.quadraticCurveTo(-L / 2 + 0.05, 0.96, -L / 2 + 0.45, 0.98);
+      s.lineTo(L / 2 - 0.55, 0.98); s.quadraticCurveTo(L / 2, 0.94, L / 2, 0.68); s.lineTo(L / 2, 0.3);
+      // the wheel arches, cut as half discs from the sill
+      s.lineTo(1.75, 0.3); s.absarc(1.4, 0.3, 0.38, 0, Math.PI, false); s.lineTo(-1.05, 0.3); s.absarc(-1.4, 0.3, 0.38, 0, Math.PI, false); s.lineTo(-L / 2, 0.3);
+      var g = new T.ExtrudeGeometry(s, { depth: 1.66, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 2, curveSegments: 8 });
+      g.translate(0, 0, -0.83); g.rotateY(Math.PI / 2); return g;
+    })(), carCabin = (function () {
+      var s = new T.Shape();
+      s.moveTo(-1.75, 0.96); s.lineTo(-1.4, 1.42); s.quadraticCurveTo(-1.3, 1.46, -1.1, 1.46); s.lineTo(0.55, 1.46); s.quadraticCurveTo(0.7, 1.46, 0.8, 1.4); s.lineTo(1.35, 0.96); s.lineTo(-1.75, 0.96);
+      var g = new T.ExtrudeGeometry(s, { depth: 1.4, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2 });
+      g.translate(0, 0, -0.7); g.rotateY(Math.PI / 2); return g;
+    })(), wheelGeo = new T.CylinderGeometry(0.33, 0.33, 0.24, 20), rimGeo = new T.CylinderGeometry(0.19, 0.19, 0.25, 12), lampGeo = box(0.32, 0.08, 0.04);
+    var tyreMat = mat(SMC.tyre), rimMat = mat('#C7CBCF', { roughness: 0.4, metalness: 0.4 }), glassMat = mat('#2F3A45', { roughness: 0.15, metalness: 0.3 });
+    var headMat = mat('#F4F1E6', { emissive: '#F4F1E6', emissiveIntensity: 0.2 }), tailMat = mat('#B5473A', { roughness: 0.4 });
+    var carMats = SMCARS.map(function (c) { return mat(c, { roughness: 0.38, metalness: 0.25 }); });
+    var car = function (x, z, ci, fl) {
+      var g = new T.Group(); add(new T.Mesh(carBody, carMats[ci % carMats.length]), 'schematic', g);
+      add(new T.Mesh(carCabin, glassMat), 'schematic', g);
+      [[-0.84, -1.4], [0.84, -1.4], [-0.84, 1.4], [0.84, 1.4]].forEach(function (p) {
+        var wh = add(new T.Mesh(wheelGeo, tyreMat), 'schematic', g, false); wh.rotation.z = Math.PI / 2; wh.position.set(p[0], 0.33, p[1]);
+        var rm = add(new T.Mesh(rimGeo, rimMat), 'schematic', g, false); rm.rotation.z = Math.PI / 2; rm.position.set(p[0] + (p[0] < 0 ? -0.01 : 0.01), 0.33, p[1]);
+      });
+      [-0.55, 0.55].forEach(function (lx) {
+        add(new T.Mesh(lampGeo, headMat), 'schematic', g, false).position.set(lx, 0.78, -2.25);
+        add(new T.Mesh(lampGeo, tailMat), 'schematic', g, false).position.set(lx, 0.82, 2.25);
+      });
+      blob(0, 0, 2.1, 4.6, 0.42, 0, g);
+      if (fl) g.rotation.y = Math.PI;
+      g.position.set(x, 0, z); sc.add(g);
+    };
+    D.cars.forEach(function (c) { car(c.x, c.z, 0); });
+    // the other bays, filled by a fixed pattern so the drawing does not change between visits
+    (D.bays || []).forEach(function (b, bi) {
+      var bw = (b.x1 - b.x0) / b.n;
+      for (var i = 0; i < b.n; i++) {
+        var x = b.x0 + (i + 0.5) * bw, z = (b.z0 + b.z1) / 2, taken = D.cars.some(function (c) { return Math.abs(c.x - x) < 1 && Math.abs(c.z - z) < 2.6; });
+        if (!taken && ((i * 7 + bi * 3) % 10) / 10 < (D.carFill || 0.45)) car(x, z, i + bi, (b.z0 + b.z1) / 2 < 0 !== (bi % 2 === 1));
+      }
+    });
+    // a box truck at the loading doors
+    (D.trucks || []).forEach(function (p) {
+      var g = new T.Group();
+      add(new T.Mesh(rbox(2.4, 2.7, 6.2, 0.08), mat('#ECEAE5', { roughness: 0.6 })), 'schematic', g).position.set(0, 1.95, 0.8);
+      add(new T.Mesh(rbox(2.3, 2.0, 1.9, 0.25), mat('#5F6B78', { roughness: 0.45 })), 'schematic', g).position.set(0, 1.45, -3.3);
+      add(new T.Mesh(box(2.1, 0.7, 0.05), glassMat), 'schematic', g, false).position.set(0, 2.0, -4.26);
+      [[-1, -3], [1, -3], [-1, 2.6], [1, 2.6]].forEach(function (q) { var wh = add(new T.Mesh(new T.CylinderGeometry(0.45, 0.45, 0.3, 20), tyreMat), 'schematic', g, false); wh.rotation.z = Math.PI / 2; wh.position.set(q[0], 0.45, q[1]); });
+      blob(0, -0.2, 2.8, 8.6, 0.42, 0, g);
+      g.rotation.y = Math.PI / 2; g.position.set(p[0], 0, p[1]); sc.add(g);
+    });
+    // trees: three faceted crowns on a trunk, two greens
+    var leafA = mat(SMC.leaf, { flatShading: true }), leafB = mat('#8A9E80', { flatShading: true });
+    D.trees.forEach(function (p, ti) {
+      var tr = new T.Group(); add(new T.Mesh(new T.CylinderGeometry(0.16, 0.24, 2.6, 7), mat(SMC.trunk)), 'schematic', tr, false).position.y = 1.3;
+      [[0, 3.7, 0, 1.7], [0.9, 3.2, 0.5, 1.2], [-0.8, 3.3, -0.4, 1.25]].forEach(function (c, i) {
+        add(new T.Mesh(new T.IcosahedronGeometry(c[3], 0), (i + ti) % 2 ? leafB : leafA), 'schematic', tr, false).position.set(c[0], c[1], c[2]);
+      });
+      blob(0, 0, 3.2, 3.2, 0.28, 0, tr);
+      tr.rotation.y = ti * 1.3; tr.position.set(p[0], 0, p[1]); sc.add(tr);
+    });
+
+    // equipment, anchored to a wall: a catalogue-sized body standing off the wall, with the details
+    // that tell one from another at a glance (fins, a display, a door seam, a holster, a fan grille)
+    var EQ = {}, dark = mat('#3A3F46', { roughness: 0.5 }), seam = mat('#8C877E', { roughness: 0.7 });
+    var part = function (g, geo, m, x, y, z) { var p = add(new T.Mesh(geo, m), 'declared', g, false); p.position.set(x, y, z); return p; };
+    Object.keys(D.equip).forEach(function (k) {
+      var e = D.equip[k], g = new T.Group(), fz = e.D / 2, b;
+      if (k === 'hp') b = add(new T.Mesh(box(e.W, e.H, e.D), mat(e.c, { roughness: 0.6 })), 'declared', g);
+      else b = add(new T.Mesh(rbox(e.W, e.H, e.D, Math.min(0.08, e.W / 5)), mat(e.c, { roughness: 0.55 })), 'declared', g);
+      if (k === 'inv') {
+        for (var f = 0; f < 5; f++) part(g, box(e.W * 0.8, 0.012, 0.03), seam, 0, -e.H / 2 + 0.12 + f * 0.05, fz + 0.01);
+        part(g, box(e.W * 0.3, e.H * 0.12, 0.012), dark, 0, e.H * 0.22, fz + 0.006);
+      }
+      if (k === 'bat') {
+        part(g, box(Math.min(0.3, e.W * 0.4), 0.025, 0.012), mat('#7A5BD0', { emissive: '#7A5BD0', emissiveIntensity: 0.7 }), 0, e.H / 2 - 0.25, fz + 0.006);
+        part(g, box(e.W * 0.92, 0.012, 0.012), seam, 0, -e.H / 2 + 0.2, fz + 0.006);
+      }
+      if (k === 'sb') {
+        part(g, box(0.012, e.H * 0.9, 0.012), seam, e.W > 1 ? 0 : -e.W * 0.1, 0, fz + 0.006);
+        part(g, box(0.03, 0.12, 0.03), dark, e.W > 1 ? 0.08 : e.W * 0.3, 0, fz + 0.015);
+      }
+      if (k === 'evc') {
+        part(g, box(e.W * 0.5, 0.06, 0.012), mat('#7EC8A0', { emissive: '#7EC8A0', emissiveIntensity: 0.5 }), 0, e.H * 0.28, fz + 0.006);
+        part(g, box(0.07, 0.12, 0.08), dark, e.W / 2 + 0.06, -0.05, 0.02);
+        var coil = part(g, new T.TorusGeometry(0.11, 0.018, 6, 18), dark, 0, -e.H / 2 - 0.2, 0.05); coil.rotation.x = Math.PI / 2 - 0.4;
+      }
+      if (k === 'hp') {
+        var ring = part(g, new T.TorusGeometry(0.25, 0.025, 8, 28), seam, -0.15, 0, fz + 0.015);
+        part(g, new T.CircleGeometry(0.24, 28), dark, -0.15, 0, fz + 0.008);
+        for (var gb = -2; gb <= 2; gb++) part(g, box(0.5, 0.012, 0.012), seam, -0.15, gb * 0.09, fz + 0.03);
+        for (var v = 0; v < 6; v++) part(g, box(0.012, e.H * 0.8, 0.012), seam, 0.18 + v * 0.04, 0, fz + 0.006);
+        ring.castShadow = false;
+        // the outdoor unit stands on two feet
+        [-e.W / 2 + 0.12, e.W / 2 - 0.12].forEach(function (x) { part(g, box(0.08, 0.1, e.D + 0.1), dark, x, -e.H / 2 - 0.05, 0); });
+      }
+      if (e.y0 < 0.2) { var bl = blob(0, 0, e.W + 0.5, e.D + 0.5, 0.38, 0, g); bl.position.y = -e.H / 2 - e.y0 + 0.035; }
+      b.userData.eq = k; sc.add(g); EQ[k] = { e: e, g: g, a: { w: e.w, s: e.s } };
+    });
+    var placeEq = function (k) {
+      var q = EQ[k], e = q.e, wl = W[q.a.w], off = (e.gap || 0) + e.D / 2, p = smAt(W, q.a.w, q.a.s, off, e.y0 + e.H / 2 + (k === 'hp' ? 0.1 : 0));
+      q.g.position.set(p[0], p[1], p[2]); q.g.rotation.y = Math.atan2(wl.nx, wl.nz);
+      if (planEq[k]) { var m = smAt(W, q.a.w, q.a.s, off, 0); planEq[k].position.set(m[0], 0, m[2]); planEq[k].rotation.y = q.g.rotation.y; }
+    };
+
+    // the plan's own layer, drawn over the roofs: the walls dashed under the eaves, the equipment
+    // as symbols, the measured dimensions; the cables go over the roofs too (see paint)
+    var planG = new T.Group(), planEq = {}, dimL = []; planG.visible = false; sc.add(planG);
+    var over = function (o, ro) { o.renderOrder = ro || 6; o.material.depthTest = false; o.material.transparent = true; planG.add(o); return o; };
+    var fp = D.foot.concat([D.foot[0]]).map(function (p) { return new T.Vector3(p[0], 0.1, p[1]); });
+    var fl = over(new T.Line(new T.BufferGeometry().setFromPoints(fp), new T.LineDashedMaterial({ color: SMC.ink, dashSize: 0.45, gapSize: 0.25, opacity: 0.75 }))); fl.computeLineDistances();
+    var eqCol = { inv: SMC.ac, bat: SMC.bat, sb: '#6F6A62', evc: SMC.ev, hp: SMC.hpc };
+    Object.keys(EQ).forEach(function (k) {
+      var e = EQ[k].e, g = new T.Group(), d = Math.max(e.D, 0.3), m = over(new T.Mesh(new T.PlaneGeometry(e.W, d), new T.MeshBasicMaterial({ color: eqCol[k] })), 7);
+      m.rotation.x = -Math.PI / 2; planG.remove(m); g.add(m);
+      var ol = over(new T.LineSegments(new T.EdgesGeometry(m.geometry), new T.LineBasicMaterial({ color: '#FFFFFF' })), 8); planG.remove(ol); ol.rotation.x = -Math.PI / 2; g.add(ol);
+      planEq[k] = g; planG.add(g);
+    });
+    // dimensions of the measured outline: extension lines, a dimension line, oblique ticks
+    var dimMat = new T.LineBasicMaterial({ color: SMF.measured });
+    (D.dims || []).forEach(function (q) {
+      var a = [q[0], q[1]], b = [q[2], q[3]], n = [q[4], q[5]], L = Math.hypot(b[0] - a[0], b[1] - a[1]), u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], o = 2, v = [];
+      var P = function (p, k, j) { return new T.Vector3(p[0] + n[0] * k + u[0] * (j || 0), 0.1, p[1] + n[1] * k + u[1] * (j || 0)); };
+      var tk = function (p) { var c = P(p, o); v.push(new T.Vector3(c.x - (u[0] + n[0]) * 0.25, 0.1, c.z - (u[1] + n[1]) * 0.25), new T.Vector3(c.x + (u[0] + n[0]) * 0.25, 0.1, c.z + (u[1] + n[1]) * 0.25)); };
+      v.push(P(a, 0.3), P(a, o + 0.3), P(b, 0.3), P(b, o + 0.3), P(a, o), P(b, o)); tk(a); tk(b);
+      over(new T.LineSegments(new T.BufferGeometry().setFromPoints(v), dimMat), 9);
+      var c = P([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], o + 0.55);
+      dimL.push({ at: [c.x, 0.1, c.z], L: L });
+    });
+
+    // the rule of the site, shown with its button: battery zones, the roof edge, or the car park surface
+    var zoneG = new T.Group(), zMat = new T.MeshBasicMaterial({ color: SMC.zone, transparent: true, opacity: 0.22, depthWrite: false, side: T.DoubleSide });
+    Z.forEach(function (z) {
+      var wl = W[z.w], s0 = Math.max(0, z.s0), s1 = Math.min(wl.L, z.s1), len = s1 - s0, mz = (s0 + s1) / 2, ry = Math.atan2(wl.nx, wl.nz);
+      var a = new T.Mesh(new T.PlaneGeometry(len, z.y1 - z.y0), zMat), p = smAt(W, z.w, mz, 0.05, (z.y0 + z.y1) / 2);
+      a.position.set(p[0], p[1], p[2]); a.rotation.y = ry; zoneG.add(a);
+      var gb = new T.Mesh(new T.PlaneGeometry(len, 0.6), zMat), q = smAt(W, z.w, mz, 0.32, 0.03);
+      gb.rotation.set(-Math.PI / 2, ry, 0, 'YXZ'); gb.position.set(q[0], q[1], q[2]); zoneG.add(gb);
+    });
+    var band = function (x0, z0, x1, z1, y) { var m = new T.Mesh(new T.PlaneGeometry(x1 - x0, z1 - z0), zMat); m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); zoneG.add(m); };
+    if (D.rule === 'edge') {
+      var B = D.bodies[0], e = D.edge, y = D.eave + 0.03;
+      band(B[0], B[1], B[2], B[1] + e, y); band(B[0], B[3] - e, B[2], B[3], y); band(B[0], B[1] + e, B[0] + e, B[3] - e, y); band(B[2] - e, B[1] + e, B[2], B[3] - e, y);
+    }
+    if (D.rule === 'aper') {
+      var S = D.surface, ol = [[S[0], S[1]], [S[2], S[1]], [S[2], S[3]], [S[0], S[3]], [S[0], S[1]]].map(function (p) { return new T.Vector3(p[0], 0.06, p[1]); });
+      var sl = new T.Line(new T.BufferGeometry().setFromPoints(ol), new T.LineDashedMaterial({ color: SMC.zone, dashSize: 0.8, gapSize: 0.4 })); sl.computeLineDistances(); zoneG.add(sl);
+      D.canopies.forEach(function (c) { var m = new T.Mesh(new T.PlaneGeometry(c.x1 - c.x0, c.z1 - c.z0), new T.MeshBasicMaterial({ color: SMF.declared, transparent: true, opacity: 0.25, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set((c.x0 + c.x1) / 2, 0.05, (c.z0 + c.z1) / 2); m.userData.tog = !!c.tog; zoneG.add(m); });
+    }
+    zoneG.visible = false; sc.add(zoneG);
+
+    // cables: a tube per circuit, plain or striped when the energy flows, the stripes moving with it
+    var CB = {}, cableG = new T.Group(); sc.add(cableG);
+    D.circuits.forEach(function (c) {
+      var cv = doc.createElement('canvas'); cv.width = 48; cv.height = 4; var cg = cv.getContext('2d');
+      cg.fillStyle = SMC[c.c]; cg.fillRect(0, 0, 48, 4); cg.fillStyle = 'rgba(255,255,255,.75)'; cg.fillRect(0, 0, 14, 4);
+      var tx = new T.CanvasTexture(cv); tx.colorSpace = T.SRGBColorSpace; tx.wrapS = T.RepeatWrapping;
+      CB[c.id] = { c: c, tex: tx, plain: new T.MeshStandardMaterial({ color: SMC[c.c], roughness: 0.5, transparent: true }), flow: new T.MeshStandardMaterial({ map: tx, roughness: 0.5, emissive: SMC[c.c], emissiveIntensity: 0.25, transparent: true }), mesh: null, pts: null, len: 0 };
+    });
+    var lead = new T.Line(new T.BufferGeometry(), new T.LineBasicMaterial({ color: SMC.ev, transparent: true })); sc.add(lead);
+    var hpLine = new T.Line(new T.BufferGeometry(), new T.LineDashedMaterial({ color: SMC.ink, dashSize: 0.25, gapSize: 0.15, transparent: true })); sc.add(hpLine);
+    // where each circuit leaves an equipment: above it for wall units, at its back for floor units
+    var tap = function (k) {
+      var q = EQ[k], e = q.e;
+      return k === 'hp' ? { a: q.a, p: smAt(W, q.a.w, q.a.s, D.off, 0.5) } : { a: q.a, p: smAt(W, q.a.w, q.a.s, D.off, Math.min(e.y0 + e.H, D.run)) };
+    };
+    // the strings' way from the array to a wall, at the run height
+    var dcStart = function () {
+      var off = D.off, pts, a;
+      if (kind === 'house') {
+        // from the array's lowest east corner down the slope to the eave, then down the fascia to the run
+        var last = PV.reduce(function (m, p) { return p.z < m.z || (p.z === m.z && p.x > m.x) ? p : m; }, PV[0]);
+        var xr = last.x + 0.5, zr = last.z - 0.75;
+        pts = [[xr, D.eave + (zr + 5) * tp + 0.1, zr], [xr, ye, Z0 - 0.02], [xr, D.run, Z0 - 0.02]]; a = { w: 0, s: xr + 7.5 };
+      } else if (kind === 'ci') {
+        // from the east end of the first row over the parapet, then down the east wall
+        var row = PV.rows[0], m = row[row.length - 1], xe = D.bodies[0][2];
+        pts = [[m.x + 0.6, D.eave + 0.2, m.z], [xe - 0.3, D.eave + 0.2, m.z], [xe - 0.3, D.eave + D.parapet + 0.08, m.z], [xe + off, D.eave + D.parapet + 0.08, m.z], [xe + off, D.run, m.z]];
+        a = { w: 1, s: m.z - D.bodies[0][1] };
+      } else {
+        // from the middle canopy's east end down a post, in a trench to the technical room, up its west wall
+        var c = D.canopies[1], cz = (c.z0 + c.z1) / 2, xw = D.foot[0][0];
+        pts = [[c.x1 - 0.4, c.y + 0.1, cz], [c.x1 + 0.1, c.y, cz], [c.x1 + 0.1, 0.05, cz], [xw - off, 0.05, cz], [xw - off, D.run, cz]];
+        a = { w: 3, s: D.foot[3][1] - cz };
+      }
+      return { pts: pts, a: a };
+    };
+    var routeOf = function (c) {
+      var Bq = tap(c.b), pts;
+      if (c.a === 'pv') { var s0 = dcStart(); pts = s0.pts.concat(smRoute(W, s0.a, Bq.a, D.run, D.off)); }
+      else { var A = tap(c.a); pts = [A.p].concat(smRoute(W, A.a, Bq.a, D.run, D.off)); }
+      pts.push(Bq.p);
+      // drop repeated points (a run that starts at the anchor's own height)
+      return pts.filter(function (p, i) { return i === 0 || Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1], p[2] - pts[i - 1][2]) > 1e-6; });
+    };
+    var inlet = function () { var c = D.cars[0]; return [c.x - 0.95, 0.85, c.z - 1.3]; };
+    var buildCables = function () {
+      D.circuits.forEach(function (c) {
+        var cb = CB[c.id], pts = routeOf(c), path = new T.CurvePath();
+        for (var i = 1; i < pts.length; i++) path.add(new T.LineCurve3(new T.Vector3().fromArray(pts[i - 1]), new T.Vector3().fromArray(pts[i])));
+        cb.pts = pts; cb.len = smLen(pts); cb.vert = smVert(pts);
+        if (cb.mesh) { cableG.remove(cb.mesh); cb.mesh.geometry.dispose(); }
+        cb.mesh = new T.Mesh(new T.TubeGeometry(path, Math.max(16, Math.ceil(cb.len * 10)), kind === 'house' ? 0.08 : 0.12, 8, false), st.flow !== 'off' && D.flow[st.flow][c.id] ? cb.flow : cb.plain);
+        cb.mesh.castShadow = true; cb.tex.repeat.set(cb.len / 0.6, 1); cableG.add(cb.mesh);
+      });
+      // the charger's tethered cable to the car inlet
+      var ch = EQ.evc, cp0 = smAt(W, ch.a.w, ch.a.s, 0.1, ch.e.y0), inl = inlet();
+      var md = [(cp0[0] + inl[0]) / 2, Math.min(cp0[1], inl[1]) - 0.4, (cp0[2] + inl[2]) / 2];
+      var curve = new T.QuadraticBezierCurve3(new T.Vector3().fromArray(cp0), new T.Vector3().fromArray(md), new T.Vector3().fromArray(inl));
+      lead.geometry.dispose(); lead.geometry = new T.BufferGeometry().setFromPoints(curve.getPoints(24)); st.reach = curve.getLength();
+      // the heat pump's distance to the boundary
+      if (EQ.hp) {
+        var h = EQ.hp, he = h.e, front = smAt(W, h.a.w, h.a.s, (he.gap || 0) + he.D, 0.04), L = D.lot;
+        var cand = [[L[0], front[2]], [L[2], front[2]], [front[0], L[1]], [front[0], L[3]]].map(function (p) { return { p: p, d: Math.hypot(p[0] - front[0], p[1] - front[2]) }; }).sort(function (a, b) { return a.d - b.d; })[0];
+        hpLine.geometry.dispose(); hpLine.geometry = new T.BufferGeometry().setFromPoints([new T.Vector3(front[0], 0.04, front[2]), new T.Vector3(cand.p[0], 0.04, cand.p[1])]); hpLine.computeLineDistances();
+        st.hp = { d: cand.d, at: [(front[0] + cand.p[0]) / 2, 0.05, (front[2] + cand.p[1]) / 2] };
+      }
+      // the battery against the zones of its wall
+      var b = EQ.bat, be = b.e;
+      st.batIn = Z.filter(function (z) { return z.w === b.a.w && b.a.s + be.W / 2 > z.s0 && b.a.s - be.W / 2 < z.s1 && be.y0 < z.y1 && be.y0 + be.H > z.y0; })[0] || null;
+    };
+
+    // cameras: the plan looks straight down, north up; the isometric looks down 35.264° from a corner
+    var cam = new T.OrthographicCamera(-1, 1, 1, -1, 0.5, 600), target = new T.Vector3().fromArray(D.iso.t);
+    var frame = function () {
+      var w = wrap.clientWidth || 600, h = wrap.clientHeight || 460, asp = w / h;
+      r.setSize(w, h, false);
+      if (st.view === 'plan') {
+        var hw = (D.lot[2] - D.lot[0]) / 2 + 1.5, hh = (D.lot[3] - D.lot[1]) / 2 + 1.5;
+        if (hw / hh > asp) hh = hw / asp; else hw = hh * asp;
+        cam.left = -hw; cam.right = hw; cam.top = hh; cam.bottom = -hh;
+        cam.up.set(0, 0, -1); cam.position.set(mid[0], 120, mid[1]); cam.lookAt(mid[0], 0, mid[1]);
+      } else {
+        var e = Math.atan(1 / Math.SQRT2), hh2 = asp < 1 ? D.iso.h * 1.24 / asp : D.iso.h;
+        cam.left = -hh2 * asp; cam.right = hh2 * asp; cam.top = hh2; cam.bottom = -hh2;
+        cam.up.set(0, 1, 0); cam.position.set(target.x + 150 * Math.sin(st.az) * Math.cos(e), target.y + 150 * Math.sin(e), target.z + 150 * Math.cos(st.az) * Math.cos(e)); cam.lookAt(target);
+      }
+      cam.updateProjectionMatrix();
+    };
+    var light = function () {
+      var k = D.shadow / 24;
+      if (st.flow === 'eve') { sun.position.set(mid[0] - 34 * k, 7 * k, mid[1] - 8 * k); sun.intensity = 1.3; hemi.intensity = 1.6; sc.background.set('#D9D3CA'); }
+      else { sun.position.set(mid[0] + 10 * k, 34 * k, mid[1] - 22 * k); sun.intensity = 2.2; hemi.intensity = 1.5 * Math.PI / 2; sc.background.set(SMC.ground); }
+      sun.target.position.set(mid[0], 0, mid[1]);
+    };
+    var paint = function () {
+      reg.forEach(function (m) { m.material = st.fid && !m.isInstancedMesh ? fidMat[m.userData.fid] : m.userData.mat; });
+      var plan = st.view === 'plan';
+      planG.visible = plan; modL.forEach(function (m) { m.visible = st.mods; });
+      gridM.visible = st.bg !== 'plain'; if (st.bg !== 'plain') gridM.material.map = grids[st.bg];
+      // on the plan the circuits are an overlay: drawn over the eaves that hide them in 3D
+      Object.keys(CB).forEach(function (id) { [CB[id].plain, CB[id].flow].forEach(function (m) { m.depthTest = !plan; }); if (CB[id].mesh) CB[id].mesh.renderOrder = plan ? 5 : 0; });
+      lead.material.depthTest = hpLine.material.depthTest = !plan; lead.renderOrder = hpLine.renderOrder = plan ? 5 : 0;
+      zoneG.visible = st.rules; togG.visible = st.tog;
+      zoneG.children.forEach(function (m) { if (m.userData.tog) m.visible = st.tog; });
+    };
+
+    // labels over the canvas: the equipment (draggable), the cable lengths, the checks
+    var chip = function (txt, bg, fg, can) {
+      var c = doc.createElement(can ? 'button' : 'span');
+      c.style.cssText = 'position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;padding:3px 7px;border-radius:999px;border:1px solid rgba(0,0,0,.1);box-shadow:0 1px 3px rgba(20,24,30,.14);background:' + bg + ';color:' + fg + ';font:inherit;' + (can ? 'pointer-events:auto;cursor:grab;touch-action:none' : '');
+      c.textContent = txt; layer.appendChild(c); return c;
+    };
+    var labels = {};
+    Object.keys(EQ).forEach(function (k) {
+      var c = chip(t[k], '#FFFFFF', SMC.ink, true); c.setAttribute('aria-label', t[k] + ' · ' + t.hint); labels[k] = c;
+      c.addEventListener('pointerdown', function (ev) { ev.preventDefault(); c.setPointerCapture(ev.pointerId); st.drag = k; st.sel = k; c.style.cursor = 'grabbing'; refresh(); });
+      c.addEventListener('pointermove', function (ev) { if (st.drag === k) dragTo(k, ev); });
+      c.addEventListener('pointerup', function () { st.drag = null; c.style.cursor = 'grab'; refresh(); });
+      c.addEventListener('keydown', function (ev) {
+        var dir = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[ev.key];
+        if (!dir) return; ev.preventDefault(); st.sel = k; slide(k, EQ[k].a.w, EQ[k].a.s + dir * (ev.shiftKey ? 0.5 : 0.1));
+      });
+      c.addEventListener('focus', function () { st.sel = k; refresh(); });
+    });
+    var lenChips = {};
+    D.circuits.forEach(function (c) { lenChips[c.id] = chip('', SMC[c.c], '#FFFFFF', false); });
+    dimL.forEach(function (d) { d.el = chip(fmt(d.L) + ' m', '#FFFFFF', SMF.measured, false); d.el.style.fontWeight = '600'; });
+    var hpChip = chip('', '#FFFFFF', SMC.ink, false), reachChip = chip('', '#FFFFFF', SMC.ev, false);
+    var v3 = new T.Vector3(), look = new T.Vector3();
+    var project = function (p, el) {
+      v3.set(p[0], p[1], p[2]).project(cam);
+      var vis = v3.z < 1 && Math.abs(v3.x) < 1.05 && Math.abs(v3.y) < 1.05;
+      el.style.display = vis ? '' : 'none';
+      el.style.left = ((v3.x + 1) / 2 * wrap.clientWidth).toFixed(1) + 'px'; el.style.top = ((1 - v3.y) / 2 * wrap.clientHeight).toFixed(1) + 'px';
+    };
+    // a wall turned away from the camera hides its equipment: so does its label
+    var facing = function (w) { return W[w].nx * look.x + W[w].nz * look.z < 0.05; };
+    var near = function (c) { return c.a === st.sel || c.b === st.sel; };
+    var placeLabels = function () {
+      cam.getWorldDirection(look);
+      var lift = st.view === 'plan' ? 0 : 0.35, out2 = st.view === 'plan' ? (kind === 'house' ? 1.1 : 2.2) : 0.2;
+      Object.keys(EQ).forEach(function (k) {
+        var q = EQ[k], e = q.e, bad = k === 'bat' && st.batIn, p = smAt(W, q.a.w, q.a.s, (e.gap || 0) + e.D + out2, e.y0 + e.H + lift);
+        project(p, labels[k]);
+        if (!facing(q.a.w) && st.drag !== k) labels[k].style.display = 'none';
+        labels[k].style.background = bad ? SMC.zone : st.sel === k ? SMC.ink : '#FFFFFF';
+        labels[k].style.color = bad || st.sel === k ? '#FFFFFF' : SMC.ink;
+      });
+      D.circuits.forEach(function (c) {
+        var cb = CB[c.id], pts = cb.pts, half = cb.len / 2, acc = 0, at = pts[0];
+        for (var i = 1; i < pts.length; i++) {
+          var seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]);
+          if (acc + seg >= half) { var f = (half - acc) / seg; at = [pts[i - 1][0] + f * (pts[i][0] - pts[i - 1][0]), pts[i - 1][1] + f * (pts[i][1] - pts[i - 1][1]), pts[i - 1][2] + f * (pts[i][2] - pts[i - 1][2])]; break; }
+          acc += seg;
+        }
+        lenChips[c.id].textContent = '≈ ' + fmt(cb.len) + ' m'; project(at, lenChips[c.id]);
+        if (!near(c)) lenChips[c.id].style.display = 'none';
+      });
+      if (st.hp) { hpChip.textContent = fmt(st.hp.d) + ' m'; project(st.hp.at, hpChip); }
+      if (st.sel !== 'hp' || !st.hp) hpChip.style.display = 'none';
+      reachChip.textContent = fmt(st.reach) + ' / ' + D.equip.evc.cable + ' m'; reachChip.style.color = st.reach > D.equip.evc.cable ? SMC.zone : SMC.ev;
+      var ch = EQ.evc; project(smAt(W, ch.a.w, ch.a.s, 1.6, 0.6), reachChip);
+      if (st.sel !== 'evc') reachChip.style.display = 'none';
+      dimL.forEach(function (d) { project(d.at, d.el); if (st.view !== 'plan' || !st.dims) d.el.style.display = 'none'; });
+    };
+
+    // dragging: the pointer meets the plane at the equipment's height, then the nearest wall takes it
+    var ray = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3();
+    var dragTo = function (k, ev) {
+      var rc = canvas.getBoundingClientRect(), e = EQ[k].e;
+      ndc.set((ev.clientX - rc.left) / rc.width * 2 - 1, -((ev.clientY - rc.top) / rc.height) * 2 + 1);
+      ray.setFromCamera(ndc, cam); plane.constant = -(e.y0 + e.H / 2);
+      if (!ray.ray.intersectPlane(plane, hit)) return;
+      var best = null;
+      W.forEach(function (wl, i) {
+        if (wl.L < e.W + 0.2) return;
+        var s = (hit.x - wl.a[0]) * wl.dx + (hit.z - wl.a[1]) * wl.dz, sc2 = Math.max(e.W / 2 + 0.1, Math.min(wl.L - e.W / 2 - 0.1, s));
+        var px = wl.a[0] + wl.dx * sc2, pz = wl.a[1] + wl.dz * sc2, d = Math.hypot(hit.x - px, hit.z - pz);
+        if (!best || d < best.d) best = { w: i, s: sc2, d: d };
+      });
+      if (best) slide(k, best.w, best.s);
+    };
+    var slide = function (k, w, s) {
+      var e = EQ[k].e, wl = W[w];
+      if (wl.L < e.W + 0.2) return;
+      EQ[k].a = { w: w, s: Math.round(Math.max(e.W / 2 + 0.1, Math.min(wl.L - e.W / 2 - 0.1, s)) * 20) / 20 };
+      placeEq(k); refresh();
+    };
+
+    // controls and the reading under the stage; a fresh panel per site, so its listeners go with it
+    var rk = { bat: 'rbat', edge: 'redge', aper: 'raper' }[D.rule];
+    var panel = doc.createElement('div');
+    panel.innerHTML = '<div class="bk-td-bar" role="group" aria-label="' + t.site + '"><span style="align-self:center;font-size:13px;color:var(--muted)">' + t.site + '</span>' +
+      ['house', 'ci', 'park'].map(function (k) { return '<button type="button" data-a="site" data-v="' + k + '">' + t[k] + '</button>'; }).join('') + '</div>' +
+      '<div class="bk-td-bar" role="group">' +
+      '<button type="button" data-a="view" data-v="plan">' + t.plan + '</button><button type="button" data-a="view" data-v="iso">' + t.iso + '</button>' +
+      '<button type="button" data-a="turn">↻ ' + t.turn + '</button></div>' +
+      '<div class="bk-td-bar" role="group" aria-label="' + t.layers + '"><span style="align-self:center;font-size:13px;color:var(--muted)">' + t.layers + '</span>' +
+      '<button type="button" data-a="mods">' + t.mods + '</button><button type="button" data-a="dims">' + t.dims + '</button>' +
+      '<button type="button" data-a="fid">' + t.fid + '</button><button type="button" data-a="rules">' + t[rk] + '</button>' +
+      (D.tog ? '<button type="button" data-a="tog">' + t[D.tog] + '</button>' : '') + '</div>' +
+      '<div class="bk-td-bar" role="group" aria-label="' + t.bg + '"><span style="align-self:center;font-size:13px;color:var(--muted)">' + t.bg + '</span>' +
+      ['plain', 'dots', 'lines'].map(function (g) { return '<button type="button" data-a="bg" data-v="' + g + '">' + t[g] + '</button>'; }).join('') + '</div>' +
+      '<div class="bk-td-bar" role="group" aria-label="' + t.flow + '"><span style="align-self:center;font-size:13px;color:var(--muted)">' + t.flow + '</span>' +
+      ['off', 'noon', 'eve'].map(function (f) { return '<button type="button" data-a="flow" data-v="' + f + '">' + t[f] + '</button>'; }).join('') + '</div>' +
+      '<div class="sm-legend" style="display:grid;gap:4px;margin:12px 0;font-size:13px"></div><div class="sm-read" style="font-size:13px"></div>' +
+      '<div class="sm-cats" style="font-size:13px;margin-top:14px"></div>' +
+      '<p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">' + t.hint + '</p>';
+    out.innerHTML = ''; out.appendChild(panel);
+    var legend = panel.querySelector('.sm-legend'), read = panel.querySelector('.sm-read'), cats = panel.querySelector('.sm-cats');
+    legend.innerHTML = ['measured', 'declared', 'schematic'].map(function (k, i) {
+      return '<span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:6px;background:' + SMF[k] + '"></span><b style="font-weight:600">' + t[k] + '</b> · ' + t.leg[kind][i] + '</span>';
+    }).join('');
+    var io2 = null, ro = null;
+    panel.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-a]'); if (!b) return;
+      var a = b.getAttribute('data-a'), v = b.getAttribute('data-v');
+      if (a === 'site') {
+        if (v === kind) return;
+        // another site: the stage is torn down and built again from that site's data
+        dead = true; if (io2) io2.disconnect(); if (ro) ro.disconnect();
+        r.dispose(); r.forceContextLoss(); wrap.remove();
+        smMount(fig, svg, out, v);
+        var nb = out.querySelector('button[data-a="site"][data-v="' + v + '"]'); if (nb) nb.focus();
+        return;
+      }
+      if (a === 'view') st.view = v;
+      if (a === 'turn') { st.view = 'iso'; st.az += Math.PI / 2; }
+      if (a === 'fid') st.fid = !st.fid;
+      if (a === 'rules') st.rules = !st.rules;
+      if (a === 'tog') st.tog = !st.tog;
+      if (a === 'mods') st.mods = !st.mods;
+      if (a === 'dims') st.dims = !st.dims;
+      if (a === 'bg') st.bg = v;
+      if (a === 'flow') st.flow = v;
+      frame(); refresh();
+    });
+    var reading = function () {
+      var rows = D.circuits.map(function (c) {
+        var cb = CB[c.id];
+        return '<tr><td style="padding:3px 8px 3px 0"><span style="display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:3px;margin-right:6px;background:' + SMC[c.c] + '"></span>' + t[c.t] + '</td><td style="padding:3px 8px">' + t[c.a] + ' → ' + t[c.b] + '</td><td style="padding:3px 8px;text-align:right">' + fmt(cb.len) + ' m</td><td style="padding:3px 0 3px 8px;text-align:right">' + fmt(cb.vert) + ' m</td></tr>';
+      }).join('');
+      var total = D.circuits.reduce(function (s, c) { return s + CB[c.id].len; }, 0);
+      var p = function (txt, bad) { return '<p style="margin:4px 0 0;color:' + (bad ? SMC.zone : 'var(--muted)') + '">' + txt + '</p>'; };
+      var checks = '';
+      if (D.rule === 'bat') checks += st.batIn ? p(t.batBad.replace('{o}', st.batIn.k === 'door' ? t.door : t.win), true) : p(t.batOk);
+      if (D.rule === 'edge') checks += p(t.edge);
+      // the capacity, summed over every zone that is on
+      var on = zones.filter(function (z) { return !z.tog || st.tog; }), n = on.reduce(function (s, z) { return s + z.n; }, 0), kWc = n * SMKWC;
+      var cover = 0, parkArea = 0;
+      if (D.surface) {
+        parkArea = (D.surface[2] - D.surface[0]) * (D.surface[3] - D.surface[1]);
+        cover = on.filter(function (z) { return z.area; }).reduce(function (s, z) { return s + z.area; }, 0) / parkArea * 100;
+        checks += p(t.aper.replace('{a}', Math.round(parkArea).toLocaleString(fr ? 'fr-FR' : 'en-GB')).replace('{p}', Math.round(cover)), cover < 50);
+      }
+      checks += p((st.reach > D.equip.evc.cable ? t.reachBad : t.reach).replace('{d}', fmt(st.reach)).replace('{m}', D.equip.evc.cable), st.reach > D.equip.evc.cable);
+      if (st.hp) checks += p(t.hpDist.replace('{d}', fmt(st.hp.d)));
+      var groups = {}; on.forEach(function (z) { groups[z.name] = (groups[z.name] || 0) + z.n; });
+      var gk = Object.keys(groups), list = gk.length > 1 ? gk.map(function (k) { return t[k] + ' ' + groups[k]; }).join(' · ') : t[gk[0]];
+      checks += p(t.mods.replace('{list}', list.charAt(0).toUpperCase() + list.slice(1)).replace('{n}', n).replace('{k}', fmt(kWc)));
+      read.innerHTML = '<table style="border-collapse:collapse;width:100%;max-width:620px"><thead><tr style="color:var(--muted);text-align:left">' + t.th.map(function (h, i) { return '<th style="font-weight:500;padding:3px ' + (i ? 8 : 0) + 'px;' + (i > 1 ? 'text-align:right' : '') + '">' + h + '</th>'; }).join('') + '</tr></thead><tbody>' + rows +
+        '<tr style="border-top:1px solid var(--line)"><td style="padding:3px 0" colspan="2"><b style="font-weight:600">' + t.total + '</b> · ' + t.est + '</td><td style="padding:3px 8px;text-align:right"><b style="font-weight:600">' + fmt(total) + ' m</b></td><td></td></tr></tbody></table>' + checks;
+      // the official categories: an inverter declared at about 1.3 kWc per kVA
+      var kVA = Math.max(3, Math.round(kWc / 1.3 * 2) / 2), cr = smCats(kind, { kWc: kWc, kVA: kVA, ph: D.ph, carport: kind === 'house' && st.tog, cover: cover }, fr, fmt);
+      cats.innerHTML = '<p style="margin:0 0 6px"><b style="font-weight:600">' + t.cats + '</b> · ' + fmt(kWc) + ' kWc · ' + fmt(kVA) + ' kVA · ' + (D.ph === 1 ? (fr ? 'monophasé' : 'single-phase') : (fr ? 'triphasé' : 'three-phase')) + '</p>' +
+        '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:560px"><thead><tr style="color:var(--muted);text-align:left">' + t.catTh.map(function (h) { return '<th style="font-weight:500;padding:3px 8px 3px 0">' + h + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        cr.map(function (row) { return '<tr style="border-top:1px solid var(--line);vertical-align:top">' + row.map(function (c, i) { return '<td style="padding:4px 8px 4px 0">' + (i ? c : '<b style="font-weight:600">' + c + '</b>') + '</td>'; }).join('') + '</tr>'; }).join('') +
+        '</tbody></table></div><p style="margin:6px 0 0;color:var(--muted);font-size:12.5px">' + t.catNote + '</p>';
+      all('button[data-a]', panel).forEach(function (b) {
+        var a = b.getAttribute('data-a'), v = b.getAttribute('data-v');
+        var on2 = (a === 'site' && kind === v) || (a === 'view' && st.view === v) || (a === 'fid' && st.fid) || (a === 'rules' && st.rules) || (a === 'tog' && st.tog) || (a === 'flow' && st.flow === v) || (a === 'mods' && st.mods) || (a === 'dims' && st.dims) || (a === 'bg' && st.bg === v);
+        if (a !== 'turn') b.setAttribute('aria-pressed', on2 ? 'true' : 'false');
+        b.style.background = on2 ? 'var(--fg)' : ''; b.style.color = on2 ? 'var(--paper)' : ''; b.style.borderColor = on2 ? 'var(--fg)' : '';
+      });
+    };
+
+    // drawing on demand; a loop only while the energy flows and the stage is on screen
+    var queued = false, visible = true, last = 0;
+    var draw = function (now) {
+      queued = false; if (dead) return;
+      var dt = last ? Math.min(0.05, (now - last) / 1000) : 0; last = now;
+      if (st.flow !== 'off') D.circuits.forEach(function (c) { var dir = D.flow[st.flow][c.id]; if (dir) CB[c.id].tex.offset.x -= dir * dt * 1.4; });
+      r.render(sc, cam); placeLabels();
+      if (st.flow !== 'off' && visible) ask(); else last = 0;
+    };
+    var ask = function () { if (!queued && !dead) { queued = true; requestAnimationFrame(draw); } };
+    var refresh = function () {
+      buildCables(); light(); paint(); reading();
+      D.circuits.forEach(function (c) { var cb = CB[c.id]; cb.mesh.material = st.flow !== 'off' && D.flow[st.flow][c.id] ? cb.flow : cb.plain; });
+      ask();
+    };
+    if ('IntersectionObserver' in window) { io2 = new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) ask(); }); io2.observe(wrap); }
+    if ('ResizeObserver' in window) { ro = new ResizeObserver(function () { var hh = wrap.clientWidth < 520 ? '360px' : '460px'; if (wrap.style.height !== hh) wrap.style.height = hh; frame(); ask(); }); ro.observe(wrap); }
+    Object.keys(EQ).forEach(placeEq);
+    frame(); refresh();
+  }
   /* ---------- actions: late due dates, owner filter on the board ---------- */
   var today = new Date().toISOString().slice(0, 10);
   all('.bk-tk-due[data-due]').forEach(function (d) { if (d.getAttribute('data-due') < today) d.classList.add('bk-late'); });
