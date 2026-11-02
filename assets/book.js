@@ -755,6 +755,35 @@
     g.userData.body = body;
     return g;
   }
+  // a callout over a 3D stage: a dot on the unit, a thin leader rising out of it at about 50°, a short
+  // horizontal shoulder, then the label, entirely clear of the unit (drafting: a dot marks a surface).
+  // `placed` holds the labels already set this frame: a label that would overlap one climbs a step.
+  function smCallout(el, line, dot, ax, ay, side, col, placed) {
+    var rise = 22, w = el.offsetWidth || 60, h = el.offsetHeight || 20, sx, sy, ex, box;
+    for (var i = 0; i < 6; i++) {
+      sx = ax + side * rise * 0.8; sy = ay - rise; ex = sx + side * 8;
+      box = side > 0 ? [ex + 2, sy - h / 2, ex + 2 + w, sy + h / 2] : [ex - 2 - w, sy - h / 2, ex - 2, sy + h / 2];
+      if (!placed.some(function (b) { return box[0] < b[2] + 4 && box[2] > b[0] - 4 && box[1] < b[3] + 3 && box[3] > b[1] - 3; })) break;
+      rise += h + 4;
+    }
+    placed.push(box);
+    line.setAttribute('d', 'M' + ax.toFixed(1) + ' ' + ay.toFixed(1) + ' L' + sx.toFixed(1) + ' ' + sy.toFixed(1) + ' L' + ex.toFixed(1) + ' ' + sy.toFixed(1));
+    line.style.stroke = col; dot.setAttribute('cx', ax.toFixed(1)); dot.setAttribute('cy', ay.toFixed(1)); dot.style.fill = col;
+    el.style.left = box[0].toFixed(1) + 'px'; el.style.top = box[1].toFixed(1) + 'px'; el.style.transform = 'none';
+  }
+  // the SVG layer that holds the leaders, under the labels; one path and one dot per label
+  function smLeaders(layer, keys) {
+    var ns = 'http://www.w3.org/2000/svg', svg = doc.createElementNS(ns, 'svg'), out = {};
+    svg.setAttribute('style', 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none');
+    keys.forEach(function (k) {
+      var p = doc.createElementNS(ns, 'path'), c = doc.createElementNS(ns, 'circle');
+      p.setAttribute('fill', 'none'); p.setAttribute('stroke-width', '1.25'); p.setAttribute('stroke-linejoin', 'round');
+      c.setAttribute('r', '3.5'); c.setAttribute('stroke', '#FFFFFF'); c.setAttribute('stroke-width', '1.5');
+      svg.appendChild(p); svg.appendChild(c); out[k] = { line: p, dot: c, show: function (on) { p.style.display = c.style.display = on ? '' : 'none'; } };
+    });
+    layer.insertBefore(svg, layer.firstChild);
+    return out;
+  }
   /* ---------- widgets: the editor's tap demos, touch by touch ---------- */
   // Same behaviour as the app's tap-demo widget: the drawing holds the steps (g.td-step and its
   // <title>); elements show from their data-step on, until their data-until; legend lines
@@ -3449,7 +3478,7 @@
     function eqOn(k) { return FN.eqOn(S, k); }
     function wires() { return FN.wires(S); }
     function checks() { return FN.checks(S); }
-    var lay = null, card = null, chips = {}, drag = null, v3 = null;
+    var lay = null, card = null, chips = {}, leads = {}, drag = null, v3 = null;
     function equipLayer() {
       var bx = q('.hh-3d');
       lay = doc.createElement('div'); lay.style.cssText = 'position:absolute;inset:0;pointer-events:none;font:500 12px/1.2 Inter,system-ui,sans-serif';
@@ -3458,13 +3487,14 @@
       Object.keys(EQD).forEach(function (k) {
         var c = doc.createElement('button'); c.type = 'button'; c.textContent = EQD[k].n;
         c.setAttribute('aria-label', EQD[k].n + ': drag along the walls, or use the arrow keys');
-        c.style.cssText = 'position:absolute;left:0;top:0;transform:translate(-50%,-100%);white-space:nowrap;padding:4px 9px;border-radius:999px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-ink);font:inherit;pointer-events:auto;cursor:grab;touch-action:none;box-shadow:0 1px 3px rgba(20,24,30,.16)';
+        c.style.cssText = 'position:absolute;left:0;top:0;white-space:nowrap;padding:3px 8px;border-radius:999px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-ink);font:inherit;pointer-events:auto;cursor:grab;touch-action:none;box-shadow:0 1px 3px rgba(20,24,30,.16)';
         c.addEventListener('pointerdown', function (ev) { ev.preventDefault(); ev.stopPropagation(); c.setPointerCapture(ev.pointerId); drag = k; c.style.cursor = 'grabbing'; });
         c.addEventListener('pointermove', function (ev) { if (drag === k) slideTo(k, ev); });
         c.addEventListener('pointerup', function () { drag = null; c.style.cursor = 'grab'; });
         c.addEventListener('keydown', function (ev) { var dv = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[ev.key]; if (!dv) return; ev.preventDefault(); moveEq(k, S.eqPos[k].w, S.eqPos[k].s + dv * (ev.shiftKey ? 0.5 : 0.1)); });
         chips[k] = c; lay.appendChild(c);
       });
+      leads = smLeaders(lay, Object.keys(EQD));
       H.onRender = placeChips;
     }
     function moveEq(k, w, s) {
@@ -3486,14 +3516,21 @@
     }
     function placeChips() {
       if (!lay) return;
-      var T = H.T, cam = H.camNow(), cv = q('.hh-canvas'), look = new T.Vector3(); cam.getWorldDirection(look); v3 = v3 || new T.Vector3();
-      var bad = {}; checks().forEach(function (c) { if (c.bad) bad[/Battery/.test(c.t) ? 'bat' : 'evc'] = true; });
+      var T = H.T, cam = H.camNow(), cv = q('.hh-canvas'), look = new T.Vector3(), placed = [], todo = []; cam.getWorldDirection(look); v3 = v3 || new T.Vector3();
+      var bad = {}; checks().forEach(function (c) { if (c.bad) bad[c.k] = true; });
+      var px = function (p) { v3.set(p[0], p[1], p[2]).project(cam); return [(v3.x + 1) / 2 * cv.clientWidth, (1 - v3.y) / 2 * cv.clientHeight]; };
       Object.keys(chips).forEach(function (k) {
-        var c = chips[k], P = S.eqPos[k], d = EQD[k], wl = H.wallsL[P.w], show = st.step === 2 && st.view4 !== 'eq' && !st.top && eqOn(k) && (wl.nx * look.x + wl.nz * look.z < 0.05 || drag === k);
-        c.style.display = show ? '' : 'none'; if (!show) return;
-        var p = smAt(H.wallsL, P.w, P.s, 0.4, d.y0 + d.H + (k === 'inv' ? 0.9 : 0.25)); v3.set(p[0], p[1], p[2]).project(cam);
-        c.style.left = ((v3.x + 1) / 2 * cv.clientWidth).toFixed(1) + 'px'; c.style.top = ((1 - v3.y) / 2 * cv.clientHeight).toFixed(1) + 'px';
-        c.style.background = bad[k] ? 'var(--c-loss)' : 'var(--c-paper)'; c.style.color = bad[k] ? '#FFFFFF' : 'var(--c-ink)';
+        var c = chips[k], L = leads[k], P = S.eqPos[k], d = EQD[k], wl = H.wallsL[P.w], show = st.step === 2 && st.view4 !== 'eq' && !st.top && eqOn(k) && (wl.nx * look.x + wl.nz * look.z < 0.05 || drag === k);
+        c.style.display = show ? '' : 'none'; L.show(show); if (!show) return;
+        // the dot on the unit's face; the label goes out on the side the wall faces on screen
+        var y = d.y0 + d.H * 0.6, a = px(smAt(H.wallsL, P.w, P.s, k === 'hp' ? 0.45 : 0.25, y)), n = px(smAt(H.wallsL, P.w, P.s, 2, y));
+        todo.push({ k: k, a: a, side: n[0] >= a[0] ? 1 : -1 });
+      });
+      // the highest units first, so the labels below climb past them rather than across them
+      todo.sort(function (p, q2) { return p.a[1] - q2.a[1]; }).forEach(function (t) {
+        var c = chips[t.k], col = bad[t.k] ? 'var(--c-loss)' : drag === t.k ? 'var(--c-sel)' : 'var(--c-ink)';
+        smCallout(c, leads[t.k].line, leads[t.k].dot, t.a[0], t.a[1], t.side, col, placed);
+        c.style.background = bad[t.k] ? 'var(--c-loss)' : 'var(--c-paper)'; c.style.color = bad[t.k] ? '#FFFFFF' : 'var(--c-ink)';
       });
     }
     function equipUpdate() {
@@ -4666,6 +4703,7 @@
       });
       c.addEventListener('focus', function () { st.sel = k; refresh(); });
     });
+    var leads = smLeaders(layer, Object.keys(EQ));
     var lenChips = {};
     D.circuits.forEach(function (c) { lenChips[c.id] = chip('', SMC[c.c], '#FFFFFF', false); });
     dimL.forEach(function (d) { d.el = chip(fmt(d.L) + ' m', '#FFFFFF', SMF.measured, false); d.el.style.fontWeight = '600'; });
@@ -4682,13 +4720,19 @@
     var near = function (c) { return c.a === st.sel || c.b === st.sel; };
     var placeLabels = function () {
       cam.getWorldDirection(look);
-      var lift = st.view === 'plan' ? 0 : 0.35, out2 = st.view === 'plan' ? (kind === 'house' ? 1.1 : 2.2) : 0.2;
+      // callouts: a dot on the unit, a leader out on the side its wall faces, the label clear of the unit
+      var placed = [], todo = [], px = function (p) { v3.set(p[0], p[1], p[2]).project(cam); return [(v3.x + 1) / 2 * wrap.clientWidth, (1 - v3.y) / 2 * wrap.clientHeight, v3.z < 1]; };
       Object.keys(EQ).forEach(function (k) {
-        var q = EQ[k], e = q.e, bad = k === 'bat' && st.batIn, p = smAt(W, q.a.w, q.a.s, (e.gap || 0) + e.D + out2, e.y0 + e.H + lift);
-        project(p, labels[k]);
-        if (!facing(q.a.w) && st.drag !== k) labels[k].style.display = 'none';
-        labels[k].style.background = bad ? SMC.zone : st.sel === k ? SMC.ink : '#FFFFFF';
-        labels[k].style.color = bad || st.sel === k ? '#FFFFFF' : SMC.ink;
+        var q = EQ[k], e = q.e, y = e.y0 + e.H * 0.6, show = facing(q.a.w) || st.drag === k;
+        labels[k].style.display = show ? '' : 'none'; leads[k].show(show); if (!show) return;
+        var a = px(smAt(W, q.a.w, q.a.s, (e.gap || 0) + e.D, y)), n = px(smAt(W, q.a.w, q.a.s, (e.gap || 0) + e.D + 2, y));
+        todo.push({ k: k, a: a, side: n[0] >= a[0] ? 1 : -1 });
+      });
+      todo.sort(function (p, q2) { return p.a[1] - q2.a[1]; }).forEach(function (t) {
+        var bad = t.k === 'bat' && st.batIn, col = bad ? SMC.zone : SMC.ink;
+        smCallout(labels[t.k], leads[t.k].line, leads[t.k].dot, t.a[0], t.a[1], t.side, col, placed);
+        labels[t.k].style.background = bad ? SMC.zone : st.sel === t.k ? SMC.ink : '#FFFFFF';
+        labels[t.k].style.color = bad || st.sel === t.k ? '#FFFFFF' : SMC.ink;
       });
       D.circuits.forEach(function (c) {
         var cb = CB[c.id], pts = cb.pts, half = cb.len / 2, acc = 0, at = pts[0];
