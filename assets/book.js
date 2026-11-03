@@ -556,6 +556,27 @@
       n.appendChild(f);
     });
   }
+  // A contract fills the window on request, so that Redoc's menu and columns have room; the
+  // button, or Escape, brings it back into the page.
+  function expand(fig, on) {
+    var b = fig.querySelector('.bk-expand');
+    if (!b.hasAttribute('data-enlarge')) b.setAttribute('data-enlarge', b.getAttribute('aria-label'));
+    var label = on ? b.getAttribute('data-shrink') : b.getAttribute('data-enlarge');
+    fig.classList.toggle('bk-expanded', on);
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    doc.documentElement.classList.toggle('bk-has-expanded', on);
+    if (on) b.focus();
+  }
+  doc.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.bk-expand');
+    if (b) { var fig = b.closest('figure'); expand(fig, !fig.classList.contains('bk-expanded')); }
+  });
+  doc.addEventListener('keydown', function (e) {
+    var fig = e.key === 'Escape' && doc.querySelector('figure.bk-expanded');
+    if (fig) expand(fig, false);
+  });
   doc.addEventListener('langchange', function () { setTimeout(function () { drawDiagrams(); drawContracts(); }, 0); });
 
   /* ---------- filterable lists (decision log cards) ---------- */
@@ -5108,6 +5129,36 @@
       set('demo');
     }).catch(function () {});
   });
+
+  /* ---------- architecture views: LikeC4's web component (```likec4, blocks.py) ---------- */
+  // The bundle (assets/c4/likec4.js, from `mise run c4`) holds the model and defines
+  // <likec4-view>; a click opens LikeC4's browser: zoom, search, focus, the other views.
+  // Published, it is inlined in the encrypted page (tools/publish.mjs), never a file of its own.
+  function c4Scheme(v) {
+    var t = root.getAttribute('data-theme');
+    if (t === 'dark' || t === 'light') v.setAttribute('color-scheme', t); else v.removeAttribute('color-scheme');
+  }
+  function drawC4() {
+    var boxes = all('.bk-likec4-view').filter(function (n) { return n.offsetParent !== null && !n.hasAttribute('data-done'); });
+    if (!boxes.length) return;
+    function run() {
+      boxes.forEach(function (n) {
+        n.setAttribute('data-done', '');
+        var v = doc.createElement('likec4-view');
+        v.setAttribute('view-id', n.getAttribute('data-view'));
+        v.setAttribute('browser', 'true');
+        c4Scheme(v);
+        n.replaceChildren(v);
+      });
+    }
+    if (window.customElements.get('likec4-view')) return run();
+    var s = doc.createElement('script');
+    s.src = BASE + 'c4/likec4.js'; s.onload = run;  // not built: the note stays
+    doc.head.appendChild(s);
+  }
+  new MutationObserver(function () { all('likec4-view').forEach(c4Scheme); })
+    .observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  doc.addEventListener('langchange', function () { setTimeout(drawC4, 0); });
   /* ---------- actions: late due dates, owner filter on the board ---------- */
   var today = new Date().toISOString().slice(0, 10);
   all('.bk-tk-due[data-due]').forEach(function (d) { if (d.getAttribute('data-due') < today) d.classList.add('bk-late'); });
