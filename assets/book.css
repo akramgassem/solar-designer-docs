@@ -129,6 +129,15 @@ body{margin:0;background:var(--bg);color:var(--fg)}
 .bk-btn:hover{color:var(--fg);background:var(--box2)}
 .bk-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
 .bk-menu{justify-self:start}
+/* a name as the logo page writes it (D-100): lower case, Manrope, the second word in 700, the
+   first in 400, letters 2 % closer (toc.NAME) */
+.bk-name{font-family:Manrope,var(--sans);letter-spacing:-.02em}
+.bk-name-solar{font-weight:400}
+.bk-name-switch{font-weight:700}
+/* Architecture and API: two references a reader keeps coming back to, full window; their
+   label shows where the search shows its own */
+.bk-ref-l{display:none}
+@media (min-width:1100px){.bk-ref-l{display:inline}}
 .bk-lang{display:inline-flex;border-radius:999px;overflow:hidden}
 .bk-lang button{font:600 11.5px/1 var(--sans);letter-spacing:.08em;padding:9px 9px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:999px}
 .bk-lang button[aria-pressed="true"]{color:var(--fg);background:var(--box2)}
@@ -452,18 +461,18 @@ figure.bk-widget.bk-fw-open .bk-jn-lab{margin-top:0}
 .bk-dc-api>p{margin:10px 0 4px;font-size:13px;color:var(--muted)}
 .bk-dc-api pre{max-height:240px;font-family:var(--mono);overflow:auto;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--box2);color:var(--fg);font-size:12px;line-height:1.4}
 
-/* the logo (77-logo.js): the live logo, its places of use beside it, the state buttons under */
-.bk-lg-stage{display:flex;flex-wrap:wrap;align-items:center;gap:28px;padding:18px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--fg)}
-.bk-lg-uses{display:flex;flex-direction:column;gap:14px;min-width:220px}
-.bk-prose .bk-lg-uses p{display:flex;align-items:center;gap:14px;margin:0}
-.bk-prose .bk-lg-line{font-size:15px}
-.bk-lg-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:#00B8A9;color:#17191E;font:500 13px/1 Inter,system-ui,sans-serif}
 .bk-td-bar button[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 1px var(--fg)}
 /* Architecture views (```likec4): LikeC4's web component, full width; a click opens its browser. */
 .bk-likec4{margin:14px 0 22px}
 .bk-likec4-view{padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
 .bk-likec4-view likec4-view{display:block;width:100%}
 .bk-likec4 figcaption{margin-top:6px;color:var(--muted);font-size:14px}
+/* the key under every view: what a solid and a dashed outline mean */
+.bk-likec4-key{display:flex;align-items:center;gap:6px;margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
+.bk-key-built,.bk-key-planned{flex:none;width:18px;height:12px;border-radius:3px;border:1.5px solid #438dd5;background:color-mix(in srgb,#438dd5 25%,transparent)}
+.bk-key-planned{border-style:dashed;opacity:.6;margin-right:2px}
+.bk-key-play{flex:none;width:18px;text-align:center;font-size:11px;color:#438dd5}
+.bk-likec4-key+.bk-likec4-key{margin-top:2px}
 /* Decision log as data (tools/bookgen/dlog.py) */
 .bk-filter{position:sticky;top:var(--bk-top);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 6px;padding:10px 0;background:var(--bg)}
 .bk-filter input{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);font:14px Inter,system-ui,sans-serif}
