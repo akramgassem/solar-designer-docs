@@ -440,6 +440,14 @@ figure.bk-widget.bk-fw-open .bk-jn-lab{margin-top:0}
 .bk-prose .bk-dc-time:empty{display:none}
 .bk-dc-api>p{margin:10px 0 4px;font-size:13px;color:var(--muted)}
 .bk-dc-api pre{max-height:240px;font-family:var(--mono);overflow:auto;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--box2);color:var(--fg);font-size:12px;line-height:1.4}
+
+/* the logo (77-logo.js): the live logo, its places of use beside it, the state buttons under */
+.bk-lg-stage{display:flex;flex-wrap:wrap;align-items:center;gap:28px;padding:18px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--fg)}
+.bk-lg-uses{display:flex;flex-direction:column;gap:14px;min-width:220px}
+.bk-prose .bk-lg-uses p{display:flex;align-items:center;gap:14px;margin:0}
+.bk-prose .bk-lg-line{font-size:15px}
+.bk-lg-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:#00B8A9;color:#17191E;font:500 13px/1 Inter,system-ui,sans-serif}
+.bk-td-bar button[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 1px var(--fg)}
 /* Decision log as data (tools/bookgen/dlog.py) */
 .bk-filter{position:sticky;top:var(--bk-top);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 6px;padding:10px 0;background:var(--bg)}
 .bk-filter input{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--fg);font:14px Inter,system-ui,sans-serif}
