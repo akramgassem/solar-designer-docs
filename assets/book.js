@@ -5051,6 +5051,823 @@
     Object.keys(EQ).forEach(placeEq);
     frame(); refresh();
   }
+  /* ---------- widgets: the concept chapters' "Your turn" figures ---------- */
+  // map-distortion (0), sun-path (1), pitch-azimuth (2), roof-edges (3), setbacks (4),
+  // flat-racks (6), orientation (7), ransac (8). Each ```widget block gives a figure with the
+  // engine's drawing (src="…", only its <style> for most), its data (data="…json") and an empty
+  // output; this file adds the controls and draws in a <g> of the drawing, so its <style> stays.
+  // A page carries the English and the French article: everything is looked up inside the
+  // figure, and the figure's language is its article's.
+  var CW_N = 0;
+  function cwWidget(name, build) {
+    all('figure.bk-widget[data-widget="' + name + '"]').forEach(function (fig) {
+      var out = fig.querySelector('.bk-widget-out');
+      if (!out || out.childNodes.length) return;
+      var fr = (fig.closest('[lang]') || root).getAttribute('lang') === 'fr';
+      var data = null, dataEl = fig.querySelector('script.bk-widget-data');
+      if (dataEl) try { data = JSON.parse(dataEl.textContent); } catch (e) {}
+      var live = fig.querySelector('.bk-widget-live');
+      if (live) live.parentNode.removeChild(live);
+      var svg = null;
+      Array.prototype.forEach.call(fig.children, function (c) { if (!svg && c.tagName.toLowerCase() === 'svg') svg = c; });
+      var uid = 'cw' + (++CW_N) + (fr ? '-fr' : '');
+      var w = {
+        fig: fig, out: out, fr: fr, data: data, svg: svg, uid: uid,
+        t: function (en, f) { return fr ? f : en; },
+        F: function (x, n) { var s = x.toFixed(n); return fr ? s.replace('.', ',') : s; },
+        $: function (k) { return out.querySelector('[data-k="' + k + '"]'); },
+        val: function (k) { return +out.querySelector('[data-k="' + k + '"]').value; },
+        set: function (k, s) { out.querySelector('[data-k="' + k + '"]').textContent = s; },
+        slider: function (k, en, f, min, max, step, v) {
+          var id = uid + '-' + k;
+          return '<div><label for="' + id + '"><span>' + w.t(en, f) + '</span><output data-k="' + k + 'v"></output></label>' +
+            '<input id="' + id + '" data-k="' + k + '" type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '"></div>';
+        },
+        controls: function (list) { return '<div class="bk-cw-controls">' + list.join('') + '</div>'; },
+        readout: function (rows) {
+          return '<div class="bk-cw-readout">' + rows.map(function (r) {
+            return '<span>' + w.t(r[1], r[2]) + '</span><span data-k="' + r[0] + '"></span>';
+          }).join('') + '</div>';
+        },
+        // the engine's drawing goes where the markup says <i data-slot></i>; a <g> takes the live part
+        mount: function (html) {
+          out.innerHTML = html;
+          var slot = out.querySelector('[data-slot]');
+          if (slot && svg) { slot.parentNode.replaceChild(svg, slot); svg.removeAttribute('style'); }
+          else if (slot) slot.parentNode.removeChild(slot);
+        },
+        layer: function (s) {
+          s = s || svg;
+          var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          s.appendChild(g);
+          return g;
+        },
+        on: function (keys, fn) { keys.forEach(function (k) { w.$(k).addEventListener('input', fn); }); }
+      };
+      fig.classList.add('bk-cw');
+      build(w);
+    });
+  }
+  function cwSvg(viewBox, label, inner, cls) {
+    return '<svg class="bk-cw-svg' + (cls ? ' ' + cls : '') + '" viewBox="' + viewBox + '" role="img" aria-label="' + label + '" xmlns="http://www.w3.org/2000/svg">' + (inner || '') + '</svg>';
+  }
+
+  /* 0.10 the map distortion: Web Mercator's scale factor, float32, grid convergence */
+  cwWidget('map-distortion', function (w) {
+    if (!w.svg) return;
+    w.mount(w.controls([
+      w.slider('lat', 'Latitude', 'Latitude', -70, 70, 0.1, -34.9),
+      w.slider('dl', 'Distance from the zone’s central meridian', 'Écart au méridien central de la zone', -3, 3, 0.1, -2.4)
+    ]) + '<div class="bk-cw-wgrid"><i data-slot></i>' + w.readout([
+      ['k', 'Web Mercator factor k', 'Facteur Web Mercator k'],
+      ['l', '12.6 m eave measured in 3857', 'Égout de 12,6 m mesuré en 3857'],
+      ['a', '105.8 m² area measured in 3857', 'Surface de 105,8 m² mesurée en 3857'],
+      ['f', 'float32 step on the 3857 y coordinate', 'Pas float32 sur la coordonnée y 3857'],
+      ['c', 'Grid convergence (TM)', 'Convergence du quadrillage (MT)']
+    ]) + '</div>');
+    var g = w.layer(), F = w.F;
+    var f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
+    function step(v) { f32[0] = Math.abs(v); var a = f32[0]; u32[0] += 1; return f32[0] - a; }
+    function draw() {
+      var lat = w.val('lat'), dl = w.val('dl');
+      var k = 1 / Math.cos(lat * Math.PI / 180);
+      var y = 6378137 * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+      var conv = dl * Math.sin(lat * Math.PI / 180);
+      var s = 5, base = 185, x0 = 20;
+      g.innerHTML = '<rect class="mercft" x="' + x0 + '" y="' + (base - 8.4 * k * s) + '" width="' + (12.6 * k * s) + '" height="' + (8.4 * k * s) + '"/>' +
+        '<rect class="trueft" x="' + x0 + '" y="' + (base - 8.4 * s) + '" width="' + (12.6 * s) + '" height="' + (8.4 * s) + '"/>';
+      w.set('latv', F(lat, 1) + '°');
+      w.set('dlv', F(dl, 1) + '°');
+      w.set('k', F(k, 3));
+      w.set('l', F(12.6 * k, 2) + ' m');
+      w.set('a', F(105.84 * k * k, 1) + ' m²');
+      var st = step(y);
+      w.set('f', st >= 0.01 ? F(st, 2) + ' m' : F(st * 1000, 2) + ' mm');
+      w.set('c', F(conv, 2) + '°');
+    }
+    w.on(['lat', 'dl'], draw);
+    draw();
+  });
+
+  /* 1.x the sun path: date and solar time, the sun on its day's path, a pole's shadow */
+  cwWidget('sun-path', function (w) {
+    var site = w.data || { lat: -34.93, lon: 138.6, tz: 9.5 }, fr = w.fr, F = w.F;
+    var R = Math.PI / 180, MD = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    var MON = fr ? ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    w.mount(w.controls([
+      w.slider('d', 'Date', 'Date', 1, 365, 1, 172),
+      w.slider('h', 'Solar time', 'Heure solaire', 5, 19.5, 0.25, 9)
+    ]) + cwSvg('0 0 640 260', w.t('Sun-path diagram with the current sun position', 'Diagramme de course solaire avec la position actuelle du soleil'), '<g data-k="path"></g>') +
+      '<div class="bk-cw-wgrid">' + cwSvg('0 0 300 200', w.t('Shadow of a 1 metre pole, north up', 'Ombre d’un poteau de 1 m, nord en haut'), '<g data-k="shadow"></g>') + w.readout([
+      ['el', 'Elevation', 'Hauteur'], ['az', 'Azimuth', 'Azimut'], ['sh', 'Shadow of a 1 m pole', 'Ombre d’un poteau de 1 m'],
+      ['clock', 'Clock time', 'Heure à la montre'], ['len', 'Day length', 'Durée du jour']
+    ]) + '</div>');
+    function g(n) { return 2 * Math.PI / 365 * (n - 1); }
+    function decl(n) { var x = g(n); return (0.006918 - 0.399912 * Math.cos(x) + 0.070257 * Math.sin(x) - 0.006758 * Math.cos(2 * x) + 0.000907 * Math.sin(2 * x) - 0.002697 * Math.cos(3 * x) + 0.00148 * Math.sin(3 * x)) / R; }
+    function eot(n) { var x = g(n); return 229.18 * (0.000075 + 0.001868 * Math.cos(x) - 0.032077 * Math.sin(x) - 0.014615 * Math.cos(2 * x) - 0.040849 * Math.sin(2 * x)); }
+    function pos(n, t) {
+      var p = site.lat * R, d = decl(n) * R, h = 15 * (t - 12) * R;
+      var el = Math.asin(Math.sin(p) * Math.sin(d) + Math.cos(p) * Math.cos(d) * Math.cos(h));
+      var az = Math.atan2(-Math.sin(h) * Math.cos(d), Math.cos(p) * Math.sin(d) - Math.sin(p) * Math.cos(d) * Math.cos(h));
+      return [el / R, ((az / R) + 360) % 360];
+    }
+    function dst(n) { return n >= 277 || n < 95; }
+    function dayLen(n) { var x = -Math.tan(site.lat * R) * Math.tan(decl(n) * R); return x <= -1 ? 24 : x >= 1 ? 0 : 2 * Math.acos(x) / R / 15; }
+    function hm(h, m) { return fr ? h + ' h ' + (m < 10 ? '0' : '') + m : h + ':' + (m < 10 ? '0' : '') + m; }
+    var X0 = 50, X1 = 610, Y0 = 230, Y1 = 20;
+    function xy(el, az) { var a = ((az + 180) % 360) - 180; return [X0 + (a + 135) / 270 * (X1 - X0), Y0 - el / 90 * (Y0 - Y1)]; }
+    function path(n) {
+      var pts = [];
+      for (var k = 0; k <= 288; k++) { var p = pos(n, k / 12); if (p[0] >= 0) { var q = xy(p[0], p[1]); if (q[0] >= X0 && q[0] <= X1) pts.push(q[0].toFixed(1) + ',' + q[1].toFixed(1)); } }
+      return pts.join(' ');
+    }
+    var base = '';
+    [0, 30, 60, 90].forEach(function (e) { var y = xy(e, 0)[1]; base += '<line class="grid" x1="' + X0 + '" y1="' + y + '" x2="' + X1 + '" y2="' + y + '"/><text class="s" x="' + (X0 - 6) + '" y="' + (y + 4) + '" text-anchor="end">' + e + '°</text>'; });
+    [[270, fr ? 'O' : 'W'], [0, 'N'], [90, 'E']].forEach(function (a) { base += '<text class="t" x="' + xy(0, a[0])[0] + '" y="' + (Y0 + 18) + '" text-anchor="middle">' + a[1] + '</text>'; });
+    [[172, 'curve main'], [79, 'curve ew'], [355, 'curve cell']].forEach(function (c) { base += '<polyline class="' + c[1] + '" points="' + path(c[0]) + '" style="opacity:.55"/>'; });
+    var gPath = w.$('path'), gShadow = w.$('shadow');
+    function draw() {
+      var n = w.val('d'), t = w.val('h');
+      var m = 0, d = n; while (d > MD[m]) { d -= MD[m]; m++; }
+      w.set('dv', d + ' ' + MON[m]);
+      var hh = Math.floor(t);
+      w.set('hv', hm(hh, Math.round((t - hh) * 60)));
+      var s = pos(n, t), out = base + '<polyline class="curve now" points="' + path(n) + '"/>';
+      if (s[0] > 0) { var q = xy(s[0], s[1]); out += '<circle class="sun" cx="' + q[0] + '" cy="' + q[1] + '" r="9"/>'; }
+      gPath.innerHTML = out;
+      var sh = '<circle class="pole" cx="150" cy="100" r="4"/><text class="t" x="285" y="20" text-anchor="end">N ↑</text>';
+      if (s[0] > 0.5) {
+        var L = 1 / Math.tan(s[0] * R), a = (s[1] + 180) * R, sc = 28, Lc = Math.min(L, 3.4);
+        sh += '<line class="shadowl" x1="150" y1="100" x2="' + (150 + Lc * sc * Math.sin(a)) + '" y2="' + (100 - Lc * sc * Math.cos(a)) + '"/>';
+        w.set('sh', F(L, 2) + ' m');
+      } else w.set('sh', w.t('night', 'nuit'));
+      gShadow.innerHTML = sh;
+      w.set('el', F(s[0], 1) + '°');
+      w.set('az', F(s[1], 1) + '°');
+      var clock = t + (site.tz * 15 - site.lon) / 15 - eot(n) / 60 + (dst(n) ? 1 : 0);
+      var ch = Math.floor(clock), cm = Math.round((clock - ch) * 60); if (cm === 60) { ch++; cm = 0; }
+      w.set('clock', hm(ch, cm) + (dst(n) ? ' ACDT' : ' ACST'));
+      w.set('len', F(dayLen(n), 1) + ' h');
+    }
+    w.on(['d', 'h'], draw);
+    draw();
+  });
+
+  /* 2.x pitch and azimuth: the face's section and its compass, the pitch in every notation */
+  cwWidget('pitch-azimuth', function (w) {
+    var F = w.F, mk = w.uid + '-arrow';
+    w.mount(w.controls([
+      w.slider('p', 'Pitch', 'Pente', 0, 60, 1, 22),
+      w.slider('a', 'Azimuth', 'Azimut', 0, 359, 1, 4)
+    ]) + '<div class="bk-cw-wgrid bk-cw-even">' +
+      cwSvg('0 0 380 230', w.t('Live cross-section of the face', 'Coupe du pan en direct'),
+        '<line class="ground" x1="20" y1="200" x2="360" y2="200"/>' +
+        '<polygon class="tri" points="40,200 320,200 320,87"/>' +
+        '<text class="sf" x="180" y="220" text-anchor="middle">' + w.t('run 4.20 m', 'course 4,20 m') + '</text>' +
+        '<text class="sf rise" x="328" y="150"></text><text class="la slope" x="60" y="60"></text>') +
+      cwSvg('0 0 220 230', w.t('Live compass', 'Boussole en direct'),
+        '<defs><marker id="' + mk + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ahb"/></marker></defs>' +
+        '<g transform="translate(110 115)"><circle class="dial" r="80"/>' +
+        '<text class="t" x="0" y="-88" text-anchor="middle">N</text><text class="t" x="88" y="5">E</text><text class="t" x="0" y="100" text-anchor="middle">S</text><text class="t" x="-88" y="5" text-anchor="end">' + w.t('W', 'O') + '</text>' +
+        '<line class="vec arrow" x1="0" y1="0" x2="0" y2="-70" marker-end="url(#' + mk + ')"/></g>') +
+      '</div>' + w.readout([
+      ['r1', 'Pitch in %', 'Pente en %'], ['r2', 'Pitch as x/12', 'Pente en x/12'], ['r3', 'Pitch “1 in k”', 'Pente « 1 pour k »'],
+      ['r4', 'Plan → true factor', 'Facteur plan → vrai'], ['r5', 'PVGIS aspect', 'Aspect PVGIS']
+    ]) + '<span class="bk-cw-flag" data-k="flag" aria-live="polite"></span>');
+    var tri = w.out.querySelector('.tri'), riseT = w.out.querySelector('.rise'), slopeT = w.out.querySelector('.slope'), arrow = w.out.querySelector('.arrow');
+    function draw() {
+      // same formulas as engines/roof_plane.py
+      var p = w.val('p'), a = w.val('a'), r = p * Math.PI / 180, t = Math.tan(r);
+      w.set('pv', p + '°');
+      w.set('av', a + '°');
+      var run = 4.2, rise = run * t, px = 280 / run, top = Math.max(200 - rise * px, 12);
+      tri.setAttribute('points', '40,200 320,200 320,' + top.toFixed(1));
+      riseT.textContent = F(rise, 2) + ' m';
+      riseT.setAttribute('y', ((200 + top) / 2).toFixed(0));
+      slopeT.textContent = w.t('true length ', 'vraie longueur ') + F(run / Math.cos(r), 2) + ' m';
+      var ar = a * Math.PI / 180;
+      arrow.setAttribute('x2', (70 * Math.sin(ar)).toFixed(1));
+      arrow.setAttribute('y2', (-70 * Math.cos(ar)).toFixed(1));
+      arrow.style.opacity = p < 2 ? 0.25 : 1;
+      w.set('r1', F(100 * t, 1) + ' %');
+      w.set('r2', F(12 * t, 2) + ' / 12');
+      w.set('r3', p === 0 ? '—' : w.t('1 in ', '1 pour ') + F(1 / t, 2));
+      w.set('r4', '× ' + F(1 / Math.cos(r), 3));
+      var asp = ((a - 180) % 360 + 360) % 360; if (asp > 180) asp -= 360;
+      w.set('r5', p < 2 ? '—' : F(asp, 0) + '°');
+      w.set('flag', p < 2 ? w.t('Flat roof: azimuth undefined', 'Toit plat : azimut non défini')
+        : a <= 45 || a >= 315 ? w.t('Faces north: ideal in Australia', 'Regarde le nord : idéal en Australie')
+          : a >= 135 && a <= 225 ? w.t('Faces south: ideal in the UK and France', 'Regarde le sud : idéal au Royaume-Uni et en France')
+            : w.t('Faces east or west: flatter daily output', 'Regarde l’est ou l’ouest : production plus étalée'));
+    }
+    w.on(['p', 'a'], draw);
+    draw();
+  });
+
+  /* 3.x the roof's edges: pick one, the three questions name it */
+  cwWidget('roof-edges', function (w) {
+    if (!w.svg) return;
+    var NAMES = w.fr ? { eave: 'égout', ridge: 'faîtage', hip: 'arêtier', valley: 'noue', rake: 'rive' }
+      : { eave: 'eave', ridge: 'ridge', hip: 'hip', valley: 'valley', rake: 'rake' };
+    w.mount('<div class="bk-cw-wgrid"><i data-slot></i><div class="bk-cw-answer" data-k="ans" aria-live="polite">' + w.t('Pick an edge.', 'Choisissez une arête.') + '</div></div>');
+    var ans = w.$('ans'), F = w.F, hits = Array.prototype.slice.call(w.svg.querySelectorAll('.hit'));
+    function show(d) {
+      var q1 = d.faces === 1 ? w.t('1 face → boundary edge', '1 pan → arête de bordure') : w.t('2 faces → internal edge', '2 pans → arête intérieure');
+      var q2 = 'Δz = ' + F(d.dz, 2) + ' m → ' + (d.dz < 0.02 ? w.t('horizontal', 'horizontale') : w.t('sloped', 'en pente'));
+      var q3 = d.convex === null ? w.t('not applicable (boundary)', 'sans objet (bordure)') : d.convex ? w.t('convex', 'saillante') : w.t('concave', 'rentrante');
+      ans.innerHTML = '<ol class="bk-cw-steps"><li>' + q1 + '</li><li>' + q2 + '</li><li>' + q3 + '</li></ol><b>' + w.t('Type: ', 'Type : ') +
+        (NAMES[d.kind] || d.kind) + '</b> · ' + w.t('true length ', 'longueur vraie ') + F(d.len, 2) + ' m';
+    }
+    hits.forEach(function (h) {
+      function pick() {
+        hits.forEach(function (o) { o.classList.remove('on'); });
+        h.classList.add('on');
+        try { show(JSON.parse(h.getAttribute('data-edge'))); } catch (e) {}
+      }
+      h.addEventListener('click', pick);
+      h.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+    });
+  });
+
+  /* 4.x setbacks: the usable area left by the eave, hip, ridge and vent margins */
+  cwWidget('setbacks', function (w) {
+    if (!w.svg) return;
+    var F = w.F;
+    w.mount(w.controls([
+      w.slider('e', 'Eave', 'Égout', 0, 100, 1, 20), w.slider('h', 'Hips', 'Arêtiers', 0, 100, 1, 50),
+      w.slider('r', 'Ridge', 'Faîtage', 0, 100, 1, 30), w.slider('o', 'Vent margin', 'Marge ventilation', 0, 100, 1, 30)
+    ]) + '<div class="bk-cw-btns">' +
+      '<button type="button" data-preset="20,50,30,30">' + w.t('Example AU', 'AU d’exemple') + '</button>' +
+      '<button type="button" data-preset="40,40,40,30">' + w.t('UK 400 mm', 'Royaume-Uni 400 mm') + '</button>' +
+      '<button type="button" data-preset="90,90,90,30">' + w.t('France, 0.9 m pathway', 'France, cheminement 0,9 m') + '</button></div>' +
+      '<i data-slot></i>' + w.readout([['ua', 'Usable area', 'Zone posable'], ['up', 'Share of the face', 'Part du pan']]));
+    // same geometry as engines/limits_layout.py: north face unfolded, true size (metres)
+    var SLOPE = 4.2 / Math.cos(22 * Math.PI / 180);
+    var FACE = [[0, 0], [12.6, 0], [8.4, SLOPE], [4.2, SLOPE]], EDGE_OF = ['e', 'h', 'r', 'h'], VENT = [8.0, 1.6, 0.175];
+    var S = 40, OX = 60, OY = 236, g = w.layer();
+    function P(p) { return (OX + p[0] * S).toFixed(1) + ',' + (OY - p[1] * S).toFixed(1); }
+    function clip(poly, a, b, d) { // keep the part at distance >= d to the left of a->b (interior side)
+      var dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+      function s(p) { return (p[0] - a[0]) * nx + (p[1] - a[1]) * ny - d; }
+      var out = [];
+      for (var i = 0; i < poly.length; i++) {
+        var p = poly[i], q = poly[(i + 1) % poly.length], sp = s(p), sq = s(q);
+        if (sp >= 0) out.push(p);
+        if ((sp >= 0) !== (sq >= 0)) { var t = sp / (sp - sq); out.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]); }
+      }
+      return out;
+    }
+    function inside(poly, x, y) {
+      var c = false;
+      for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        var a = poly[i], b = poly[j];
+        if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c;
+      }
+      return c;
+    }
+    function val(k) { return w.val(k) / 100; }
+    function draw() {
+      var poly = FACE.slice();
+      for (var i = 0; i < 4; i++) poly = clip(poly, FACE[i], FACE[(i + 1) % 4], val(EDGE_OF[i]));
+      var r = VENT[2] + val('o'), area = 0, step = 0.02;
+      if (poly.length > 2) {
+        for (var x = 0; x < 12.6; x += step) for (var y = 0; y < SLOPE; y += step) {
+          var cx = x + step / 2, cy = y + step / 2;
+          if (inside(poly, cx, cy) && Math.hypot(cx - VENT[0], cy - VENT[1]) > r) area += step * step;
+        }
+      }
+      g.innerHTML = '<polygon class="face" points="' + FACE.map(P).join(' ') + '"/>' +
+        (poly.length > 2 ? '<polygon class="usable" points="' + poly.map(P).join(' ') + '"/>' : '') +
+        '<circle class="cutzone" cx="' + (OX + VENT[0] * S) + '" cy="' + (OY - VENT[1] * S) + '" r="' + (r * S) + '"/>' +
+        '<circle class="chim" cx="' + (OX + VENT[0] * S) + '" cy="' + (OY - VENT[1] * S) + '" r="' + (VENT[2] * S) + '"/>';
+      ['e', 'h', 'r', 'o'].forEach(function (k) { w.set(k + 'v', F(val(k), 2) + ' m'); });
+      w.set('ua', F(area, 1) + ' m²');
+      w.set('up', F(area / 38.05 * 100, 0) + ' %');
+    }
+    w.on(['e', 'h', 'r', 'o'], draw);
+    all('[data-preset]', w.out).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v = b.getAttribute('data-preset').split(',');
+        ['e', 'h', 'r', 'o'].forEach(function (k, i) { w.$(k).value = v[i]; });
+        draw();
+      });
+    });
+    draw();
+  });
+
+  /* 6.x flat racks: city, design window, orientation and tilt give the row gap and the energy */
+  cwWidget('flat-racks', function (w) {
+    var D = w.data; if (!D || !w.svg) return;
+    var F = w.F, rad = Math.PI / 180, st = { city: 'adelaide', rule: '9-15', orient: 'P' };
+    function seg(key, opts) {
+      return '<div class="bk-cw-btns" role="group" data-group="' + key + '">' + opts.map(function (o) {
+        return '<button type="button" data-v="' + o[0] + '" aria-pressed="' + (st[key] === o[0]) + '">' + w.t(o[1], o[2]) + '</button>';
+      }).join('') + '</div>';
+    }
+    w.mount(seg('city', [['adelaide', 'Adelaide', 'Adélaïde'], ['lyon', 'Lyon', 'Lyon'], ['london', 'London', 'Londres']]) +
+      '<div class="bk-cw-btnline">' + seg('rule', [['9-15', '9:00–15:00', '9 h–15 h'], ['10-14', '10:00–14:00', '10 h–14 h'], ['12-12', 'noon', 'midi']]) +
+      seg('orient', [['P', 'Portrait', 'Portrait'], ['L', 'Landscape', 'Paysage']]) + '</div>' +
+      w.controls([w.slider('tilt', 'Tilt β', 'Inclinaison β', 0, 40, 1, 20)]) +
+      '<div class="bk-cw-wgrid"><i data-slot></i>' + w.readout([
+      ['pa', 'Critical profile angle', 'Angle de profil critique'], ['d', 'Gap D', 'Écart D'], ['p', 'Pitch P', 'Pas P'], ['g', 'GCR', 'GCR'],
+      ['n', 'Rows × modules (11 × 7 m)', 'Rangées × modules (11 × 7 m)'], ['y', 'kWh/kWp (PVGIS)', 'kWh/kWc (PVGIS)'], ['e', 'Annual roof energy', 'Énergie annuelle du toit']
+    ]) + '</div>');
+    var g = w.layer();
+    function sun(lat, dec, t) {
+      var p = lat * rad, d = dec * rad, h = 15 * (t - 12) * rad;
+      var el = Math.asin(Math.sin(p) * Math.sin(d) + Math.cos(p) * Math.cos(d) * Math.cos(h));
+      var az = Math.atan2(-Math.sin(h) * Math.cos(d), Math.cos(p) * Math.sin(d) - Math.sin(p) * Math.cos(d) * Math.cos(h));
+      return [el / rad, ((az / rad) + 360) % 360];
+    }
+    function designProfile(lat, a, b) {
+      var dec = lat >= 0 ? -23.44 : 23.44, n = lat < 0 ? 0 : 180, worst = 90;
+      for (var t = a; t <= b + 1e-9; t += 1 / 12) {
+        var s = sun(lat, dec, t), gm = (s[1] - n) * rad;
+        if (s[0] <= 0 || Math.cos(gm) <= 0) return null;
+        worst = Math.min(worst, Math.atan(Math.tan(s[0] * rad) / Math.cos(gm)) / rad);
+      }
+      return worst;
+    }
+    function yieldAt(city, tilt) {
+      var t = D.pvgis[city], lo = Math.floor(tilt / 5) * 5, hi = Math.min(40, lo + 5), f = (tilt - lo) / 5;
+      var a = t['eq' + lo], b = t['eq' + hi];
+      return hi === lo ? a : a + (b - a) * f;
+    }
+    function draw() {
+      var tilt = w.val('tilt'), lat = D.cities[st.city];
+      var win = st.rule.split('-').map(Number), pa = designProfile(lat, win[0], win[1]);
+      var L = st.orient === 'P' ? D.mod[0] : D.mod[1], across = st.orient === 'P' ? D.mod[1] : D.mod[0];
+      var H = L * Math.sin(tilt * rad), dep = L * Math.cos(tilt * rad);
+      var gap = tilt > 0 ? H / Math.tan(pa * rad) : 0, P = dep + gap;
+      var rows = dep > D.roof[1] ? 0 : 1 + Math.floor((D.roof[1] - dep + 1e-9) / P);
+      var per = Math.floor((D.roof[0] + D.gap + 1e-9) / (across + D.gap)), mods = rows * per;
+      var ey = yieldAt(st.city, tilt), mwh = mods * D.kwp * ey / 1000;
+      w.set('tiltv', tilt + '°');
+      w.set('pa', F(pa, 1) + '°');
+      w.set('d', F(gap, 2) + ' m');
+      w.set('p', F(P, 2) + ' m');
+      w.set('g', F(L / P, 2));
+      w.set('n', rows + ' × ' + per + ' = ' + mods);
+      w.set('y', String(Math.round(ey)));
+      w.set('e', F(mwh, 1) + ' MWh');
+      var s = Math.min(150, 520 / (2 * P + dep + 0.2)), base = 190, x0 = 20, out = '<line class="ground" x1="10" y1="' + base + '" x2="550" y2="' + base + '"/>';
+      for (var i = 0; i < 3; i++) {
+        var a = x0 + i * P * s, x1 = a + dep * s, y1 = base - H * s;
+        if (i < 2 && gap > 0) {
+          out += '<polygon class="shade" points="' + x1 + ',' + y1 + ' ' + x1 + ',' + base + ' ' + (x1 + gap * s) + ',' + base + '"/>';
+          out += '<line class="ray" x1="' + (x1 - 30) + '" y1="' + (y1 - 30 * H / gap) + '" x2="' + (x1 + gap * s) + '" y2="' + base + '"/>';
+        }
+        out += '<line class="leg" x1="' + x1 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + base + '"/>';
+        out += '<line class="mod" x1="' + a + '" y1="' + base + '" x2="' + x1 + '" y2="' + y1 + '"/>';
+      }
+      out += '<text class="la" x="' + (x0 + (dep + gap / 2) * s) + '" y="' + (base + 20) + '" text-anchor="middle">D = ' + F(gap, 2) + ' m</text>';
+      g.innerHTML = out;
+    }
+    all('[data-group]', w.out).forEach(function (el) {
+      var key = el.getAttribute('data-group');
+      el.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        st[key] = b.getAttribute('data-v');
+        all('button', el).forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        draw();
+      });
+    });
+    w.on(['tilt'], draw);
+    draw();
+  });
+
+  /* 7.14 orientation: tilt, azimuth and module count read off the PVGIS grid of Fig. 7.10 */
+  cwWidget('orientation', function (w) {
+    var D = w.data; if (!D || !w.svg) return;
+    var F = w.F, kw = w.t('kWp', 'kWc');
+    w.mount(w.controls([
+      w.slider('t', 'Tilt β (= face pitch)', 'Inclinaison β (= pente du pan)', 0, 60, 1, 22),
+      w.slider('a', 'Azimuth γ (0 = north)', 'Azimut γ (0 = nord)', 0, 359, 1, 0),
+      w.slider('m', '440 W modules', 'Modules de 440 W', 1, 30, 1, 8)
+    ]) + '<div class="bk-cw-wgrid"><i data-slot></i>' + w.readout([
+      ['e', 'Annual production', 'Production annuelle'], ['y', 'Specific yield', 'Productible'],
+      ['p', 'Compared with the optimum', 'Par rapport à l’optimum'], ['o', 'Orientation', 'Orientation']
+    ]) + '</div>');
+    var best = 0; D.y.forEach(function (r) { r.forEach(function (v) { best = Math.max(best, v); }); });
+    function at(t, a) {
+      var ti = Math.min(D.tilts.length - 2, Math.floor(t / 5)), ft = (t - ti * 5) / 5;
+      var aa = ((a % 360) + 360) % 360, ai = Math.floor(aa / 15) % 24, fa = (aa - ai * 15) / 15, aj = (ai + 1) % 24;
+      function row(i) { return D.y[i][ai] * (1 - fa) + D.y[i][aj] * fa; }
+      return row(ti) * (1 - ft) + row(ti + 1) * ft;
+    }
+    // columns from south through north back to south
+    var order = [], k; for (k = 12; k < 24; k++) order.push(k); for (k = 0; k <= 12; k++) order.push(k);
+    var X0 = 50, Y0 = 10, cw = 21, ch = 14, base = '';
+    D.tilts.forEach(function (t, i) {
+      order.forEach(function (kk, j) {
+        var v = D.y[i][kk % 24] / best;
+        base += '<rect class="hm" x="' + (X0 + j * cw) + '" y="' + (Y0 + i * ch) + '" width="' + cw + '" height="' + ch + '" style="fill-opacity:' + Math.max(0.06, (v - 0.55) / 0.45).toFixed(2) + '"/>';
+      });
+      if (i % 2 === 0) base += '<text class="s" x="' + (X0 - 6) + '" y="' + (Y0 + i * ch + 11) + '" text-anchor="end">' + t + '°</text>';
+    });
+    var compass = { 0: 'N', 6: 'E', 12: 'S', 18: w.t('W', 'O') };
+    order.forEach(function (kk, j) {
+      var c = compass[kk % 24];
+      if (c) base += '<text class="t" x="' + (X0 + j * cw + cw / 2) + '" y="' + (Y0 + D.tilts.length * ch + 16) + '" text-anchor="middle">' + c + '</text>';
+    });
+    var DIRS = w.fr ? ['nord', 'nord-est', 'est', 'sud-est', 'sud', 'sud-ouest', 'ouest', 'nord-ouest']
+      : ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+    var g = w.layer();
+    function draw() {
+      var t = w.val('t'), a = w.val('a'), m = w.val('m'), y = at(t, a), kwp = m * 0.44;
+      w.set('tv', t + '°');
+      w.set('av', a + '°');
+      w.set('mv', m + ' (' + F(kwp, 2) + ' ' + kw + ')');
+      w.set('e', Math.round(y * kwp).toLocaleString(w.fr ? 'fr-FR' : 'en-AU') + ' kWh');
+      w.set('y', Math.round(y) + ' kWh/' + kw);
+      w.set('p', Math.round(y / best * 100) + w.t('%', ' %'));
+      w.set('o', DIRS[Math.round(a / 45) % 8] + ', ' + t + '°');
+      var col = ((a - 180 + 360) % 360) / 15, mx = X0 + col * cw + cw / 2, my = Y0 + (t / 5) * ch + ch / 2;
+      g.innerHTML = base + '<circle class="mark" cx="' + mx + '" cy="' + my + '" r="7" style="fill:none;stroke:var(--fg);stroke-width:2.5"/>';
+    }
+    w.on(['t', 'a', 'm'], draw);
+    draw();
+  });
+
+  /* 8.12 RANSAC on a section: draw samples, count the votes, see the threshold give way */
+  cwWidget('ransac', function (w) {
+    if (!w.svg) return;
+    var F = w.F, clipId = w.uid + '-clip';
+    w.mount(w.controls([
+      w.slider('noise', 'Noise (1 σ)', 'Bruit (1 σ)', 1, 25, 1, 3),
+      w.slider('th', 'Inlier threshold', 'Seuil inlier', 2, 40, 1, 5)
+    ]) + '<div class="bk-cw-btns">' +
+      '<button type="button" class="primary" data-k="one">' + w.t('Draw one sample', 'Tirer un échantillon') + '</button>' +
+      '<button type="button" data-k="hundred">' + w.t('Run 100 draws', 'Lancer 100 tirages') + '</button>' +
+      '<button type="button" data-k="reset">' + w.t('Start over', 'Recommencer') + '</button></div>' +
+      '<i data-slot></i>' + w.readout([
+      ['n', 'Draws so far', 'Tirages effectués'], ['last', 'Inliers, last draw', 'Inliers du dernier tirage'], ['best', 'Best: inliers / slope', 'Meilleur plan : inliers / pente']
+    ]));
+    var g = w.layer();
+    var T = Math.tan(22 * Math.PI / 180), X0 = 40, OY = 215, SX = 52, SZ = 40;
+    function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    function gauss(r) { var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+    var pts = [], best = null, last = null, n = 0, R = rng(11);
+    function build() {
+      var noise = w.val('noise') / 100, r = rng(5), i;
+      pts = [];
+      for (i = 0; i < 70; i++) { var x = 0.1 + 10.8 * r(); pts.push([x, 3 + T * Math.min(x, 11 - x) + noise * gauss(r)]); }
+      for (i = 0; i < 14; i++) pts.push([8.6 + 2.2 * r(), 4.6 + 1.2 * r()]); // tree points
+      best = null; last = null; n = 0; R = rng(11);
+    }
+    function inliers(a, b) {
+      var th = w.val('th') / 100, dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), out = [];
+      if (L < 1e-6) return out;
+      pts.forEach(function (p, i) { if (Math.abs((p[0] - a[0]) * dz - (p[1] - a[1]) * dx) / L < th) out.push(i); });
+      return out;
+    }
+    function sample() {
+      var i = Math.floor(R() * pts.length), j = Math.floor(R() * pts.length);
+      if (i === j) j = (j + 1) % pts.length;
+      n++;
+      last = { a: pts[i], b: pts[j], inl: inliers(pts[i], pts[j]) };
+      if (!best || last.inl.length > best.inl.length) best = last;
+    }
+    function P(p) { return [X0 + p[0] * SX, OY - (p[1] - 1.6) * SZ]; }
+    function line(a, b, cls) {
+      var dx = b[0] - a[0]; if (Math.abs(dx) < 1e-6) dx = 1e-6;
+      var m = (b[1] - a[1]) / dx, q0 = P([-0.3, a[1] + m * (-0.3 - a[0])]), q1 = P([11.3, a[1] + m * (11.3 - a[0])]);
+      return '<line class="' + cls + '" x1="' + q0[0] + '" y1="' + q0[1] + '" x2="' + q1[0] + '" y2="' + q1[1] + '"/>';
+    }
+    function render() {
+      var out = '<clipPath id="' + clipId + '"><rect x="20" y="0" width="610" height="215"/></clipPath><g clip-path="url(#' + clipId + ')">';
+      var inb = {}; if (best) best.inl.forEach(function (k) { inb[k] = 1; });
+      if (best) out += line(best.a, best.b, 'isect');
+      if (last && last !== best) out += line(last.a, last.b, 'ray');
+      pts.forEach(function (p, k) { var q = P(p); out += '<circle class="' + (inb[k] ? 'pt-in' : (k >= 70 ? 'pt-v' : 'pt-out')) + '" cx="' + q[0] + '" cy="' + q[1] + '" r="3.4"/>'; });
+      if (last) [last.a, last.b].forEach(function (p) { var q = P(p); out += '<circle class="pick" cx="' + q[0] + '" cy="' + q[1] + '" r="6"/>'; });
+      out += '</g><line class="ground" x1="20" y1="' + (OY + 4) + '" x2="630" y2="' + (OY + 4) + '"/>';
+      g.innerHTML = out;
+      w.set('n', String(n));
+      w.set('last', last ? String(last.inl.length) : '–');
+      if (best) {
+        var s = Math.abs(Math.atan((best.b[1] - best.a[1]) / ((best.b[0] - best.a[0]) || 1e-6)) * 180 / Math.PI);
+        w.set('best', best.inl.length + ' / ' + F(s, 1) + '°');
+      } else w.set('best', '–');
+      w.set('noisev', w.val('noise') + ' cm');
+      w.set('thv', w.val('th') + ' cm');
+    }
+    w.$('one').addEventListener('click', function () { sample(); render(); });
+    w.$('hundred').addEventListener('click', function () { for (var k = 0; k < 100; k++) sample(); render(); });
+    w.$('reset').addEventListener('click', function () { build(); render(); });
+    w.on(['noise'], function () { build(); render(); });
+    w.on(['th'], function () {
+      if (best) best.inl = inliers(best.a, best.b);
+      if (last && last !== best) last.inl = inliers(last.a, last.b);
+      render();
+    });
+    build(); render();
+  });
+
+  /* ---------- chapters 9 to 13: the engines' results, looked up (engines/widgets9_13.py) ---------- */
+  function cwSeg(w, key, opts, on) {
+    return '<div class="bk-cw-btns" role="group" data-group="' + key + '">' + opts.map(function (o) {
+      return '<button type="button" data-v="' + o[0] + '" aria-pressed="' + (o[0] === on) + '">' + w.t(o[1], o[2]) + '</button>';
+    }).join('') + '</div>';
+  }
+  function cwGroups(w, st, draw) {
+    all('[data-group]', w.out).forEach(function (el) {
+      var key = el.getAttribute('data-group');
+      el.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        st[key] = b.getAttribute('data-v');
+        all('button', el).forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        draw();
+      });
+    });
+  }
+  function cwPct(w, x, d) { return w.F(x * 100, d === undefined ? 0 : d) + w.t('%', ' %'); }
+  function cwInt(w, x) { return Math.round(x).toLocaleString(w.fr ? 'fr-FR' : 'en-AU'); }
+  // a day of half-hours on an axis: 0-24 h across, 0-ymax kW up
+  function cwDayAxes(w, ymax, unit) {
+    var ox = 50, oy = 250, cw = 600, ch = 220, s = '';
+    for (var v = 0; v <= ymax; v += ymax > 8 ? 2 : 1) s += '<line class="grid" x1="' + ox + '" y1="' + (oy - v / ymax * ch) + '" x2="' + (ox + cw) + '" y2="' + (oy - v / ymax * ch) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (oy - v / ymax * ch + 4) + '" text-anchor="end">' + v + '</text>';
+    for (var h = 0; h <= 24; h += 3) s += '<text class="s" x="' + (ox + h / 24 * cw) + '" y="' + (oy + 16) + '" text-anchor="middle">' + (w.fr ? h + ' h' : h + 'h') + '</text>';
+    s += '<text class="s" x="' + (ox - 40) + '" y="14">' + unit + '</text>';
+    return { svg: s, X: function (k) { return ox + k / 48 * cw; }, Y: function (v) { return oy - Math.min(v, ymax) / ymax * ch; }, oy: oy };
+  }
+  function cwStep(d, s) {
+    var p = [];
+    s.forEach(function (v, k) { p.push(d.X(k).toFixed(1) + ',' + d.Y(v).toFixed(1), d.X(k + 1).toFixed(1) + ',' + d.Y(v).toFixed(1)); });
+    return p.join(' ');
+  }
+  function cwKey(items) {
+    var x = 60, s = '';
+    items.forEach(function (it) {
+      s += it[0] === 'line' ? '<line class="' + it[1] + '" x1="' + x + '" y1="282" x2="' + (x + 18) + '" y2="282"/>'
+        : '<rect class="' + it[1] + '" x="' + x + '" y="276" width="14" height="12"/>';
+      s += '<text class="s" x="' + (x + 22) + '" y="286">' + it[2] + '</text>';
+      x += 30 + it[2].length * 6.2;
+    });
+    return s;
+  }
+
+  /* 9.x shade on the face: week and solar hour, each module's share in the shade */
+  cwWidget('shade-face', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, S = 44, OX = 30, OY = 240;
+    var MON = w.fr ? ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function P(u, v) { return (OX + u * S).toFixed(1) + ',' + (OY - v * S).toFixed(1); }
+    w.mount(w.controls([
+      w.slider('wk', 'Week', 'Semaine', 0, 52, 1, 25),
+      w.slider('h', 'Solar hour', 'Heure solaire', D.h0, D.h0 + 14, 1, 10)
+    ]) + '<div class="bk-cw-wgrid">' + cwSvg('0 0 620 290', w.t('North face with its 8 modules, each coloured by its share in the shade', 'Pan nord et ses 8 modules, chacun coloré selon sa part à l’ombre'), '<g data-k="face"></g>') +
+      w.readout([
+        ['m', 'Module', 'Module'], ['now', 'In the shade this hour', 'À l’ombre à cette heure'],
+        ['beam', 'Beam lost over the year (tree / chimney)', 'Direct perdu sur l’année (arbre / cheminée)'],
+        ['lin', 'Annual loss, lit area only', 'Perte annuelle, surface éclairée seule'],
+        ['dio', 'Annual loss, bypass diodes', 'Perte annuelle, diodes de dérivation'],
+        ['nod', 'Annual loss, no diode', 'Perte annuelle, sans diode']
+      ]) + '</div><p class="bk-cw-note">' + w.t('Tap a module. The 8 modules together, by wiring: ', 'Touchez un module. Les 8 modules ensemble, selon le câblage : ') +
+      '<span data-k="arch"></span></p>');
+    var sel = 3, g = w.$('face');
+    var a = D.arch;
+    w.set('arch', [[w.t('ideal', 'idéal'), a.ideal], [w.t('optimisers or micro-inverters', 'optimiseurs ou micro-onduleurs'), a.mlpe],
+      [w.t('2 strings of 4', '2 chaînes de 4'), a.two_mppt], [w.t('1 string of 8', '1 chaîne de 8'), a.one_string]]
+      .map(function (x) { return x[0] + ' ' + cwPct(w, x[1], 1); }).join(' · ') + w.t(' (chapter 7 lump sum: ', ' (forfait du chapitre 7 : ') + D.lump + w.t('%)', ' %)'));
+    function draw() {
+      var wk = w.val('wk'), h = w.val('h'), day = new Date(2026, 0, 1 + wk * 7 + 3);
+      w.set('wkv', w.t('around ', 'vers le ') + day.getDate() + ' ' + MON[day.getMonth()]);
+      w.set('hv', w.fr ? h + ' h' : h + ':00');
+      var out = '<polygon class="roofp" points="' + D.face.map(function (p) { return P(p[0], p[1]); }).join(' ') + '"/>';
+      out += '<text class="s" x="' + (OX + 6.3 * S) + '" y="' + (OY + 16) + '" text-anchor="middle">' + w.t('eave (north)', 'égout (nord)') + '</text>';
+      out += '<text class="s" x="' + (OX + 6.3 * S) + '" y="' + (OY - D.face[2][1] * S - 8) + '" text-anchor="middle">' + w.t('ridge', 'faîtage') + '</text>';
+      D.mods.forEach(function (m, i) {
+        var v = D.shade[i][wk][h - D.h0], x = OX + m[0] * S, y = OY - (m[1] + m[3]) * S;
+        out += '<rect class="modp' + (i === sel ? ' on' : '') + '" data-i="' + i + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (m[2] * S).toFixed(1) + '" height="' + (m[3] * S).toFixed(1) + '"/>';
+        if (v > 0) out += '<rect class="shd" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (m[2] * S).toFixed(1) + '" height="' + (m[3] * S).toFixed(1) + '" style="fill-opacity:' + (0.15 + 0.7 * v / 100).toFixed(2) + '"/>';
+        out += '<text class="t" x="' + (x + m[2] * S / 2).toFixed(1) + '" y="' + (y + m[3] * S / 2 + 4).toFixed(1) + '" text-anchor="middle">' + (i + 1) + (v < 0 ? '' : ' · ' + v + w.t('%', ' %')) + '</text>';
+      });
+      var c = D.chimney, hu = c[3] / 2, hv = c[2] / 2;
+      out += '<polygon class="chimp" points="' + [P(c[0] - hu, c[1] - hv), P(c[0] + hu, c[1] - hv), P(c[0] + hu, c[1] + hv), P(c[0] - hu, c[1] + hv)].join(' ') + '"/>';
+      out += '<circle class="treep" cx="' + (OX + 11.6 * S) + '" cy="' + (OY + 30) + '" r="12"/><text class="s" x="' + (OX + 11.6 * S - 18) + '" y="' + (OY + 34) + '" text-anchor="end">' + w.t('tree, north-east', 'arbre, nord-est') + '</text>';
+      g.innerHTML = out;
+      var L = D.loss[sel], v = D.shade[sel][wk][h - D.h0];
+      w.set('m', String(sel + 1));
+      w.set('now', v < 0 ? w.t('sun behind the face', 'soleil derrière le pan') : v + w.t('%', ' %'));
+      w.set('beam', cwPct(w, L.beam, 1) + ' (' + cwPct(w, L.tree, 1) + ' / ' + cwPct(w, L.chimney, 1) + ')');
+      w.set('lin', cwPct(w, L.linear, 1));
+      w.set('dio', cwPct(w, L.diodes, 1));
+      w.set('nod', cwPct(w, L.nodiode, 1));
+    }
+    g.addEventListener('click', function (e) { var r = e.target.closest('[data-i]'); if (r) { sel = +r.getAttribute('data-i'); draw(); } });
+    w.on(['wk', 'h'], draw);
+    draw();
+  });
+
+  /* 10.x the voltage window: modules in series, strings in parallel, the site's temperatures */
+  cwWidget('string-window', function (w) {
+    var D = w.data; if (!D) return;
+    var M = D.module, I = D.inverter, F = w.F, st = { site: 'adelaide', cold: 'rule' };
+    function at(v, c, t) { return v * (1 + c / 100 * (t - 25)); }
+    w.mount(cwSeg(w, 'site', [['adelaide', 'Adelaide', 'Adélaïde'], ['lyon', 'Lyon', 'Lyon'], ['london', 'London', 'Londres']], 'adelaide') +
+      cwSeg(w, 'cold', [['rule', 'Cold: the market’s design temperature', 'Froid : température de calcul du marché'], ['tmy', 'Cold: the typical year’s coldest hour', 'Froid : heure la plus froide de l’année type']], 'rule') +
+      w.controls([w.slider('n', 'Modules in series', 'Modules en série', 1, 16, 1, 8), w.slider('p', 'Strings in parallel on the input', 'Chaînes en parallèle sur l’entrée', 1, 3, 1, 1)]) +
+      '<div class="bk-cw-wgrid">' + cwSvg('0 0 420 300', w.t('The string’s voltage range against the inverter’s limits', 'Plage de tension de la chaîne face aux limites de l’onduleur'), '<g data-k="win"></g>') +
+      w.readout([
+        ['tc', 'Cold, hot (cell)', 'Froid, chaud (cellule)'], ['voc', 'Voc on the coldest hour', 'Voc à l’heure la plus froide'],
+        ['vmpc', 'Vmp on the coldest hour', 'Vmp à l’heure la plus froide'], ['vmph', 'Vmp on the hottest hour', 'Vmp à l’heure la plus chaude'],
+        ['isc', 'Design Isc on the input', 'Isc de calcul sur l’entrée'], ['range', 'Series range at this site', 'Plage en série sur ce site']
+      ]) + '</div><span class="bk-cw-flag" data-k="flag" aria-live="polite"></span>');
+    var g = w.$('win');
+    function draw() {
+      var s = D.sites[st.site], n = w.val('n'), p = w.val('p');
+      var tc = st.cold === 'rule' ? s.cold : s.tmin, th = s.hot;
+      var voc = at(M.voc, M.beta_voc, tc), vmpc = at(M.vmp, M.beta_vmp, tc), vmph = at(M.vmp, M.beta_vmp, th);
+      var isc = at(M.isc, M.alpha_isc, th) * D.isc_factor * p;
+      var nmax = Math.min(Math.floor(I.vdc_max / voc), Math.floor(I.mppt_max / vmpc));
+      var nmin = Math.ceil(Math.max(I.mppt_min, I.v_start) / vmph), nfull = Math.ceil(I.full_min / vmph);
+      w.set('nv', String(n));
+      w.set('pv', String(p));
+      w.set('tc', F(tc, 1) + ' °C, ' + F(th, 1) + ' °C' + (st.cold === 'rule' && !s.rule ? w.t(' (no rule: typical year)', ' (pas de règle : année type)') : ''));
+      w.set('voc', F(n * voc, 0) + ' V / ' + I.vdc_max + ' V');
+      w.set('vmpc', F(n * vmpc, 0) + ' V / ' + I.mppt_max + ' V');
+      w.set('vmph', F(n * vmph, 0) + ' V / ' + I.full_min + ' V');
+      w.set('isc', F(isc, 1) + ' A / ' + I.isc_max + ' A');
+      w.set('range', nmin + '–' + nmax + w.t(' modules (full power from ', ' modules (pleine puissance dès ') + nfull + ')');
+      var Y = function (v) { return 270 - v / 700 * 250; }, x0 = 70, x1 = 400, out = '';
+      out += '<rect class="bandp" x="' + x0 + '" y="' + Y(I.full_max) + '" width="' + (x1 - x0) + '" height="' + (Y(I.full_min) - Y(I.full_max)) + '"/>';
+      for (var v = 0; v <= 700; v += 100) out += '<line class="grid" x1="' + x0 + '" y1="' + Y(v) + '" x2="' + x1 + '" y2="' + Y(v) + '"/><text class="s" x="' + (x0 - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + ' V</text>';
+      [[I.vdc_max, 'lim', w.t('max DC ', 'DC max ') + I.vdc_max + ' V'], [I.mppt_max, 'lim2', 'MPPT max'], [I.mppt_min, 'lim2', 'MPPT min']].forEach(function (l) {
+        out += '<line class="' + l[1] + '" x1="' + x0 + '" y1="' + Y(l[0]) + '" x2="' + x1 + '" y2="' + Y(l[0]) + '"/><text class="s" x="' + (x1 - 2) + '" y="' + (Y(l[0]) - 4) + '" text-anchor="end">' + l[2] + '</text>';
+      });
+      out += '<text class="s" x="' + (x0 + 4) + '" y="' + (Y(I.full_max) + 14) + '">' + w.t('full power ', 'pleine puissance ') + I.full_min + '–' + I.full_max + ' V</text>';
+      var ok = n * voc <= I.vdc_max && n * vmpc <= I.mppt_max && n * vmph >= Math.max(I.mppt_min, I.v_start), bx = 235;
+      out += '<line class="' + (ok ? 'okb' : 'nob') + '" x1="' + bx + '" y1="' + Y(n * vmph) + '" x2="' + bx + '" y2="' + Y(Math.min(n * voc, 700)) + '"/>';
+      out += '<line class="tickp" x1="' + (bx - 10) + '" y1="' + Y(Math.min(n * M.voc, 700)) + '" x2="' + (bx + 10) + '" y2="' + Y(Math.min(n * M.voc, 700)) + '"/>';
+      out += '<text class="s" x="' + (bx + 14) + '" y="' + (Y(Math.min(n * voc, 700)) + 4) + '">Voc ' + F(tc, 0) + ' °C</text>';
+      out += '<text class="s" x="' + (bx + 14) + '" y="' + (Y(Math.min(n * M.voc, 700)) + 4) + '">' + w.t('Voc at 25 °C (datasheet)', 'Voc à 25 °C (fiche)') + '</text>';
+      out += '<text class="s" x="' + (bx + 14) + '" y="' + (Y(n * vmph) + 4) + '">Vmp ' + F(th, 0) + ' °C</text>';
+      g.innerHTML = out;
+      var why = [];
+      if (n * voc > I.vdc_max) why.push(w.t('the cold Voc passes the inverter’s maximum: refused', 'le Voc à froid dépasse le maximum de l’onduleur : refusé'));
+      else if (n * vmpc > I.mppt_max) why.push(w.t('the cold Vmp leaves the MPPT range', 'le Vmp à froid sort de la plage MPPT'));
+      if (n * vmph < Math.max(I.mppt_min, I.v_start)) why.push(w.t('too few modules: the inverter will not start on a hot day', 'trop peu de modules : l’onduleur ne démarre pas par forte chaleur'));
+      else if (n * vmph < I.full_min) why.push(w.t('below full power on hot days', 'sous la pleine puissance par forte chaleur'));
+      if (isc > I.isc_max) why.push(w.t('the input’s current is exceeded', 'le courant de l’entrée est dépassé'));
+      if (n * M.voc <= I.vdc_max && n * voc > I.vdc_max) why.push(w.t('a check on datasheet values would have passed it', 'un contrôle sur les valeurs de la fiche l’aurait accepté'));
+      w.set('flag', why.length ? why.join(' · ') : w.t('Inside the window', 'Dans la fenêtre'));
+      w.$('flag').classList.toggle('bad', !ok || isc > I.isc_max);
+    }
+    cwGroups(w, st, draw);
+    w.on(['n', 'p'], draw);
+    draw();
+  });
+
+  /* 11.x a battery for the day: the engine's self-consumption dispatch, half-hour by half-hour */
+  cwWidget('battery-day', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { day: 'jan' }, B = D.battery, eta = Math.sqrt(B.round_trip), dt = D.dt;
+    w.mount(cwSeg(w, 'day', [['jan', '15 January', '15 janvier'], ['jun', '21 June', '21 juin']], 'jan') +
+      w.controls([w.slider('kwh', 'Usable capacity', 'Capacité utile', 0, 30, 1, 10)]) +
+      cwSvg('0 0 700 296', w.t('One day, half-hourly: where the load’s energy comes from, and the energy stored', 'Une journée, par demi-heure : d’où vient l’énergie consommée, et l’énergie stockée'), '<g data-k="day"></g>') +
+      '<div class="bk-cw-cols">' + w.readout([
+        ['imp0', 'Bought from the grid this day, no battery', 'Acheté au réseau ce jour, sans batterie'],
+        ['imp1', 'Bought from the grid this day, with it', 'Acheté au réseau ce jour, avec'],
+        ['out', 'Delivered by the battery', 'Fourni par la batterie'], ['e', 'Stored at midnight, start → end', 'Stocké à minuit, début → fin']
+      ]) + w.readout([
+        ['save', 'Savings, year 1 (ToU tariff)', 'Économies, année 1 (tarif heures pleines/creuses)'], ['efc', 'Full cycles a year', 'Cycles complets par an'],
+        ['yimp', 'Grid purchases over the year', 'Achats au réseau sur l’année'], ['reb', 'Federal rebate (at 40 AUD per STC)', 'Aide fédérale (à 40 AUD le STC)']
+      ]) + '</div>');
+    var g = w.$('day');
+    function rebate(k) {
+      var s = 0; D.stc.bands.forEach(function (b) { s += Math.max(0, Math.min(k, b[1]) - b[0]) * b[2]; });
+      return Math.floor(s * D.stc.factor) * D.stc.price;
+    }
+    function draw() {
+      var kwh = w.val('kwh'), i = D.sizes.indexOf(kwh), day = D.days[st.day], cmax = Math.max(B.kw_min, kwh / 3) * dt;
+      var e = D.e0[st.day][i], e0 = e, imp0 = 0, imp1 = 0, outE = 0, rows = [];
+      for (var k = 0; k < 48; k++) {
+        var pv = day.pv[k], lo = day.load[k], s = pv - lo - B.standby_kw * dt, c = 0, d = 0;
+        if (kwh > 0 && s > 0) { c = Math.max(0, Math.min(s, cmax, (kwh - e) / eta)); e += c * eta; }
+        else if (kwh > 0) { d = Math.max(0, Math.min(-s, cmax, e * eta)); e -= d / eta; }
+        var stb = kwh > 0 ? B.standby_kw * dt : 0, net = lo + stb - pv + c - d;
+        imp0 += Math.max(lo - pv, 0); imp1 += Math.max(net, 0); outE += d;
+        rows.push({ pv: pv / dt, load: lo / dt, direct: Math.min(lo, pv) / dt, batt: Math.min(d, lo) / dt, e: e });
+      }
+      var A = cwDayAxes(w, 6, 'kW'), out = A.svg;
+      rows.forEach(function (r, k) {
+        var x = A.X(k), wd = A.X(k + 1) - x, y0 = A.oy;
+        var parts = [[r.direct, 'f-sc'], [r.batt, 'f-bt'], [Math.max(r.load - r.direct - r.batt, 0), 'f-gr']];
+        parts.forEach(function (p) { if (p[0] > 0) { var y = A.Y(p[0]) - (A.oy - y0); out += '<rect class="' + p[1] + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + wd.toFixed(1) + '" height="' + (y0 - y).toFixed(1) + '"/>'; y0 = y; } });
+      });
+      out += '<polyline class="k-pv" points="' + cwStep(A, rows.map(function (r) { return r.pv; })) + '"/>';
+      if (kwh > 0) out += '<polyline class="k-soc" points="' + rows.map(function (r, k) { return A.X(k + 1).toFixed(1) + ',' + (A.oy - r.e / 30 * 220).toFixed(1); }).join(' ') + '"/>' +
+        '<text class="s" x="655" y="34">30 kWh</text>';
+      out += cwKey([['rect', 'f-sc', w.t('PV, used at once', 'PV, consommé aussitôt')], ['rect', 'f-bt', w.t('battery', 'batterie')], ['rect', 'f-gr', w.t('grid', 'réseau')],
+        ['line', 'k-pv', 'PV'], ['line', 'k-soc', w.t('stored (right scale)', 'stocké (échelle de droite)')]]);
+      g.innerHTML = out;
+      var y = D.years[i];
+      w.set('kwhv', kwh + ' kWh');
+      w.set('imp0', F(imp0, 1) + ' kWh');
+      w.set('imp1', F(imp1, 1) + ' kWh');
+      w.set('out', F(outE, 1) + ' kWh');
+      w.set('e', F(e0, 1) + ' → ' + F(e, 1) + ' kWh');
+      w.set('save', cwInt(w, y.save) + ' AUD');
+      w.set('efc', cwInt(w, y.efc));
+      w.set('yimp', cwInt(w, y.imp) + ' kWh');
+      w.set('reb', cwInt(w, rebate(kwh)) + ' AUD');
+    }
+    cwGroups(w, st, draw);
+    w.on(['kwh'], draw);
+    draw();
+  });
+
+  /* 12.x PV size and export limit: a day's split, and the year's two ratios */
+  cwWidget('self-consumption', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { day: 'jan', lim: 'none' }, dt = D.dt;
+    w.mount(cwSeg(w, 'day', [['jan', '15 January', '15 janvier'], ['jun', '21 June', '21 juin']], 'jan') +
+      cwSeg(w, 'lim', [['none', 'No export limit', 'Sans limite d’injection'], ['5', '5 kW', '5 kW'], ['3', '3 kW', '3 kW'], ['1.5', '1.5 kW', '1,5 kW'], ['0', 'Zero export', 'Injection nulle']], 'none') +
+      w.controls([w.slider('kwp', 'PV size', 'Puissance PV', 0.5, 12, 0.5, D.house_kwp >= 6.5 ? 6.5 : D.house_kwp)]) +
+      cwSvg('0 0 700 296', w.t('One day, half-hourly: PV used on site, exported and curtailed', 'Une journée, par demi-heure : PV consommé sur place, injecté et écrêté'), '<g data-k="day"></g>') +
+      '<div class="bk-cw-cols">' + w.readout([
+        ['dsc', 'This day: used on site', 'Ce jour : consommé sur place'], ['dex', 'This day: exported', 'Ce jour : injecté'], ['dcu', 'This day: curtailed', 'Ce jour : écrêté']
+      ]) + w.readout([
+        ['sc', 'Year: self-consumption', 'Année : autoconsommation'], ['ss', 'Year: self-sufficiency', 'Année : autoproduction'],
+        ['cu', 'Year: PV curtailed', 'Année : PV écrêté'], ['pvy', 'Year: PV produced', 'Année : PV produit']
+      ]) + '</div>');
+    var g = w.$('day');
+    function draw() {
+      var kwp = w.val('kwp'), day = D.days[st.day], lim = st.lim === 'none' ? Infinity : +st.lim;
+      var A = cwDayAxes(w, 10, 'kW'), out = A.svg, sc = 0, ex = 0, cu = 0, pvs = [];
+      for (var k = 0; k < 48; k++) {
+        var p = day.pv[k] * kwp / dt, lo = day.load[k] / dt, d = Math.min(p, lo), x = Math.min(p - d, lim), c = p - d - x;
+        sc += d * dt; ex += x * dt; cu += c * dt; pvs.push(p);
+        var X0 = A.X(k), wd = A.X(k + 1) - X0;
+        [[0, d, 'f-sc'], [d, d + x, 'f-ex'], [d + x, p, 'f-cu']].forEach(function (b) {
+          if (b[1] > b[0] + 1e-9) out += '<rect class="' + b[2] + '" x="' + X0.toFixed(1) + '" y="' + A.Y(b[1]).toFixed(1) + '" width="' + wd.toFixed(1) + '" height="' + (A.Y(b[0]) - A.Y(b[1])).toFixed(1) + '"/>';
+        });
+      }
+      out += '<polyline class="k-load" points="' + cwStep(A, day.load.map(function (v) { return v / dt; })) + '"/>';
+      if (lim !== Infinity) out += '<text class="s" x="655" y="' + (A.Y(10) - 4) + '" text-anchor="end">' + w.t('export limit ', 'limite d’injection ') + F(lim, 1) + ' kW' + w.t(', above the load', ', au-dessus de la consommation') + '</text>';
+      out += cwKey([['rect', 'f-sc', w.t('used on site', 'consommé sur place')], ['rect', 'f-ex', w.t('exported', 'injecté')], ['rect', 'f-cu', w.t('curtailed', 'écrêté')], ['line', 'k-load', w.t('load', 'consommation')]]);
+      g.innerHTML = out;
+      var r = D.sweep[st.lim][D.kwps.indexOf(kwp)];
+      w.set('kwpv', F(kwp, 1) + ' ' + w.t('kWp', 'kWc'));
+      w.set('dsc', F(sc, 1) + ' kWh');
+      w.set('dex', F(ex, 1) + ' kWh');
+      w.set('dcu', F(cu, 1) + ' kWh');
+      w.set('sc', cwPct(w, r[0]));
+      w.set('ss', cwPct(w, r[1]));
+      w.set('cu', cwPct(w, r[2]));
+      w.set('pvy', cwInt(w, r[3]) + ' kWh');
+    }
+    cwGroups(w, st, draw);
+    w.on(['kwp'], draw);
+    draw();
+  });
+
+  /* 13.x a heat pump and an EV: the months' loads against PV, and the year's ratios */
+  cwWidget('electrification', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { hp: 'off', ev: 'none' }, M = D.months;
+    w.mount(cwSeg(w, 'hp', [['off', 'No heat pump', 'Sans pompe à chaleur'], ['on', 'Heat pump', 'Pompe à chaleur']], 'off') +
+      cwSeg(w, 'ev', [['none', 'No EV', 'Sans VE'], ['night', 'EV charged at 22:00', 'VE chargé à 22 h'], ['midday', 'EV charged at 11:00', 'VE chargé à 11 h'], ['solar', 'EV on PV surplus', 'VE sur le surplus PV']], 'none') +
+      cwSvg('0 0 700 296', w.t('Monthly loads against the PV production', 'Consommations mensuelles face à la production PV'), '<g data-k="m"></g>') +
+      '<div class="bk-cw-cols">' + w.readout([
+        ['load', 'Load over the year', 'Consommation sur l’année'], ['imp', 'Bought from the grid', 'Acheté au réseau'],
+        ['ss', 'Self-sufficiency', 'Autoproduction'], ['sc', 'Self-consumption', 'Autoconsommation']
+      ]) + w.readout([['evc', 'EV charged from PV', 'VE chargé par le PV'], ['hpc', 'Heat pump covered by PV', 'Pompe à chaleur couverte par le PV']]) + '</div>');
+    var g = w.$('m'), ML = w.fr ? 'JFMAMJJASOND' : 'JFMAMJJASOND';
+    function draw() {
+      var hp = st.hp === 'on', ev = st.ev === 'none' ? null : M[(hp ? 'hp_' : '') + 'ev_' + st.ev];
+      var tot = M.base.map(function (b, i) { return b + (hp ? M.hp[i] : 0) + (ev ? ev[i] : 0); });
+      var ymax = Math.ceil(Math.max.apply(null, tot.concat(M.pv)) / 200) * 200;
+      var ox = 60, oy = 250, cw = 600, ch = 220, bw = cw / 12, Y = function (v) { return oy - v / ymax * ch; }, out = '';
+      for (var v = 0; v <= ymax; v += 200) out += '<line class="grid" x1="' + ox + '" y1="' + Y(v) + '" x2="' + (ox + cw) + '" y2="' + Y(v) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+      out += '<text class="s" x="4" y="14">' + w.t('kWh per month', 'kWh par mois') + '</text>';
+      var pts = [];
+      M.base.forEach(function (b, i) {
+        var x = ox + i * bw + bw * 0.2, y0 = 0;
+        [[b, 'f-gr'], [hp ? M.hp[i] : 0, 'f-ex'], [ev ? ev[i] : 0, 'f-bt']].forEach(function (p) {
+          if (p[0] > 0) out += '<rect class="' + p[1] + '" x="' + x.toFixed(1) + '" y="' + Y(y0 + p[0]).toFixed(1) + '" width="' + (bw * 0.6).toFixed(1) + '" height="' + (Y(y0) - Y(y0 + p[0])).toFixed(1) + '"/>';
+          y0 += p[0];
+        });
+        out += '<text class="s" x="' + (ox + (i + 0.5) * bw) + '" y="' + (oy + 16) + '" text-anchor="middle">' + ML[i] + '</text>';
+        pts.push((ox + (i + 0.5) * bw).toFixed(1) + ',' + Y(M.pv[i]).toFixed(1));
+      });
+      out += '<polyline class="k-pv" points="' + pts.join(' ') + '"/>';
+      out += cwKey([['rect', 'f-gr', w.t('household', 'foyer')], ['rect', 'f-ex', w.t('heat pump', 'pompe à chaleur')], ['rect', 'f-bt', w.t('EV', 'VE')], ['line', 'k-pv', 'PV ' + F(D.pv_kwp, 1) + ' ' + w.t('kWp', 'kWc')]]);
+      g.innerHTML = out;
+      var c = D.cases[(hp ? 'hp' : 'base') + '_' + st.ev];
+      w.set('load', cwInt(w, c.load) + ' kWh');
+      w.set('imp', cwInt(w, c.imp) + ' kWh');
+      w.set('ss', cwPct(w, c.ss));
+      w.set('sc', cwPct(w, c.sc));
+      w.set('evc', c.ev_cov === null ? '—' : cwPct(w, c.ev_cov));
+      w.set('hpc', c.hp_cov === null ? '—' : cwPct(w, c.hp_cov));
+    }
+    cwGroups(w, st, draw);
+    draw();
+  });
 
   /* ---------- architecture views: LikeC4's web component (```likec4, blocks.py) ---------- */
   // The bundle (assets/c4/likec4.js, from `mise run c4`) holds the model and defines
