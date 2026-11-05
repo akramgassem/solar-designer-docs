@@ -6093,6 +6093,485 @@
     cwGroups(w, st, draw);
     draw();
   });
+  /* ---------- widgets of chapter 14: cashflow and financing ----------
+     Each widget replays engines/cashflow.py from figures/14-cashflow/widgetdata.json: the
+     simulations (import cost at year-1 prices, export kWh, year by year) come from the engine;
+     the formulas below are the engine's, line for line (bill, savings, payback, NPV, IRR, loan). */
+  var CF = {
+    bill: function (D, c, y, a) {          // cashflow.bill
+      var g = Math.pow(1 + a.escalation, y - 1), h = Math.pow(1 + a.fit_growth, y - 1);
+      return D.tariff.supply * 365 * g + c.imp[y - 1] * g - c.exp[y - 1] * D.tariff.fit * h;
+    },
+    savings: function (D, a, sim) {        // cashflow.savings
+      sim = sim || D.sim;
+      var sol = [], bat = [];
+      for (var y = 1; y <= D.years; y++) {
+        var b0 = CF.bill(D, sim.none, y, a), b1 = CF.bill(D, sim.pv, y, a), b2 = CF.bill(D, sim.batt, y, a);
+        sol.push(b0 - b1); bat.push(b1 - b2);
+      }
+      return { sol: sol, bat: bat };
+    },
+    costs: function (D, a) {               // cashflow.costs
+      var c = []; for (var y = 1; y <= D.years; y++) c.push(0);
+      if (a.inverter !== false) c[D.inverter.year - 1] += D.inverter.aud * Math.pow(1 + a.inflation, D.inverter.year - 1);
+      return c;
+    },
+    cumulative: function (price, flows) { var c = -price, o = [c]; flows.forEach(function (f) { c += f; o.push(c); }); return o; },
+    payback: function (price, flows) {
+      var c = -price;
+      for (var y = 1; y <= flows.length; y++) { var f = flows[y - 1]; if (c + f >= 0) return y - 1 + (f ? -c / f : 0); c += f; }
+      return null;
+    },
+    npv: function (price, flows, r) { var s = -price; flows.forEach(function (f, i) { s += f / Math.pow(1 + r, i + 1); }); return s; },
+    irr: function (price, flows) {
+      var lo = -0.5, hi = 1.0;
+      if (CF.npv(price, flows, lo) * CF.npv(price, flows, hi) > 0) return null;
+      for (var i = 0; i < 100; i++) { var m = (lo + hi) / 2; if (CF.npv(price, flows, m) > 0) lo = m; else hi = m; }
+      return (lo + hi) / 2;
+    },
+    loan: function (principal, rate, years) {
+      var n = years * 12, i = rate / 12, p = i === 0 ? principal / n : principal * i / (1 - Math.pow(1 + i, -n));
+      return { pmt: p, total: p * n, interest: p * n - principal };
+    },
+    stcsPv: function (D, kw, zone, year) { return Math.floor(kw * zone * D.price.deeming[String(year)]); },
+    stcsBatt: function (D, kwh, factor) {  // battery.rebate_stcs
+      var s = 0; D.price.bands.forEach(function (b) { s += Math.max(0, Math.min(kwh, b[1]) - b[0]) * b[2]; });
+      return Math.floor(factor * s);
+    },
+    aud: function (w, x) { return (x < 0 ? '−' : '') + cwInt(w, Math.abs(x)) + ' AUD'; },
+    yrs: function (w, x) { return x === null ? w.t('never', 'jamais') : w.F(x, 1) + w.t(' years', ' ans'); },
+    half: function (w, y, h) { return (h === 1 ? w.t('Jan–Jun ', 'janv.–juin ') : w.t('Jul–Dec ', 'juil.–déc. ')) + y; }
+  };
+
+  /* 14.1 from list price to net price: STCs for the PV, the battery rebate by half-year */
+  cwWidget('net-price', function (w) {
+    var D = w.data; if (!D) return;
+    var P = D.price, H = P.chbp, F = w.F;
+    w.mount(w.controls([
+      w.slider('half', 'Installed in', 'Installée en', 0, H.length - 1, 1, 0),
+      w.slider('zone', 'STC zone (1 north, 4 south)', 'Zone STC (1 nord, 4 sud)', 1, 4, 1, P.zones.indexOf(P.zone) + 1),
+      w.slider('kwh', 'Usable battery capacity', 'Capacité utile de la batterie', 0, 30, 0.5, P.usable),
+      w.slider('stc', 'Price paid per STC', 'Prix payé par STC', 30, 40, 0.5, P.stc_market)
+    ]) + cwSvg('0 0 700 300', w.t('From list price to net price: PV and battery', 'Du prix catalogue au prix net : PV et batterie'), '<g data-k="g"></g>') +
+      '<ol class="bk-cw-steps" data-k="steps"></ol>' +
+      w.readout([['pvn', 'PV, net', 'PV, net'], ['btn', 'Battery, net', 'Batterie, nette'], ['tot', 'What the household pays', 'Ce que paie le ménage'], ['sh', 'Paid by the certificates', 'Payé par les certificats']]));
+    var g = w.$('g');
+    function draw() {
+      var hi = w.val('half'), yh = H[hi], year = yh[0], factor = yh[2];
+      var zone = P.zones[w.val('zone') - 1], kwh = w.val('kwh'), sp = w.val('stc');
+      var spv = CF.stcsPv(D, P.pv_kw, zone, year), sb = kwh >= 5 ? CF.stcsBatt(D, kwh, factor) : 0;
+      var battGross = P.batt_gross * kwh / P.usable;
+      var pvn = P.pv_gross - spv * sp, btn = battGross - sb * sp;
+      var bars = [
+        [w.t('PV list', 'PV catalogue'), 0, P.pv_gross, 'f-gr'], [w.t('− STCs', '− STC'), pvn, P.pv_gross, 'f-sc'], [w.t('PV net', 'PV net'), 0, pvn, 'f-bt'],
+        [w.t('Battery list', 'Batterie catalogue'), 0, battGross, 'f-gr'], [w.t('− rebate', '− aide'), btn, battGross, 'f-sc'], [w.t('Battery net', 'Batterie nette'), 0, btn, 'f-bt'],
+        [w.t('Total net', 'Total net'), 0, pvn + btn, 'f-ex']
+      ];
+      var ymax = 25000, ox = 70, oy = 250, ch = 220, bw = 64, gap = 22, Y = function (v) { return oy - v / ymax * ch; }, s = '';
+      for (var v = 0; v <= ymax; v += 5000) s += '<line class="grid" x1="' + ox + '" y1="' + Y(v) + '" x2="680" y2="' + Y(v) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + cwInt(w, v) + '</text>';
+      bars.forEach(function (b, i) {
+        var x = ox + 12 + i * (bw + gap) + (i >= 3 ? 14 : 0) + (i >= 6 ? 14 : 0);
+        s += '<rect class="' + b[3] + '" x="' + x + '" y="' + Y(b[2]).toFixed(1) + '" width="' + bw + '" height="' + Math.max(0, Y(b[1]) - Y(b[2])).toFixed(1) + '"/>';
+        s += '<text class="s" x="' + (x + bw / 2) + '" y="' + (Y(b[2]) - 6).toFixed(1) + '" text-anchor="middle">' + cwInt(w, b[2] - b[1]) + '</text>';
+        s += '<text class="s" x="' + (x + bw / 2) + '" y="' + (oy + 16) + '" text-anchor="middle">' + b[0] + '</text>';
+      });
+      s += '<text class="s" x="' + (ox - 60) + '" y="14">AUD</text>';
+      g.innerHTML = s;
+      var b1 = Math.min(kwh, 14), b2 = Math.max(0, Math.min(kwh, 28) - 14), b3 = Math.max(0, Math.min(kwh, 50) - 28);
+      w.$('steps').innerHTML =
+        '<li>' + w.t('PV certificates: ', 'Certificats du PV : ') + '⌊' + F(P.pv_kw, 1) + ' kW × ' + F(zone, 3) + ' × ' + D.price.deeming[String(year)] + w.t(' deeming years', ' années de forfait') + '⌋ = <b>' + spv + ' STC</b> × ' + F(sp, 2) + ' AUD = ' + CF.aud(w, spv * sp) + '</li>' +
+        (kwh >= 5 ? '<li>' + w.t('Battery certificates: ', 'Certificats de la batterie : ') + '⌊' + F(factor, 1) + ' × (' + F(b1, 1) + ' × 1 + ' + F(b2, 1) + ' × ' + F(0.6, 1) + ' + ' + F(b3, 1) + ' × ' + F(0.15, 2) + ')⌋ = <b>' + sb + ' STC</b> × ' + F(sp, 2) + ' AUD = ' + CF.aud(w, sb * sp) + '</li>'
+          : '<li>' + w.t('Battery under 5 kWh usable: not eligible.', 'Batterie de moins de 5 kWh utiles : non éligible.') + '</li>') +
+        '<li>' + w.t('Factor for ', 'Facteur pour ') + CF.half(w, year, yh[1]) + w.t(': ', ' : ') + F(factor, 1) + w.t(' STC per kWh', ' STC par kWh') + (hi > 0 ? w.t('; it was ', ' ; il était de ') + F(H[0][2], 1) + w.t(' in ', ' en ') + CF.half(w, H[0][0], H[0][1]) : '') + '</li>';
+      w.set('halfv', CF.half(w, year, yh[1]));
+      w.set('zonev', w.val('zone') + ' (' + F(zone, 3) + ')');
+      w.set('kwhv', F(kwh, 1) + ' kWh');
+      w.set('stcv', F(sp, 2) + ' AUD');
+      w.set('pvn', CF.aud(w, pvn));
+      w.set('btn', CF.aud(w, btn));
+      w.set('tot', CF.aud(w, pvn + btn));
+      w.set('sh', cwPct(w, (spv + sb) * sp / (P.pv_gross + battGross)));
+    }
+    w.on(['half', 'zone', 'kwh', 'stc'], draw);
+    draw();
+  });
+
+  // the assumptions a widget starts from: the engine's BASE, with the inverter cost on
+  function cfBase(D) { var a = {}; for (var k in D.base) a[k] = D.base[k]; a.inverter = true; return a; }
+  // one configuration's case: price, yearly flows (savings − costs), as cashflow.case
+  function cfCase(D, a, which, sim, prices) {
+    var s = CF.savings(D, a, sim), c = CF.costs(D, a), pr = prices || D.engine, sav, price, cst;
+    if (which === 'solar') { sav = s.sol; price = pr.pv_net; cst = c; }
+    else if (which === 'battery') { sav = s.bat; price = pr.batt_net; cst = c.map(function () { return 0; }); }
+    else { sav = s.sol.map(function (x, i) { return x + s.bat[i]; }); price = pr.pv_net + pr.batt_net; cst = c; }
+    var flows = sav.map(function (x, i) { return x - cst[i]; });
+    return { price: price, sav: sav, cst: cst, flows: flows, s: s };
+  }
+  function cfAxes(w, ymin, ymax, years, opt) {
+    opt = opt || {};
+    var ox = opt.ox || 70, oy0 = 30, ch = opt.ch || 220, cw = opt.cw || 590, s = '';
+    var Y = function (v) { return oy0 + (ymax - v) / (ymax - ymin) * ch; }, X = function (y) { return ox + y / years * cw; };
+    var step = opt.step || 5000;
+    for (var v = Math.ceil(ymin / step) * step; v <= ymax; v += step)
+      s += '<line class="grid" x1="' + ox + '" y1="' + Y(v).toFixed(1) + '" x2="' + (ox + cw) + '" y2="' + Y(v).toFixed(1) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end">' + cwInt(w, v) + '</text>';
+    s += '<line class="ground" x1="' + ox + '" y1="' + Y(0).toFixed(1) + '" x2="' + (ox + cw) + '" y2="' + Y(0).toFixed(1) + '"/>';
+    for (var y = 0; y <= years; y += 5) s += '<text class="s" x="' + X(y).toFixed(1) + '" y="' + (oy0 + ch + 16) + '" text-anchor="middle">' + y + '</text>';
+    s += '<text class="s" x="' + (ox + cw) + '" y="' + (oy0 + ch + 32) + '" text-anchor="end">' + w.t('year', 'année') + '</text><text class="s" x="' + (ox - 60) + '" y="18">AUD</text>';
+    return { svg: s, X: X, Y: Y, ox: ox, cw: cw };
+  }
+
+  /* 14.2 twenty-five years: each year's savings from its simulation, the cumulative cashflow */
+  cwWidget('cashflow-years', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { cfg: 'both', unit: 'nom' };
+    w.mount(cwSeg(w, 'cfg', [['solar', 'Solar', 'Solaire'], ['battery', 'Battery, on top of solar', 'Batterie, en plus du solaire'], ['both', 'Both', 'Les deux']], 'both') +
+      cwSeg(w, 'unit', [['nom', 'Dollars of each year', 'Dollars de chaque année'], ['real', 'Today’s dollars', 'Dollars d’aujourd’hui']], 'nom') +
+      w.controls([
+        w.slider('esc', 'Retail price growth a year', 'Hausse annuelle des prix de détail', 0, 8, 0.5, D.base.escalation * 100),
+        w.slider('fit', 'Feed-in change a year', 'Évolution annuelle du tarif de rachat', -15, 3, 1, D.base.fit_growth * 100),
+        w.slider('yr', 'Year to open', 'Année à ouvrir', 1, D.years, 1, 1)
+      ]) + cwSvg('0 0 700 372', w.t('Savings year by year and the cumulative cashflow', 'Économies année par année et trésorerie cumulée'), '<g data-k="g"></g>') +
+      '<ol class="bk-cw-steps" data-k="steps"></ol>' +
+      w.readout([['pb', 'Payback', 'Temps de retour'], ['tot', 'Sum over 25 years', 'Somme sur 25 ans'], ['y1', 'Year 1 savings', 'Économies de l’année 1']]));
+    var g = w.$('g');
+    function draw() {
+      var a = cfBase(D); a.escalation = w.val('esc') / 100; a.fit_growth = w.val('fit') / 100;
+      var C = cfCase(D, a, st.cfg), real = st.unit === 'real', yr = w.val('yr');
+      var defl = function (v, y) { return real ? v / Math.pow(1 + a.inflation, y) : v; };
+      var flows = C.flows.map(function (f, i) { return defl(f, i + 1); });
+      var cum = CF.cumulative(C.price, flows), pb = CF.payback(C.price, flows);
+      var top = Math.max(60000, Math.ceil(Math.max.apply(null, cum) / 10000) * 10000), bot = -Math.ceil(C.price / 10000) * 10000;
+      var A = cfAxes(w, bot, top, D.years, { step: 10000, ch: 150 }), s = A.svg, bw = A.cw / D.years * 0.7;
+      s += '<polyline class="curve main" points="' + cum.map(function (c, y) { return A.X(y).toFixed(1) + ',' + A.Y(c).toFixed(1); }).join(' ') + '"/>';
+      if (pb !== null) s += '<circle class="sun" cx="' + A.X(pb).toFixed(1) + '" cy="' + A.Y(0).toFixed(1) + '" r="5"/><text class="la" x="' + (A.X(pb) + 8).toFixed(1) + '" y="' + (A.Y(0) - 8).toFixed(1) + '">' + w.t('payback ', 'retour ') + CF.yrs(w, pb) + '</text>';
+      s += '<text class="t" x="' + A.ox + '" y="18">' + w.t('Cumulative cashflow', 'Trésorerie cumulée') + '</text>';
+      // lower panel: each year's flow at its own scale
+      var bmax = 4000, bmin = -2000, by0 = 230, bh = 110, BY = function (v) { return by0 + (bmax - v) / (bmax - bmin) * bh; };
+      s += '<text class="t" x="' + A.ox + '" y="' + (by0 - 12) + '">' + w.t('Each year', 'Chaque année') + '</text>';
+      [bmin, 0, 2000, bmax].forEach(function (v) { s += '<line class="grid" x1="' + A.ox + '" y1="' + BY(v) + '" x2="' + (A.ox + A.cw) + '" y2="' + BY(v) + '"/><text class="s" x="' + (A.ox - 6) + '" y="' + (BY(v) + 4) + '" text-anchor="end">' + cwInt(w, v) + '</text>'; });
+      C.sav.forEach(function (v, i) {
+        var y = i + 1, x = A.X(i + 0.15), sv = defl(v, y), cv = defl(C.cst[i], y), sol = st.cfg === 'both' ? defl(C.s.sol[i], y) : (st.cfg === 'solar' ? sv : 0);
+        if (sol > 0) s += '<rect class="f-sc" x="' + x.toFixed(1) + '" y="' + BY(sol).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (BY(0) - BY(sol)).toFixed(1) + '"/>';
+        if (sv > sol) s += '<rect class="f-bt" x="' + x.toFixed(1) + '" y="' + BY(sv).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (BY(sol) - BY(sv)).toFixed(1) + '"/>';
+        if (cv > 0) s += '<rect class="f-cu" x="' + x.toFixed(1) + '" y="' + BY(0).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (BY(-cv) - BY(0)).toFixed(1) + '"/>';
+        if (y === yr) s += '<rect class="lim2" fill="none" x="' + (x - 2).toFixed(1) + '" y="' + BY(Math.max(sv, 0)).toFixed(1) + '" width="' + (bw + 4).toFixed(1) + '" height="' + (BY(-cv) - BY(Math.max(sv, 0))).toFixed(1) + '"/>';
+      });
+      var kx = A.ox, ky = by0 + bh + 24;
+      [['f-sc', w.t('solar savings', 'économies solaire')], ['f-bt', w.t('battery savings', 'économies batterie')], ['f-cu', w.t('inverter replaced', 'onduleur remplacé')]].forEach(function (it) {
+        s += '<rect class="' + it[0] + '" x="' + kx + '" y="' + (ky - 10) + '" width="14" height="12"/><text class="s" x="' + (kx + 20) + '" y="' + ky + '">' + it[1] + '</text>'; kx += 40 + it[1].length * 6.4;
+      });
+      g.innerHTML = s;
+      // the opened year, term by term, as cashflow.bill computes it
+      var gy = Math.pow(1 + a.escalation, yr - 1), hy = Math.pow(1 + a.fit_growth, yr - 1), fit = D.tariff.fit;
+      var row = function (c, label) {
+        return '<li>' + label + w.t(': ', ' : ') + cwInt(w, c.imp[yr - 1]) + ' × ' + F(gy, 3) + ' − ' + cwInt(w, c.exp[yr - 1]) + ' kWh × ' + F(fit, 2) + ' × ' + F(hy, 3) + ' = <b>' + CF.aud(w, c.imp[yr - 1] * gy - c.exp[yr - 1] * fit * hy) + '</b></li>';
+      };
+      var steps = '<li>' + w.t('The supply charge is left out: it is the same with or without PV, so it cancels in the savings.', 'L’abonnement est laissé de côté : il est le même avec ou sans PV, il s’annule dans les économies.') + '</li>' + row(D.sim.none, w.t('No PV, imports at year-1 prices × growth', 'Sans PV, achats aux prix de l’année 1 × hausse'));
+      if (st.cfg !== 'battery') steps += row(D.sim.pv, w.t('PV, imports × growth − exports × feed-in', 'PV, achats × hausse − injections × rachat'));
+      if (st.cfg !== 'solar') steps += row(D.sim.batt, w.t('PV + battery (health ', 'PV + batterie (santé ') + cwPct(w, D.sim.soh[yr - 1]) + ')');
+      steps += '<li>' + w.t('Year ', 'Année ') + yr + w.t(' saving: ', ' : économie de ') + '<b>' + CF.aud(w, C.sav[yr - 1]) + '</b>' + (C.cst[yr - 1] ? w.t(', minus the inverter ', ', moins l’onduleur ') + CF.aud(w, C.cst[yr - 1]) : '') + (real ? w.t('; in today’s dollars ', ' ; en dollars d’aujourd’hui ') + CF.aud(w, flows[yr - 1]) : '') + '</li>';
+      w.$('steps').innerHTML = steps;
+      w.set('escv', cwPct(w, a.escalation, 1)); w.set('fitv', (a.fit_growth > 0 ? '+' : '') + cwPct(w, a.fit_growth, 0)); w.set('yrv', String(yr));
+      w.set('pb', CF.yrs(w, pb)); w.set('tot', CF.aud(w, flows.reduce(function (x, y) { return x + y; }, 0))); w.set('y1', CF.aud(w, C.sav[0]));
+    }
+    cwGroups(w, st, draw);
+    w.on(['esc', 'fit', 'yr'], draw);
+    draw();
+  });
+
+  /* 14.3 discounting: each year brought back to today, NPV, and the rate where NPV is zero */
+  cwWidget('discounting', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { cfg: 'both' };
+    w.mount(cwSeg(w, 'cfg', [['solar', 'Solar', 'Solaire'], ['battery', 'Battery, on top of solar', 'Batterie, en plus du solaire'], ['both', 'Both', 'Les deux']], 'both') +
+      w.controls([w.slider('r', 'Discount rate', 'Taux d’actualisation', 0, 20, 0.5, D.base.discount * 100)]) +
+      cwSvg('0 0 700 300', w.t('Each year’s flow, as paid and brought back to today', 'Flux de chaque année, tel quel et ramené à aujourd’hui'), '<g data-k="g"></g>') +
+      cwSvg('0 0 700 230', w.t('NPV against the discount rate; it crosses zero at the IRR', 'VAN selon le taux d’actualisation ; elle passe par zéro au TRI'), '<g data-k="n"></g>') +
+      w.readout([['npv', 'NPV at this rate', 'VAN à ce taux'], ['irr', 'IRR (NPV = 0)', 'TRI (VAN = 0)'], ['pb', 'Payback', 'Temps de retour'], ['pbd', 'Discounted payback', 'Temps de retour actualisé']]));
+    var g = w.$('g'), n = w.$('n'), a = cfBase(D);
+    function draw() {
+      var r = w.val('r') / 100, C = cfCase(D, a, st.cfg);
+      var disc = C.flows.map(function (f, i) { return f / Math.pow(1 + r, i + 1); });
+      var ymax = Math.ceil(Math.max.apply(null, C.flows) / 1000) * 1000 + 1000;
+      var A = cfAxes(w, -1000, ymax, D.years, { step: 1000, ch: 220 }), s = A.svg, bw = A.cw / D.years * 0.7;
+      C.flows.forEach(function (f, i) {
+        var x = A.X(i + 0.15), d = disc[i];
+        s += '<rect class="f-gr" x="' + x.toFixed(1) + '" y="' + A.Y(Math.max(f, 0)).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.abs(A.Y(0) - A.Y(f)).toFixed(1) + '"/>';
+        s += '<rect class="f-ex" x="' + (x + bw * 0.2).toFixed(1) + '" y="' + A.Y(Math.max(d, 0)).toFixed(1) + '" width="' + (bw * 0.6).toFixed(1) + '" height="' + Math.abs(A.Y(0) - A.Y(d)).toFixed(1) + '"/>';
+      });
+      s += cwKey([['rect', 'f-gr', w.t('flow as paid that year', 'flux payé cette année-là')], ['rect', 'f-ex', w.t('the same flow worth today: ÷ (1 + r)^year', 'le même flux vu d’aujourd’hui : ÷ (1 + r)^année')]]).replace(/y="28(\d)"/g, 'y="29$1"').replace(/y="276"/g, 'y="286"');
+      g.innerHTML = s;
+      // NPV(r) from 0 to 20 %
+      var ox = 70, oy = 20, cw = 590, ch = 170, rs = [], lo = Infinity, hi = -Infinity;
+      for (var q = 0; q <= 40; q++) { var v = CF.npv(C.price, C.flows, q / 200); rs.push(v); lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      lo = Math.min(lo, -5000); hi = Math.max(hi, 5000);
+      var X = function (x) { return ox + x / 0.2 * cw; }, Y = function (v) { return oy + (hi - v) / (hi - lo) * ch; }, t = '';
+      [lo, 0, hi].forEach(function (v) { t += '<line class="grid" x1="' + ox + '" y1="' + Y(v).toFixed(1) + '" x2="' + (ox + cw) + '" y2="' + Y(v).toFixed(1) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end">' + cwInt(w, Math.round(v / 1000) * 1000) + '</text>'; });
+      for (var p = 0; p <= 20; p += 5) t += '<text class="s" x="' + X(p / 100).toFixed(1) + '" y="' + (oy + ch + 16) + '" text-anchor="middle">' + p + ' %</text>';
+      t += '<line class="ground" x1="' + ox + '" y1="' + Y(0).toFixed(1) + '" x2="' + (ox + cw) + '" y2="' + Y(0).toFixed(1) + '"/>';
+      t += '<polyline class="curve ew" points="' + rs.map(function (v, q) { return X(q / 200).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ') + '"/>';
+      var npv = CF.npv(C.price, C.flows, r), irr = CF.irr(C.price, C.flows);
+      t += '<circle class="sun" cx="' + X(r).toFixed(1) + '" cy="' + Y(npv).toFixed(1) + '" r="5"/>';
+      if (irr !== null && irr <= 0.2) t += '<line class="lim" x1="' + X(irr).toFixed(1) + '" y1="' + oy + '" x2="' + X(irr).toFixed(1) + '" y2="' + (oy + ch) + '"/><text class="la" x="' + (X(irr) + 6).toFixed(1) + '" y="' + (oy + 14) + '">' + w.t('IRR ', 'TRI ') + cwPct(w, irr, 1) + '</text>';
+      t += '<text class="s" x="' + (ox - 60) + '" y="12">' + w.t('NPV, AUD', 'VAN, AUD') + '</text><text class="s" x="' + (ox + cw) + '" y="' + (oy + ch + 32) + '" text-anchor="end">' + w.t('discount rate', 'taux d’actualisation') + '</text>';
+      n.innerHTML = t;
+      w.set('rv', cwPct(w, r, 1)); w.set('npv', CF.aud(w, npv)); w.set('irr', irr === null ? '—' : cwPct(w, irr, 1));
+      w.set('pb', CF.yrs(w, CF.payback(C.price, C.flows))); w.set('pbd', CF.yrs(w, CF.payback(C.price, disc)));
+    }
+    cwGroups(w, st, draw);
+    w.on(['r'], draw);
+    draw();
+  });
+
+  /* 14.4 sensitivity: each assumption swept alone between a low and a high value */
+  cwWidget('tornado', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { m: 'payback', worst: 'off' }, T = D.tornado;
+    var NAME = {
+      escalation: [w.t('Retail price growth', 'Hausse des prix de détail'), function (v) { return cwPct(w, v, 1); }],
+      fit_growth: [w.t('Feed-in change a year', 'Évolution du rachat par an'), function (v) { return cwPct(w, v, 0); }],
+      degradation: [w.t('Module degradation', 'Dégradation des modules'), function (v) { return cwPct(w, v, 2); }],
+      discount: [w.t('Discount rate', 'Taux d’actualisation'), function (v) { return cwPct(w, v, 0); }],
+      load_kwh_day: [w.t('Household load', 'Consommation du ménage'), function (v) { return F(v, 0) + w.t(' kWh a day', ' kWh par jour'); }],
+      price: [w.t('Net price', 'Prix net'), function (v) { return (v < 1 ? '−' : '+') + cwPct(w, Math.abs(v - 1), 0); }]
+    };
+    var LIVE = { escalation: 1, fit_growth: 1, discount: 1, price: 1 };
+    w.mount(cwSeg(w, 'm', [['payback', 'Payback', 'Temps de retour'], ['npv', 'NPV', 'VAN']], 'payback') +
+      cwSeg(w, 'worst', [['off', 'Each alone', 'Chacune seule'], ['on', 'The four live ones at their worst, together', 'Les quatre en direct au pire, ensemble']], 'off') +
+      cwSvg('0 0 700 300', w.t('Sensitivity of the whole system to each assumption', 'Sensibilité de l’installation entière à chaque hypothèse'), '<g data-k="g"></g>') +
+      w.readout([['base', 'With the engine’s assumptions', 'Avec les hypothèses du moteur'], ['worst', 'The four live ones at their worst', 'Les quatre en direct au pire']]));
+    var g = w.$('g'), a0 = cfBase(D);
+    function evalWith(over, priceF) {
+      var a = cfBase(D); for (var k in over) a[k] = over[k];
+      var C = cfCase(D, a, 'both'), price = C.price * (priceF || 1);
+      return { payback: CF.payback(price, C.flows), npv: CF.npv(price, C.flows, a.discount) };
+    }
+    function row(r) {   // live rows recomputed here; degradation and load come from the engine's runs
+      if (!LIVE[r.key]) return { lo: r.low, hi: r.high, live: false };
+      var f = function (v) { var o = {}; if (r.key === 'price') return evalWith(o, v); o[r.key] = v; return evalWith(o); };
+      var lo = f(r.low.v), hi = f(r.high.v); lo.v = r.low.v; hi.v = r.high.v;
+      return { lo: lo, hi: hi, live: true };
+    }
+    function draw() {
+      var m = st.m, base = evalWith({}), bv = base[m];
+      var rows = T.rows.map(function (r) { var x = row(r); x.key = r.key; x.span = Math.abs((x.hi[m] || 0) - (x.lo[m] || 0)); return x; });
+      rows.sort(function (p, q) { return q.span - p.span; });
+      var lo = m === 'payback' ? 3 : -10000, hi = m === 'payback' ? 9 : 50000;
+      var ox = 250, cw = 400, X = function (v) { return ox + (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * cw; }, s = '';
+      for (var t = lo; t <= hi; t += (m === 'payback' ? 1 : 10000)) s += '<line class="grid" x1="' + X(t) + '" y1="20" x2="' + X(t) + '" y2="252"/><text class="s" x="' + X(t) + '" y="268" text-anchor="middle">' + (m === 'payback' ? t : cwInt(w, t / 1000) + 'k') + '</text>';
+      s += '<text class="s" x="' + (ox + cw) + '" y="286" text-anchor="end">' + (m === 'payback' ? w.t('payback, years', 'temps de retour, années') : w.t('NPV, AUD', 'VAN, AUD')) + '</text>';
+      rows.forEach(function (r, i) {
+        var y = 30 + i * 38, a = r.lo[m], b = r.hi[m];
+        s += '<text class="s" x="' + (ox - 10) + '" y="' + (y + 8) + '" text-anchor="end">' + NAME[r.key][0] + (r.live ? '' : ' *') + '</text>';
+        s += '<text class="s" x="' + (ox - 10) + '" y="' + (y + 22) + '" text-anchor="end">' + NAME[r.key][1](r.lo.v) + ' → ' + NAME[r.key][1](r.hi.v) + '</text>';
+        if (a !== null && b !== null) {
+          s += '<rect class="f-ex" x="' + Math.min(X(a), X(b)).toFixed(1) + '" y="' + y + '" width="' + Math.max(2, Math.abs(X(b) - X(a))).toFixed(1) + '" height="22"/>';
+          s += '<circle class="pole" cx="' + X(a).toFixed(1) + '" cy="' + (y + 11) + '" r="3"/>';
+        }
+      });
+      s += '<line class="lim" x1="' + X(bv) + '" y1="20" x2="' + X(bv) + '" y2="252"/>';
+      var worst = evalWith({ escalation: 0, fit_growth: -0.15, discount: 0.08 }, 1.15);
+      if (st.worst === 'on') s += '<line class="curve cell" x1="' + X(worst[m] === null ? hi : worst[m]) + '" y1="20" x2="' + X(worst[m] === null ? hi : worst[m]) + '" y2="252"/>';
+      s += '<text class="s" x="10" y="296">' + w.t('* simulated again by the engine (cashflow.tornado); the others recomputed here', '* simulées à nouveau par le moteur (cashflow.tornado) ; les autres recalculées ici') + '</text>';
+      g.innerHTML = s;
+      var fmt = function (r) { return m === 'payback' ? CF.yrs(w, r.payback) : CF.aud(w, r.npv); };
+      w.set('base', fmt(base)); w.set('worst', fmt(worst));
+    }
+    cwGroups(w, st, draw);
+    draw();
+  });
+
+  /* 14.5 a loan: the repayment against the savings, month by month */
+  cwWidget('loan-month', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, L = D.loan, a = cfBase(D);
+    w.mount(w.controls([
+      w.slider('rate', 'Interest rate', 'Taux d’intérêt', 0, 15, 0.01, +(L.rate * 100).toFixed(2)),
+      w.slider('yrs', 'Term', 'Durée', 1, 15, 1, L.years),
+      w.slider('dep', 'Deposit', 'Apport', 0, 50, 5, L.deposit * 100)
+    ]) + cwSvg('0 0 700 300', w.t('Monthly savings against the monthly repayment', 'Économies mensuelles face à la mensualité'), '<g data-k="g"></g>') +
+      '<div class="bk-cw-cols">' + w.readout([['pmt', 'Monthly repayment', 'Mensualité'], ['int', 'Interest paid', 'Intérêts payés'], ['neg', 'Months the repayment beats the saving', 'Mois où la mensualité dépasse l’économie']]) +
+      w.readout([['cash', 'Cash: 25-year gain', 'Comptant : gain sur 25 ans'], ['loan', 'Loan: 25-year gain', 'Prêt : gain sur 25 ans'], ['dif', 'What the loan costs', 'Ce que coûte le prêt']]) + '</div>');
+    var g = w.$('g');
+    var C = cfCase(D, a, 'both'), months = [];
+    C.sav.forEach(function (v) { D.shares.forEach(function (sh) { months.push(v * sh); }); });   // cashflow.monthly
+    function draw() {
+      var rate = w.val('rate') / 100, yrs = w.val('yrs'), dep = w.val('dep') / 100;
+      var principal = C.price * (1 - dep), Lo = CF.loan(principal, rate, yrs), n = yrs * 12, shown = Math.min(300, n + 24);
+      var neg = 0; for (var k = 0; k < n; k++) if (months[k] < Lo.pmt) neg++;
+      var ymax = Math.max(600, Math.ceil(Math.max(Lo.pmt, Math.max.apply(null, months.slice(0, shown))) / 100) * 100);
+      var ox = 70, oy = 250, cw = 590, ch = 220, X = function (k) { return ox + k / shown * cw; }, Y = function (v) { return oy - v / ymax * ch; }, s = '';
+      for (var v = 0; v <= ymax; v += 100) s += '<line class="grid" x1="' + ox + '" y1="' + Y(v) + '" x2="' + (ox + cw) + '" y2="' + Y(v) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+      for (var y = 0; y * 12 <= shown; y += (shown > 120 ? 2 : 1)) s += '<text class="s" x="' + X(y * 12) + '" y="' + (oy + 16) + '" text-anchor="middle">' + y + '</text>';
+      for (var j = 0; j < shown; j++) {
+        var m = months[j], c = j < n ? Math.min(m, Lo.pmt) : m;
+        s += '<rect class="f-sc" x="' + X(j).toFixed(1) + '" y="' + Y(c).toFixed(1) + '" width="' + (X(j + 1) - X(j)).toFixed(2) + '" height="' + (oy - Y(c)).toFixed(1) + '"/>';
+        if (j < n && m < Lo.pmt) s += '<rect class="f-cu" x="' + X(j).toFixed(1) + '" y="' + Y(Lo.pmt).toFixed(1) + '" width="' + (X(j + 1) - X(j)).toFixed(2) + '" height="' + (Y(m) - Y(Lo.pmt)).toFixed(1) + '"/>';
+      }
+      s += '<polyline class="curve now" points="' + X(0) + ',' + Y(Lo.pmt).toFixed(1) + ' ' + X(n).toFixed(1) + ',' + Y(Lo.pmt).toFixed(1) + ' ' + X(n).toFixed(1) + ',' + Y(0) + '"/>';
+      s += '<text class="s" x="' + (ox - 50) + '" y="14">' + w.t('AUD a month', 'AUD par mois') + '</text><text class="s" x="' + (ox + cw) + '" y="282" text-anchor="end">' + w.t('year', 'année') + '</text>';
+      s += '<rect class="f-sc" x="70" y="276" width="14" height="12"/><text class="s" x="90" y="286">' + w.t('saving', 'économie') + '</text><rect class="f-cu" x="160" y="276" width="14" height="12"/><text class="s" x="180" y="286">' + w.t('out of pocket', 'de sa poche') + '</text><line class="curve now" x1="290" y1="282" x2="308" y2="282"/><text class="s" x="314" y="286">' + w.t('repayment', 'mensualité') + '</text>';
+      g.innerHTML = s;
+      var total = C.flows.reduce(function (p, q) { return p + q; }, 0);
+      var cash = total - C.price, loan = total - C.price * dep - Lo.total;
+      w.set('ratev', cwPct(w, rate, 2)); w.set('yrsv', yrs + w.t(' years', ' ans')); w.set('depv', cwPct(w, dep, 0));
+      w.set('pmt', CF.aud(w, Lo.pmt)); w.set('int', CF.aud(w, Lo.interest)); w.set('neg', neg + ' / ' + n);
+      w.set('cash', CF.aud(w, cash)); w.set('loan', CF.aud(w, loan)); w.set('dif', CF.aud(w, cash - loan));
+    }
+    w.on(['rate', 'yrs', 'dep'], draw);
+    draw();
+  });
+
+  /* 14.6 pitfalls: tick one and the same quote is computed the wrong way */
+  cwWidget('pitfalls', function (w) {
+    var D = w.data; if (!D) return;
+    var P = D.pit, F = w.F;
+    var LIST = [
+      ['retail_all', 'Every PV kWh valued at the retail price', 'Chaque kWh PV valorisé au prix de détail'],
+      ['hourly', 'An hourly balance instead of half-hourly', 'Un bilan horaire au lieu de la demi-heure'],
+      ['no_ageing', 'No degradation, no inverter, a battery that barely fades', 'Pas de dégradation, pas d’onduleur, une batterie qui s’use à peine'],
+      ['escalation', 'This year’s price rise, every year (7 %)', 'La hausse de cette année, chaque année (7 %)'],
+      ['frozen_fit', 'The feed-in frozen at today’s rate', 'Le rachat figé au tarif d’aujourd’hui'],
+      ['rebate_twice', 'The certificates deducted twice', 'Les certificats déduits deux fois'],
+      ['battery_alone', 'The battery credited with the solar’s savings', 'La batterie créditée des économies du solaire'],
+      ['nominal', 'The 25-year sum in each year’s dollars as the headline', 'La somme sur 25 ans en dollars courants comme titre']
+    ];
+    var on = {};
+    w.mount('<div class="bk-cw-btns" role="group" data-k="ticks">' + LIST.map(function (l) {
+      return '<button type="button" data-v="' + l[0] + '" aria-pressed="false">' + w.t(l[1], l[2]) + '</button>';
+    }).join('') + '</div>' +
+      cwSvg('0 0 700 300', w.t('The cumulative cashflow, computed right and with the pitfalls ticked', 'La trésorerie cumulée, calculée juste et avec les pièges cochés'), '<g data-k="g"></g>') +
+      '<div class="bk-cw-cols">' + w.readout([['pb0', 'Payback, computed right', 'Temps de retour, calculé juste'], ['pb1', 'Payback, with the pitfalls', 'Temps de retour, avec les pièges'], ['bp0', 'Battery payback, right', 'Retour de la batterie, juste'], ['bp1', 'Battery payback, with the pitfalls', 'Retour de la batterie, avec les pièges']]) +
+      w.readout([['h0', 'Headline, right: value today (NPV)', 'Titre, juste : valeur aujourd’hui (VAN)'], ['h1', 'Headline, with the pitfalls', 'Titre, avec les pièges']]) + '</div>');
+    var g = w.$('g');
+    w.$('ticks').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      var k = b.getAttribute('data-v'); on[k] = !on[k]; b.setAttribute('aria-pressed', on[k] ? 'true' : 'false'); draw();
+    });
+    function compute(flags) {
+      var a = cfBase(D), sim = D.sim, prices = { pv_net: D.engine.pv_net, batt_net: D.engine.batt_net };
+      if (flags.no_ageing) { sim = { none: P.noage.none, pv: P.noage.pv, batt: P.noage.batt }; a.degradation = 0; a.inverter = false; }
+      if (flags.escalation) a.escalation = P.escalation;
+      if (flags.frozen_fit) a.fit_growth = 0;
+      if (flags.rebate_twice) { prices.pv_net -= D.engine.pv_stc_aud; prices.batt_net -= D.engine.batt_stc_aud; }
+      var s = CF.savings(D, a, sim), sol = s.sol.slice();
+      if (flags.retail_all) sol = sol.map(function (_, i) { return P.retail_all * Math.pow(1 - a.degradation, i) * Math.pow(1 + a.escalation, i); });
+      if (flags.hourly) sol = sol.map(function (x) { return x * P.hourly; });
+      var cst = CF.costs(D, a), flows = sol.map(function (x, i) { return x + s.bat[i] - cst[i]; }), price = prices.pv_net + prices.batt_net;
+      var bflows = flags.battery_alone ? sol.map(function (x, i) { return x + s.bat[i]; }) : s.bat;
+      return { price: price, flows: flows, cum: CF.cumulative(price, flows), payback: CF.payback(price, flows),
+        bpay: CF.payback(prices.batt_net, bflows), npv: CF.npv(price, flows, a.discount), total: flows.reduce(function (p, q) { return p + q; }, 0) };
+    }
+    function draw() {
+      var R = compute({}), W = compute(on);
+      var ymax = Math.max(60000, Math.ceil(Math.max.apply(null, W.cum.concat(R.cum)) / 20000) * 20000), ymin = -20000;
+      var A = cfAxes(w, ymin, ymax, D.years, { step: ymax > 100000 ? 40000 : 20000 }), s = A.svg;
+      var line = function (c, cls) { return '<polyline class="' + cls + '" points="' + c.map(function (v, y) { return A.X(y).toFixed(1) + ',' + A.Y(v).toFixed(1); }).join(' ') + '"/>'; };
+      s += line(R.cum, 'curve now') + line(W.cum, 'curve cell');
+      s += cwKey([['line', 'curve now', w.t('computed right', 'calculé juste')], ['line', 'curve cell', w.t('with the pitfalls ticked', 'avec les pièges cochés')]]).replace(/y="28(\d)"/g, 'y="29$1"').replace(/y="276"/g, 'y="286"');
+      g.innerHTML = s;
+      w.set('pb0', CF.yrs(w, R.payback)); w.set('pb1', CF.yrs(w, W.payback));
+      w.set('bp0', CF.yrs(w, R.bpay)); w.set('bp1', CF.yrs(w, W.bpay));
+      w.set('h0', CF.aud(w, R.npv)); w.set('h1', on.nominal ? CF.aud(w, W.total) + w.t(' “saved over 25 years”', ' « économisés sur 25 ans »') : CF.aud(w, W.npv));
+    }
+    draw();
+  });
+
+  /* 14.8 two ways to present the same system: as an investment, or in the household's own bills */
+  cwWidget('two-proposals', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { v: 'invest' }, a = cfBase(D), M = D.months, DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    w.mount(cwSeg(w, 'v', [['invest', 'As an investment', 'Comme un placement'], ['home', 'In the household’s bills', 'Dans les factures du ménage']], 'invest') +
+      '<div data-k="card"></div>');
+    var card = w.$('card');
+    var C = cfCase(D, a, 'both'), irr = CF.irr(C.price, C.flows), pb = CF.payback(C.price, C.flows);
+    var total = C.flows.reduce(function (p, q) { return p + q; }, 0);
+    var quarter = function (c) {     // year-1 bills by quarter, supply charge included
+      var q = [0, 0, 0, 0]; for (var m = 0; m < 12; m++) q[Math.floor(m / 3)] += D.tariff.supply * DAYS[m] + c.imp[m] - c.exp[m] * D.tariff.fit; return q;
+    };
+    var q0 = quarter(M.none), q1 = quarter(M.batt);
+    var zero = JSON.parse(JSON.stringify(D)); zero.tariff.fit = 0;      // the worst case SolarQuotes asks for: no feed-in at all
+    var Cz = cfCase(zero, a, 'both'), pbz = CF.payback(Cz.price, Cz.flows);
+    var pbs = [pb]; D.tornado.rows.forEach(function (r) { [r.low.payback, r.high.payback].forEach(function (x) { if (x !== null) pbs.push(x); }); });
+    var lo = Math.min.apply(null, pbs), hi = Math.max.apply(null, pbs);
+    function draw() {
+      if (st.v === 'invest') {
+        card.innerHTML = '<div class="bk-cw-answer"><p><b>' + w.t('Internal rate of return: ', 'Taux de rendement interne : ') + cwPct(w, irr, 1) + '</b></p><p>' +
+          w.t('Saves ', 'Économise ') + CF.aud(w, total) + w.t(' over 25 years. Payback ', ' sur 25 ans. Temps de retour ') + CF.yrs(w, pb) + '.</p></div>' +
+          '<p class="bk-cw-note">' + w.t('Three numbers a buyer cannot check, without the assumptions behind them, in dollars of 2050.', 'Trois chiffres qu’un acheteur ne peut pas vérifier, sans leurs hypothèses, en dollars de 2050.') + '</p>';
+        return;
+      }
+      var ox = 70, oy = 210, ch = 180, ymax = Math.ceil(Math.max.apply(null, q0) / 200) * 200, Y = function (v) { return oy - Math.max(v, 0) / ymax * ch; }, s = '';
+      for (var v = 0; v <= ymax; v += 200) s += '<line class="grid" x1="' + ox + '" y1="' + Y(v) + '" x2="660" y2="' + Y(v) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+      var QN = w.fr ? ['janv.–mars', 'avr.–juin', 'juil.–sept.', 'oct.–déc.'] : ['Jan–Mar', 'Apr–Jun', 'Jul–Sep', 'Oct–Dec'];
+      q0.forEach(function (b0, i) {
+        var x = ox + 30 + i * 145, b1 = q1[i];
+        s += '<rect class="f-gr" x="' + x + '" y="' + Y(b0).toFixed(1) + '" width="50" height="' + (oy - Y(b0)).toFixed(1) + '"/><text class="s" x="' + (x + 25) + '" y="' + (Y(b0) - 5).toFixed(1) + '" text-anchor="middle">' + cwInt(w, b0) + '</text>';
+        s += '<rect class="f-sc" x="' + (x + 56) + '" y="' + Y(b1).toFixed(1) + '" width="50" height="' + (oy - Y(b1)).toFixed(1) + '"/><text class="s" x="' + (x + 81) + '" y="' + (Y(b1) - 5).toFixed(1) + '" text-anchor="middle">' + cwInt(w, b1) + '</text>';
+        s += '<text class="s" x="' + (x + 53) + '" y="' + (oy + 16) + '" text-anchor="middle">' + QN[i] + '</text>';
+      });
+      s += '<text class="s" x="' + (ox - 50) + '" y="20">' + w.t('AUD a quarter', 'AUD par trimestre') + '</text>';
+      s += '<rect class="f-gr" x="70" y="236" width="14" height="12"/><text class="s" x="90" y="246">' + w.t('your bill today', 'votre facture aujourd’hui') + '</text><rect class="f-sc" x="260" y="236" width="14" height="12"/><text class="s" x="280" y="246">' + w.t('with solar and the battery, year 1', 'avec le solaire et la batterie, année 1') + '</text>';
+      card.innerHTML = cwSvg('0 0 700 256', w.t('Quarterly bills before and after', 'Factures trimestrielles avant et après'), s) +
+        '<div class="bk-cw-answer"><p><b>' + w.t('Pays back in about ', 'Se rembourse en ') + F(lo, 0) + w.t(' to ', ' à ') + F(hi, 0) + w.t(' years', ' ans environ') + '</b>' +
+        w.t(' (', ' (') + CF.yrs(w, pb) + w.t(' with the assumptions below). With no feed-in at all, ', ' avec les hypothèses ci-dessous). Sans aucun rachat, ') + CF.yrs(w, pbz) + '.</p><p>' +
+        w.t('Assumed: electricity prices +', 'Hypothèses : prix de l’électricité +') + cwPct(w, a.escalation, 0) + w.t(' a year, feed-in ', ' par an, rachat ') + cwPct(w, a.fit_growth, 0) +
+        w.t(' a year, your use of ', ' par an, votre consommation de ') + F(a.load_kwh_day, 0) + w.t(' kWh a day.', ' kWh par jour.') + '</p></div>';
+    }
+    cwGroups(w, st, draw);
+    draw();
+  });
+
+  /* 14.12 your turn: the whole quote, every lever of the chapter together */
+  cwWidget('cashflow-quote', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, st = { cfg: 'both', pay: 'cash' }, P = D.price;
+    var pvW0 = (D.engine.pv_net / (P.pv_kw * 1000));
+    w.mount(cwSeg(w, 'cfg', [['solar', 'Solar only', 'Solaire seul'], ['both', 'Solar and battery', 'Solaire et batterie']], 'both') +
+      cwSeg(w, 'pay', [['cash', 'Cash', 'Comptant'], ['loan', 'Loan', 'Prêt']], 'cash') +
+      w.controls([
+        w.slider('pvw', 'PV price after STCs', 'Prix du PV après STC', 0.6, 1.5, 0.05, +pvW0.toFixed(2)),
+        w.slider('bat', 'Battery price after the rebate', 'Prix de la batterie après aide', 4000, 16000, 1, Math.round(D.engine.batt_net)),
+        w.slider('esc', 'Retail price growth a year', 'Hausse annuelle des prix de détail', 0, 8, 0.5, D.base.escalation * 100),
+        w.slider('fit', 'Feed-in change a year', 'Évolution annuelle du rachat', -15, 3, 1, D.base.fit_growth * 100),
+        w.slider('r', 'Discount rate', 'Taux d’actualisation', 0, 12, 0.5, D.base.discount * 100),
+        w.slider('rate', 'Loan rate (if a loan)', 'Taux du prêt (si prêt)', 0, 15, 0.25, +(D.loan.rate * 100).toFixed(2)),
+        w.slider('yrs', 'Loan term', 'Durée du prêt', 1, 15, 1, D.loan.years)
+      ]) + cwSvg('0 0 700 300', w.t('Cumulative cashflow of the quote', 'Trésorerie cumulée du devis'), '<g data-k="g"></g>') +
+      '<div class="bk-cw-cols">' + w.readout([['pbs', 'Solar payback', 'Retour du solaire'], ['pbb', 'Battery payback, on top', 'Retour de la batterie, en plus'], ['pba', 'Whole system payback', 'Retour de l’ensemble']]) +
+      w.readout([['npv', 'Value today (NPV)', 'Valeur aujourd’hui (VAN)'], ['irr', 'IRR', 'TRI'], ['mon', 'Monthly repayment', 'Mensualité']]) + '</div>');
+    var g = w.$('g');
+    function draw() {
+      var a = cfBase(D); a.escalation = w.val('esc') / 100; a.fit_growth = w.val('fit') / 100; a.discount = w.val('r') / 100;
+      var prices = { pv_net: w.val('pvw') * P.pv_kw * 1000, batt_net: w.val('bat') };
+      var S = cfCase(D, a, 'solar', null, prices), B = cfCase(D, a, 'battery', null, prices), C = cfCase(D, a, st.cfg === 'both' ? 'both' : 'solar', null, prices);
+      var flows = C.flows.slice(), price = C.price, mon = null;
+      if (st.pay === 'loan') {                        // the deposit of the funnels' example, the rest borrowed
+        var dep = D.loan.deposit, L = CF.loan(price * (1 - dep), w.val('rate') / 100, w.val('yrs'));
+        mon = L.pmt;
+        for (var y = 0; y < w.val('yrs'); y++) flows[y] -= L.pmt * 12;
+        price = price * dep;
+      }
+      var cum = CF.cumulative(price, flows), pb = CF.payback(price, flows);
+      var ymax = Math.max(40000, Math.ceil(Math.max.apply(null, cum) / 20000) * 20000), ymin = Math.min(-20000, Math.floor(Math.min.apply(null, cum) / 10000) * 10000);
+      var A = cfAxes(w, ymin, ymax, D.years, { step: 20000 }), s = A.svg;
+      s += '<polyline class="curve main" points="' + cum.map(function (v, y) { return A.X(y).toFixed(1) + ',' + A.Y(v).toFixed(1); }).join(' ') + '"/>';
+      if (pb !== null) s += '<circle class="sun" cx="' + A.X(pb).toFixed(1) + '" cy="' + A.Y(0).toFixed(1) + '" r="5"/><text class="la" x="' + (A.X(pb) + 8).toFixed(1) + '" y="' + (A.Y(0) - 8).toFixed(1) + '">' + CF.yrs(w, pb) + '</text>';
+      g.innerHTML = s;
+      w.set('pvwv', F(w.val('pvw'), 2) + w.t(' AUD/W → ', ' AUD/W → ') + cwInt(w, prices.pv_net) + ' AUD');
+      w.set('batv', cwInt(w, prices.batt_net) + ' AUD'); w.set('escv', cwPct(w, a.escalation, 1)); w.set('fitv', cwPct(w, a.fit_growth, 0));
+      w.set('rv', cwPct(w, a.discount, 1)); w.set('ratev', cwPct(w, w.val('rate') / 100, 2)); w.set('yrsv', w.val('yrs') + w.t(' years', ' ans'));
+      w.set('pbs', CF.yrs(w, CF.payback(S.price, S.flows)));
+      w.set('pbb', st.cfg === 'both' ? CF.yrs(w, CF.payback(B.price, B.flows)) : '—');
+      w.set('pba', CF.yrs(w, pb));
+      w.set('npv', CF.aud(w, CF.npv(price, flows, a.discount)));
+      var irr = CF.irr(price, flows); w.set('irr', st.pay === 'loan' && price < 1 ? w.t('meaningless, nothing paid up front', 'sans objet, rien payé comptant') : (irr === null ? '—' : cwPct(w, irr, 1)));
+      w.set('mon', mon === null ? '—' : CF.aud(w, mon));
+    }
+    cwGroups(w, st, draw);
+    w.on(['pvw', 'bat', 'esc', 'fit', 'r', 'rate', 'yrs'], draw);
+    draw();
+  });
 
   /* ---------- architecture views: LikeC4's web component (```likec4, blocks.py) ---------- */
   // The bundle (assets/c4/likec4.js, from `mise run c4`) holds the model and defines
