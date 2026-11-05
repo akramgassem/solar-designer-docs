@@ -309,6 +309,61 @@
     window.addEventListener('scroll', function () { if (noteFor) placeNote(noteFor); }, { passive: true });
     window.addEventListener('resize', function () { if (noteFor) placeNote(noteFor); });
   }
+  /* ---------- section links: a link button beside each section heading copies the address of
+     that section (page, language, anchor) and puts it in the address bar. The button holds an
+     icon only, so a heading's text stays its own (37-sidenotes.js reads it). ---------- */
+  var SL = {
+    en: { copy: 'Copy the link to this section', done: 'Link copied', bar: 'Link in the address bar' },
+    fr: { copy: 'Copier le lien de cette section', done: 'Lien copié', bar: "Lien dans la barre d'adresse" }
+  };
+  var LINK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg>';
+  var slLive = doc.createElement('p');
+  slLive.className = 'bk-sr';
+  slLive.setAttribute('aria-live', 'polite');
+  doc.body.appendChild(slLive);
+  all('.bk-prose article[data-lang] > :is(h2, h3)[id]').forEach(function (h) {
+    var lang = h.closest('article').getAttribute('data-lang') === 'fr' ? 'fr' : 'en';
+    var b = doc.createElement('button');
+    b.type = 'button';
+    b.className = 'bk-hlink';
+    b.setAttribute('data-for', h.id);
+    b.setAttribute('aria-label', SL[lang].copy + ' : ' + h.textContent.trim());
+    b.setAttribute('title', SL[lang].copy);
+    b.innerHTML = LINK_SVG;
+    h.appendChild(b);
+  });
+  function sectionUrl(id, lang) {
+    var u = new URL(location.href);
+    u.searchParams.set('lang', lang);
+    u.hash = id;
+    return u.href;
+  }
+  function copyText(text, ok, fail) {
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(ok, fail); return; }
+    var t = doc.createElement('textarea'), done = false;
+    t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+    doc.body.appendChild(t); t.select();
+    try { done = doc.execCommand('copy'); } catch (x) {}
+    t.remove();
+    (done ? ok : fail)();
+  }
+  doc.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.bk-hlink');
+    if (!b) return;
+    e.preventDefault();
+    var lang = b.closest('article').getAttribute('data-lang') === 'fr' ? 'fr' : 'en';
+    var url = sectionUrl(b.getAttribute('data-for'), lang);
+    try { history.replaceState(history.state, '', url); } catch (x) {}
+    function say(msg) {
+      b.setAttribute('data-done', msg);
+      slLive.textContent = msg;
+      clearTimeout(b._t);
+      b._t = setTimeout(function () { b.removeAttribute('data-done'); slLive.textContent = ''; }, 1800);
+    }
+    // the clipboard may refuse (a page opened from a file, a browser setting): the address bar
+    // holds the link anyway
+    copyText(url, function () { say(SL[lang].done); }, function () { say(SL[lang].bar); });
+  });
   /* ---------- concept toggletips, and decision cards (a D-nn badge opens the same card) ---------- */
   var data = { concepts: {} };
   var dataEl = doc.getElementById('bk-data');

@@ -70,7 +70,8 @@ body{margin:0;background:var(--bg);color:var(--fg)}
 .bk-ch>a{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:6px;align-items:baseline;padding:7px 6px;border-radius:6px;color:var(--fg);text-decoration:none}
 .bk-ch>a:hover{background:var(--box2)}
 .bk-chn{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
-.bk-cht>span:first-child{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* a chapter title wraps to two lines at most, its number and reading time level with the first */
+.bk-cht>span:first-child{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;font-weight:500;line-height:1.3;overflow-wrap:break-word}
 .bk-chm{color:var(--muted);font-size:10.5px;white-space:nowrap;opacity:.55;font-variant-numeric:tabular-nums}
 .bk-ch.bk-cur .bk-chm{opacity:.8}
 .bk-ch.bk-read>a .bk-chm::after{content:" ✓";color:var(--good)}
@@ -81,12 +82,14 @@ body{margin:0;background:var(--bg);color:var(--fg)}
 .bk-ch.bk-cur>a:hover{background:var(--paper)}
 .bk-ch.bk-cur .bk-chn{color:var(--acc);font-weight:600}
 .bk-ch.bk-cur .bk-cht>span:first-child{font-weight:600}
-.bk-sub{margin:0 0 4px 2.2em}
+.bk-sub{margin:0 0 4px .9em}
 .bk-sub>summary{cursor:pointer;color:var(--muted);font-size:12px;padding:3px 6px;list-style:none}
 .bk-sub>summary::-webkit-details-marker{display:none}
 .bk-sub>summary::before{content:"▸ "}
 .bk-sub[open]>summary::before{content:"▾ "}
-.bk-sub .bk-ch>a{grid-template-columns:2.8em minmax(0,1fr) auto}
+.bk-sub .bk-ch>a{grid-template-columns:2.6em minmax(0,1fr) auto}
+/* a page under a chapter has less room: its title may take a third line */
+.bk-sub .bk-cht>span:first-child{-webkit-line-clamp:3;line-clamp:3}
 
 /* the page being read: how far the reader is */
 .bk-chp{display:block;height:2px;margin:9px 0 3px;border-radius:2px;background:color-mix(in srgb,var(--line) 55%,transparent);overflow:hidden}
@@ -119,6 +122,7 @@ body{margin:0;background:var(--bg);color:var(--fg)}
   /* wide tables grow to the right only, clear of the menu */
   :root:not([data-side="off"]) .bk-prose article .tablewrap{width:calc(var(--measure) + 110px);margin-left:0;margin-right:-110px}
 }
+@media (min-width:1440px){:root:not([data-side="off"]) .bk-side{width:320px}}
 @media (min-width:1280px) and (prefers-reduced-motion:reduce){.bk-side *{transition:none!important}}
 /* Top bar: contents on the left, the book's name in the middle, search, language and theme on
    the right; a hairline shows how far the reader is in the page */
@@ -263,6 +267,18 @@ body{margin:0;background:var(--bg);color:var(--fg)}
 .bk-badge{display:inline-block;font:600 12px/1 var(--sans);padding:5px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);vertical-align:middle;margin-left:8px}
 .bk-badge.draft{border-color:var(--acc);color:var(--acc)}
 html[lang="en"] [data-lang="fr"],html[lang="fr"] [data-lang="en"]{display:none}
+
+/* Section links (39-section-links.js): a link icon after a section heading, shown on hover or
+   focus (always, faintly, on touch screens); a click copies the section's address. */
+.bk-hlink{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.3em;height:1.3em;margin-left:.3em;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);vertical-align:.08em;cursor:pointer;opacity:0;transition:opacity .15s}
+.bk-hlink svg{width:.7em;height:.7em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+:is(h2,h3):hover>.bk-hlink,.bk-hlink:focus-visible,.bk-hlink[data-done]{opacity:1}
+.bk-hlink:hover{color:var(--acc);background:var(--box2)}
+.bk-hlink:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.bk-hlink[data-done]{color:var(--good)}
+.bk-hlink[data-done]::after{content:attr(data-done);position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);padding:3px 8px;border-radius:6px;background:var(--fg);color:var(--paper);font:500 12px/1.3 var(--sans);white-space:nowrap;letter-spacing:0;pointer-events:none}
+@media (hover:none){.bk-hlink{opacity:.45}}
+.bk-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* Home page */
 .bk-hero{max-width:760px;margin:24px 0 8px}
 .bk-hero h1{font-size:40px;line-height:1.1;letter-spacing:-.03em;margin:0 0 14px}
