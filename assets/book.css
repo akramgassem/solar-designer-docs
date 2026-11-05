@@ -556,7 +556,7 @@ figure.bk-widget.bk-fw-open .bk-jn-lab{margin-top:0}
 .bk-filter-n{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bk-dst{display:inline-block;font:600 11.5px/1.3 Inter,system-ui,sans-serif;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;vertical-align:1px}
 .bk-dst-accepted{color:var(--good);border-color:var(--good);background:var(--good-soft)}
-.bk-dst-proposed{color:var(--acc);border-color:var(--acc);background:var(--acc-soft)}
+.bk-dst-proposed{color:var(--sun-ink);border-color:var(--sun-ink);background:var(--sun-soft)}
 .bk-dst-open{color:var(--blue);border-color:var(--blue);background:var(--blue-soft)}
 .bk-dst-superseded{color:var(--muted);background:var(--box2)}
 .bk-dby{font-size:13px;color:var(--muted)}
@@ -565,7 +565,7 @@ figure.bk-widget.bk-fw-open .bk-jn-lab{margin-top:0}
 .bk-prose .bk-dlog{list-style:none;margin:8px 0 24px;padding:0;display:grid;gap:12px;max-width:860px}
 .bk-prose .bk-dcard{max-width:none;padding:14px 18px 12px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;background:var(--paper);scroll-margin-top:calc(var(--bk-top) + 70px)}
 .bk-dcard[data-status=accepted]{border-left-color:var(--good)}
-.bk-dcard[data-status=proposed]{border-left-color:var(--acc)}
+.bk-dcard[data-status=proposed]{border-left-color:var(--sun-ink)}
 .bk-dcard[data-status=open]{border-left-color:var(--blue)}
 .bk-dcard[hidden]{display:none}
 .bk-dcard:target{box-shadow:0 0 0 2px var(--acc);background:color-mix(in srgb,var(--acc-soft) 45%,var(--paper))}
@@ -596,6 +596,44 @@ figure.bk-widget.bk-fw-open .bk-jn-lab{margin-top:0}
 .bk-dcited li{padding:4px 0;max-width:none}
 .bk-dcited li>span:last-child{color:var(--muted)}
 
+
+/* A D-nn in the text (reading.decision_badges): a small outlined badge, coloured by its status; it opens
+   the decision's card in the concept popover (40-concepts.js). A superseded one is struck
+   through and names its replacement. */
+.bk-dref{display:inline-block;margin:0 1px;padding:0 5px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--fg);font:600 .78em/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace;white-space:nowrap;vertical-align:.06em;cursor:pointer}
+.bk-dref:hover,.bk-dref[aria-expanded="true"]{background:var(--box2)}
+.bk-dref:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.bk-dref-accepted{color:var(--good);border-color:var(--good)}
+.bk-dref-proposed{color:var(--sun-ink);border-color:var(--sun-ink)}
+.bk-dref-open{color:var(--blue);border-color:var(--blue)}
+.bk-dref-superseded{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.bk-dref-superseded[data-by]::after{content:" → " attr(data-by);display:inline-block;text-decoration:none}
+/* The decision card: a register entry, no fill. Glossary cards stay serif definitions; this one
+   is sans with a mono id, its status a coloured dot, its fields one line each. */
+.bk-pop-ic{width:13px;height:13px;margin:0 5px -2px 0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bk-pop-dec .bk-pop-kind{color:var(--muted)}
+.bk-pop .bk-pop-did{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font:700 19px/1.3 "JetBrains Mono",ui-monospace,Consolas,monospace}
+.bk-dstat{font:500 12.5px/1.3 var(--sans);white-space:nowrap}
+.bk-dstat::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:currentColor}
+.bk-dstat-accepted{color:var(--good)}
+.bk-dstat-proposed{color:var(--sun-ink)}
+.bk-dstat-open{color:var(--blue)}
+.bk-dstat-superseded{color:var(--muted)}
+.bk-pop-date{margin-left:auto;font:400 12.5px/1.3 var(--sans);color:var(--muted);font-variant-numeric:tabular-nums}
+.bk-pop .bk-pop-dtext{margin:10px 0 12px;font:500 14.5px/1.5 var(--sans);color:var(--fg)}
+.bk-pop-dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 14px;margin:0 0 12px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;line-height:1.45}
+.bk-pop-dl dt{color:var(--muted)}
+.bk-pop-dl dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.bk-did-ref{border:0;padding:0;background:none;color:var(--fg);font:600 12.5px/1.45 "JetBrains Mono",ui-monospace,Consolas,monospace;border-bottom:1px solid var(--line);cursor:pointer}
+button.bk-did-ref:hover,button.bk-did-ref:focus-visible{color:var(--acc);border-color:var(--acc)}
+.bk-did-old{color:var(--muted);text-decoration:line-through}
+.bk-pop-where-d summary{cursor:pointer;list-style:none}
+.bk-pop-where-d summary::-webkit-details-marker{display:none}
+.bk-pop-where-d summary::after{content:" ▾";color:var(--muted)}
+.bk-pop-where-d[open] summary::after{content:" ▴"}
+.bk-pop-where-d summary:hover{color:var(--acc)}
+.bk-pop-where-d abbr{text-decoration:none;font-weight:600}
+.bk-pop-where-d .bk-pop-cited{margin:6px 0 0}
 /* Actions written in the pages and the Actions board (tools/bookgen/tasks.py) */
 .bk-task{list-style:none;position:relative;margin:6px 0;padding:8px 12px 8px 36px;border:1px solid var(--line);border-radius:10px;background:var(--paper);max-width:820px}
 .bk-tk-box{position:absolute;left:12px;top:12px;width:14px;height:14px;border:1.5px solid var(--muted);border-radius:4px}

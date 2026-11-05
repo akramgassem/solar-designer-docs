@@ -309,7 +309,7 @@
     window.addEventListener('scroll', function () { if (noteFor) placeNote(noteFor); }, { passive: true });
     window.addEventListener('resize', function () { if (noteFor) placeNote(noteFor); });
   }
-  /* ---------- concept toggletips ---------- */
+  /* ---------- concept toggletips, and decision cards (a D-nn badge opens the same card) ---------- */
   var data = { concepts: {} };
   var dataEl = doc.getElementById('bk-data');
   if (dataEl) { try { data = JSON.parse(dataEl.textContent); } catch (e) {} }
@@ -317,6 +317,16 @@
     en: { kind: 'Glossary', other: 'in French', ref: 'Explained in', here: 'on this page', also: 'Also used in', related: 'Related terms', close: 'Close', glossary: 'Open in the glossary', back: 'Back to', more: ['more', 'more'] },
     fr: { kind: 'Glossaire', other: 'en anglais', ref: 'Expliqué dans', here: 'sur cette page', also: 'Utilisé aussi dans', related: 'Termes liés', close: 'Fermer', glossary: 'Voir dans le glossaire', back: 'Retour à', more: ['autre', 'autres'] }
   };
+  var DCARD = {
+    en: { kind: 'Decision', why: 'Why', by: 'Replaced by', replaces: 'Replaces', linked: 'Related to', note: 'Note', cited: 'Cited in', page: ['page', 'pages'], here: 'this page', arg: 'Argument', log: 'Open in the decision log',
+          s: { accepted: 'accepted', proposed: 'proposed', open: 'open', superseded: 'superseded' } },
+    fr: { kind: 'Décision', why: 'Pourquoi', by: 'Remplacée par', replaces: 'Remplace', linked: 'Liée à', note: 'Précision', cited: 'Citée dans', page: ['page', 'pages'], here: 'cette page', arg: 'Argumentation', log: 'Voir dans le journal des décisions',
+          s: { accepted: 'acceptée', proposed: 'proposée', open: 'ouverte', superseded: 'remplacée' } }
+  };
+  var decisions = data.decisions || {};
+  var MARKS = '.cx, .bk-dref';
+  function keyOf(m) { return m.getAttribute('data-c') || m.getAttribute('data-d'); }
+  function nameOf(id) { var d = decisions[id], c = data.concepts[id]; return d ? id : c ? L(c.t) : id; }
   /* the symbol a definition gives in brackets, such as (α) or (γs) */
   var SYMBOL = /\(([^()\sa-zA-Z0-9]{1,2}[a-z0-9]{0,2})\)/;
   var pop = doc.createElement('div');
@@ -328,6 +338,13 @@
   var owner = null, pinned = false, timer = null, refocusing = false;
 
   function armMarks() {
+    all('.bk-dref').forEach(function (m) {
+      var d = decisions[m.getAttribute('data-d')];
+      m.setAttribute('aria-expanded', 'false');
+      m.setAttribute('aria-controls', 'bk-pop');
+      m.setAttribute('aria-haspopup', 'dialog');
+      if (d) m.setAttribute('aria-label', m.textContent + ', ' + DCARD[window.courseLang === 'fr' ? 'fr' : 'en'].s[d.s]);
+    });
     all('.cx').forEach(function (m) {
       m.setAttribute('role', 'button');
       m.setAttribute('tabindex', '0');
@@ -342,20 +359,76 @@
     var h = isLocalPage(href) ? withLang(href, window.courseLang || 'en') : href;
     return '<a href="' + esc(h) + '">' + text + '</a>';
   }
-  var trail = [];  // the concepts the reader came from, through related terms
+  var trail = [];  // the concepts or decisions the reader came from, through related ones
+  function head(from) {
+    if (from === undefined) trail = []; else if (from) trail.push(from);
+    var t = T[window.courseLang === 'fr' ? 'fr' : 'en'];
+    var h = '<button type="button" class="bk-close" aria-label="' + t.close + '">×</button>';
+    if (trail.length) h += '<button type="button" class="bk-back">← ' + t.back + ' ' + esc(nameOf(trail[trail.length - 1])) + '</button>';
+    return h;
+  }
+  /* outline icons (Tabler, MIT): a book for the glossary, a gavel for a decision */
+  function icon(paths) { return '<svg class="bk-pop-ic" viewBox="0 0 24 24" aria-hidden="true">' + paths.map(function (d) { return '<path d="' + d + '"/>'; }).join('') + '</svg>'; }
+  var IC_BOOK = icon(['M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0', 'M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0', 'M3 6v13', 'M12 6v13', 'M21 6v13']);
+  var IC_GAVEL = icon(['M13 10l7.383 7.418c.823 .82 .823 2.148 0 2.967a2.11 2.11 0 0 1 -2.976 0l-7.407 -7.385', 'M6 9l4 4', 'M13 10l-4 -4', 'M3 21h7',
+    'M6.793 15.793l-3.586 -3.586a1 1 0 0 1 0 -1.414l2.293 -2.293l.5 .5l3 -3l-.5 -.5l2.293 -2.293a1 1 0 0 1 1.414 0l3.586 3.586a1 1 0 0 1 0 1.414l-2.293 2.293l-.5 -.5l-3 3l.5 .5l-2.293 2.293a1 1 0 0 1 -1.414 0z']);
+  /* a decision named in a card: its id, opened in place when its card is on the page */
+  function did(id) {
+    var d = decisions[id], cls = 'bk-did-ref' + (d && d.s === 'superseded' ? ' bk-did-old' : '');
+    if (!d) return '<span class="' + cls + '">' + esc(id) + '</span>';
+    return '<button type="button" class="' + cls + '" data-go="' + esc(id) + '" title="' + esc(L(d.d).replace(/<[^>]+>/g, '')) + '">' + esc(id) + '</button>';
+  }
+  /* The decision card reads as a register entry: id, status, date, the decision, then one line
+     per field. The glossary card stays a definition (serif); this one is sans and mono. */
+  function fillDecision(id, from) {
+    var d = decisions[id];
+    if (!d) return false;
+    var l = window.courseLang === 'fr' ? 'fr' : 'en', t = DCARD[l];
+    function row(k, v) { return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
+    var h = head(from) +
+      '<p class="bk-pop-kind bk-pop-dkind">' + IC_GAVEL + t.kind + '</p>' +
+      '<h2 id="bk-pop-t" class="bk-pop-did">' + esc(id) + ' <span class="bk-dstat bk-dstat-' + d.s + '">' + t.s[d.s] + '</span>' +
+      '<span class="bk-pop-date">' + L(d.date) + '</span></h2>' +
+      '<p class="bk-pop-dtext" id="bk-pop-d">' + L(d.d) + '</p><dl class="bk-pop-dl">';
+    if (d.by) h += row(t.by, did(d.by));
+    if (d.note) h += row(t.note, L(d.note));
+    h += row(t.why, L(d.w));
+    if (d.replaces.length) h += row(t.replaces, d.replaces.map(did).join(' · '));
+    if (d.linked.length) h += row(t.linked, d.linked.map(did).join(' · '));
+    if (d.parts.length) {
+      var n = d.parts.reduce(function (a, p) { return a + p.pages.length; }, 0);
+      h += row(t.cited, '<details class="bk-pop-where-d"><summary>' + n + ' ' + t.page[n > 1 ? 1 : 0] + ' · ' + d.parts.map(function (p) {
+        return '<abbr title="' + esc(L(p.t)) + '">' + esc(p.n) + '</abbr> ' + p.pages.length;
+      }).join(' · ') + '</summary><ul class="bk-pop-cited">' + d.parts.map(function (p) {
+        return p.pages.map(function (pg) { return '<li>' + (pg.here ? esc(L(pg.title)) + ' · <i>' + t.here + '</i>' : link(pg.href, esc(L(pg.title)))) + '</li>'; }).join('');
+      }).join('') + '</ul></details>');
+    }
+    h += row(t.arg, L(d.a)) + '</dl>';
+    if (d.log) h += '<p class="bk-pop-foot">' + link(L(d.log), t.log + ' →') + '</p>';
+    return h;
+  }
   function fill(id, from) {
-    var c = data.concepts[id];
-    if (!c) return false;
+    var h, c = data.concepts[id];
+    if (decisions[id]) h = fillDecision(id, from);
+    else if (!c) return false;
+    else h = fillConcept(c, from);
+    pop.innerHTML = h;
+    pop.classList.toggle('bk-pop-dec', !!decisions[id]);
+    pop.setAttribute('aria-labelledby', 'bk-pop-t');
+    pop.querySelector('.bk-close').addEventListener('click', function () { closePop(true); });
+    var back = pop.querySelector('.bk-back');
+    if (back) back.addEventListener('click', function (e) { e.stopPropagation(); jump(trail.pop(), null); });
+    all('[data-go]', pop).forEach(function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); jump(b.getAttribute('data-go'), id); });
+    });
+    return true;
+  }
+  function fillConcept(c, from) {
     var l = window.courseLang === 'fr' ? 'fr' : 'en', t = T[l];
     var other = l === 'fr' ? c.t.en : c.t.fr;
-    if (from === undefined) trail = []; else if (from) trail.push(from);
     var def = L(c.d), sym = def.replace(/<[^>]+>/g, '').match(SYMBOL);
-    var h = '<button type="button" class="bk-close" aria-label="' + t.close + '">×</button>';
-    if (trail.length) {
-      var prev = data.concepts[trail[trail.length - 1]];
-      h += '<button type="button" class="bk-back">← ' + t.back + ' ' + esc(L(prev.t)) + '</button>';
-    }
-    h += '<p class="bk-pop-kind">' + t.kind + '</p>' +
+    var h = head(from);
+    h += '<p class="bk-pop-kind">' + IC_BOOK + t.kind + '</p>' +
       '<h2 id="bk-pop-t">' + esc(L(c.t)) + (sym ? ' <span class="bk-sym">' + esc(sym[1]) + '</span>' : '') + '</h2>' +
       (other && other !== L(c.t) ? '<p class="bk-pop-other">' + t.other + ' · <i>' + esc(other) + '</i></p>' : '') +
       '<p class="bk-pop-def" id="bk-pop-d">' + def + '</p>';
@@ -377,15 +450,7 @@
         (c.cited.length > 4 ? '<li>' + link(c.gloss, '+ ' + (c.cited.length - 4) + ' ' + t.more[c.cited.length - 4 > 1 ? 1 : 0]) + '</li>' : '') + '</ul>';
     }
     if (c.gloss) h += '<p class="bk-pop-foot">' + link(c.gloss, t.glossary + ' →') + '</p>';
-    pop.innerHTML = h;
-    pop.setAttribute('aria-labelledby', 'bk-pop-t');
-    pop.querySelector('.bk-close').addEventListener('click', function () { closePop(true); });
-    var back = pop.querySelector('.bk-back');
-    if (back) back.addEventListener('click', function (e) { e.stopPropagation(); jump(trail.pop(), null); });
-    all('.bk-chip[data-go]', pop).forEach(function (b) {
-      b.addEventListener('click', function (e) { e.stopPropagation(); jump(b.getAttribute('data-go'), id); });
-    });
-    return true;
+    return h;
   }
   function jump(id, from) {
     fill(id, from);
@@ -407,7 +472,7 @@
   function openPop(m, pin) {
     clearTimeout(timer);
     if (owner && owner !== m) closePop();
-    if (owner !== m && !fill(m.getAttribute('data-c'))) return;
+    if (owner !== m && !fill(keyOf(m))) return;
     owner = m;
     pinned = pinned || !!pin;
     pop.hidden = false;
@@ -426,17 +491,20 @@
     if (focusBack && doc.contains(m)) { refocusing = true; m.focus(); refocusing = false; }
   }
   function later(fn, ms) { clearTimeout(timer); timer = setTimeout(fn, ms); }
-  function focusables() { return all('a[href],button', pop); }
+  function focusables() {  // what Tab reaches in the card: not the links of a folded list
+    return all('a[href],button,summary', pop).filter(function (x) { var d = x.closest('details'); return !d || d.open || x.tagName === 'SUMMARY'; });
+  }
+  function focusIn() { var f = focusables(); if (f.length > 1) f[1].focus(); else if (f.length) f[0].focus(); }
 
   doc.addEventListener('pointerover', function (e) {
     if (e.pointerType !== 'mouse') return;
-    var m = e.target.closest && e.target.closest('.cx');
+    var m = e.target.closest && e.target.closest('.cx');  // a decision badge opens on click only
     if (m) { later(function () { openPop(m, false); }, 180); }
     else if (pop.contains(e.target)) clearTimeout(timer);
   });
   doc.addEventListener('pointerout', function (e) {
     if (e.pointerType !== 'mouse' || pinned) return;
-    var from = e.target.closest && (e.target.closest('.cx') || (pop.contains(e.target) ? pop : null));
+    var from = e.target.closest && (e.target.closest(MARKS) || (pop.contains(e.target) ? pop : null));
     if (!from) return;
     var to = e.relatedTarget;
     if (to && (pop.contains(to) || (owner && owner.contains(to)))) return;
@@ -444,26 +512,25 @@
   });
   doc.addEventListener('focusin', function (e) {
     if (refocusing) return;
-    var m = e.target.closest && e.target.closest('.cx');
+    var m = e.target.closest && e.target.closest('.cx');  // a decision badge opens with Enter
     if (m && m.matches(':focus-visible')) openPop(m, false);
     else if (owner && !pop.contains(e.target) && e.target !== owner && !pinned) closePop();
   });
   doc.addEventListener('click', function (e) {
-    var m = e.target.closest && e.target.closest('.cx');
+    var m = e.target.closest && e.target.closest(MARKS);
     if (m) {
       e.preventDefault();
-      if (owner === m && pinned) closePop(); else { closePop(); openPop(m, true); }
+      if (owner === m && pinned) closePop(); else { closePop(); openPop(m, true); if (e.detail === 0) focusIn(); }
       return;
     }
     if (owner && !pop.contains(e.target)) closePop();
   });
   doc.addEventListener('keydown', function (e) {
-    var m = e.target.closest && e.target.closest('.cx');
+    var m = e.target.closest && e.target.closest('.cx');  // a decision badge is a button: its own click
     if (m && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       openPop(m, true);
-      var f = focusables();
-      if (f.length > 1) f[1].focus(); else if (f.length) f[0].focus();
+      focusIn();
       return;
     }
     if (e.key === 'Escape' && owner) { closePop(true); return; }
