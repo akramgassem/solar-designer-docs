@@ -2108,6 +2108,8 @@
     // builder and resold at the price list's margin; illustrative like every price here, quoted for real after approval
     structures: { carport: { name: 'Carport structure, steel, one bay, 8 modules', price: 7400 } }
   };
+  // the installer's electrification measures (D-108); prices and avoided costs are the prototype's assumptions
+  FN.ELEC = [{ k: 'hw', name: 'Heat-pump hot water, 270 L', price: 3200, sub: 'COP from the hour’s air', repl: 'gas hot water, $520/yr', fossil: 520 }, { k: 'ev', name: 'Car charger, 7 kW', price: 1400, sub: 'solar-follow mode', repl: 'petrol, $2,044/yr', fossil: 2044 }, { k: 'ind', name: 'Induction cooktop', price: 1600, sub: 'and its circuit', repl: 'gas cooking, $90/yr', fossil: 90 }, { k: 'pool', name: 'Pool heat pump', price: 4500, sub: 'heats the pool on surplus', repl: 'gas pool heating', fossil: 0 }];
   // the smallest inverter that keeps the panels under the 133 % limit (the largest when none does)
   FN.invFor = function (kwp) {
     var L = FN.CAT.inverters;
@@ -2131,6 +2133,8 @@
         zok: J ? (S.zones || []).map(function (z) { return !!z.ok; }) : [], pts: [], curPt: null, zones: [], dims: [], pins: [], selPin: '', pinTxt: '', vtx: null, selVtx: 0, dynLen: '', dynAng: '', dynField: 0, lastMeas: null };
       // in the journey the studio starts on its inbox, and the household's draft (16 portrait modules) comes with the site
       if (J) { st.mode = -1; st.filled = true; st.bat = S.measures.bat ? 13.5 : 0; }
+      // the Needs step (D-106) and the installer's electrification measures (D-108), seeded from what the household gave
+      st.needsOk = false; st.need = {}; st.elec = { hw: J ? !!S.measures.hp : false, ev: J ? !!S.measures.ev : true, ind: false, pool: false }; st.sweepKey = ''; st.sweep = null;
       el.innerHTML = '<div class="sd-root" style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden;user-select:none">' +
         '<div class="sd-top"></div><div class="sd-plan" style="position:absolute;left:0;top:48px;width:1180px;height:772px"></div>' +
         '<div class="sd-3d" style="position:absolute;overflow:hidden;background:var(--c-canvas)"><canvas class="sd-canvas" width="1180" height="772" aria-label="The roof in 3D, mirroring the plan: drag to turn" style="width:100%;height:100%;display:block;touch-action:none;cursor:grab"></canvas><div class="sd-3d-ctrl"></div></div>' +
@@ -2164,7 +2168,7 @@
         var M = mods(s).filter(function (m) { return !m.blocked && !m.removed; }), n = M.length, loss = M.reduce(function (a, m) { return a + (m.shaded ? 0.15 : 0); }, 0), eff = (n - loss) * s.modW / 1000, y = s.roof === 'flat' ? FN.RACKS[rackMode(s)].yield : FN.YIELD;
         // the household's zones the installer confirmed, at the roof's yield per kWp until their own orientation is measured
         var zn = J ? FN.zonesOk(S, s.zok).reduce(function (a, z) { return a + z.n; }, 0) : 0, zk = zn * s.modW / 1000, kwh = eff * y + zk * FN.YIELD;
-        return { n: n + zn, nRoof: n, nZones: zn, kwp: (n + zn) * s.modW / 1000, kwh: kwh, eff: eff + zk, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: kwh / FN.YIELD, cap: s.bat, ev: J ? S.measures.ev : true, hp: J && S.measures.hp }).total };
+        return { n: n + zn, nRoof: n, nZones: zn, kwp: (n + zn) * s.modW / 1000, kwh: kwh, eff: eff + zk, save: FN.TODAY() - FN.sim({ plan: 'best', kwp: kwh / FN.YIELD, cap: s.bat, ev: s.elec ? s.elec.ev : true, hp: !!(s.elec && s.elec.hw) }).total };
       }
       function touch() { if (st.task < 5) st.touches[st.task]++; }
       function check() {
@@ -2201,7 +2205,7 @@
         var btn = function (a, label, svg, on, color) { return '<button type="button" data-a="' + a + '" aria-label="' + label + '" style="width:40px;height:40px;border:none;border-radius:8px;background:' + (on ? 'var(--c-line2)' : 'transparent') + ';color:' + (color || 'var(--c-ink)') + ';cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center">' + svg + '</button>'; };
         var ico = function (d) { return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"></path></svg>'; };
         var sep = '<span style="width:1px;height:24px;background:var(--c-line);margin:0 4px"></span>';
-        return FN.topbar(J && !S.shared ? ['Sites', 'Inbox'] : ['Sites', '14 Wattle Lane, Marrickville', 'Design v1'], (J ? [['Inbox', -1], ['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]] : [['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]]).map(function (x) { return FN.tab(x[0] + (x[1] === -1 && J && S.shared && !S.opened ? ' · 1' : ''), x[1] === st.mode, 'mode', x[1]); }).join(''),
+        return FN.topbar(J && !S.shared ? ['Sites', 'Inbox'] : ['Sites', '14 Wattle Lane, Marrickville', 'Design v1'], (J ? [['Inbox', -1], ['Needs', -0.5], ['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]] : [['Roof', 0], ['Layout', 1], ['Equipment', 2], ['Proposal', 3]]).map(function (x) { return FN.tab(x[0] + (x[1] === -1 && J && S.shared && !S.opened ? ' · 1' : ''), x[1] === st.mode, 'mode', x[1]); }).join(''),
           '<span style="font-size:12px;color:var(--c-gain);display:flex;align-items:center;gap:5px;padding:0 6px"><span style="width:7px;height:7px;border-radius:4px;background:var(--c-gain)"></span>Synced 14:02</span>' + sep +
           btn('undo', 'Undo · ⌘Z', FN.icon('undo', st.hist.length ? 'var(--c-ink)' : 'var(--c-faint)', 20), false) +
           btn('redo', 'Redo · ⇧⌘Z', FN.icon('redo', st.rhist.length ? 'var(--c-ink)' : 'var(--c-faint)', 20), false) + sep +
@@ -2477,6 +2481,12 @@
               var sv = FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: z, ev: J ? S.measures.ev : true }).total, pv0 = i ? FN.TODAY() - FN.sim({ plan: 'best', kwp: E.eff, cap: sizes[i - 1], ev: J ? S.measures.ev : true }).total : 0;
               return pick('bat', z, st.bat === z, z ? z + ' kWh' : 'None', z ? 'rebate ' + FN.money(FN.rebate(z)) + ' · saves ' + FN.money(sv) + '/yr' : 'saves ' + FN.money(sv) + '/yr', z ? '<span style="font-size:11px;color:' + (z > 14 ? 'var(--c-loss)' : 'var(--c-muted)') + '">+' + FN.money((sv - pv0) / (z - sizes[i - 1])) + '/yr per kWh</span>' : '');
             }).join('') + '</div>' +
+            (function () {
+              var W = sweep(E), cur = E.nRoof, p = W.pts.filter(function (x) { return x.n === cur; })[0] || W.pts[W.pts.length - 1];
+              return '<div style="display:grid;grid-template-columns:110px minmax(0,1fr) 260px;gap:8px;align-items:center"><span style="font-size:12px;font-weight:600">Array size</span>' + sweepSvg(W, cur) +
+                '<span style="display:flex;flex-direction:column;gap:4px;font-size:12px"><input type="range" min="' + W.pts[0].n + '" max="' + W.total + '" value="' + cur + '" data-in="size" aria-label="Modules on the roof" style="width:100%;accent-color:var(--c-sel)"><span><b>' + cur + ' modules · ' + p.kwp.toFixed(2) + ' kWp</b> · the solar saves ' + FN.money(p.save) + '/yr · payback ' + p.pay.toFixed(1) + ' yr</span><span style="color:var(--c-muted)">simulated by open-energy at every size, on the customer’s intervals</span></span></div>';
+            })() +
+            '<div style="display:grid;grid-template-columns:110px repeat(4,minmax(0,1fr));gap:8px;align-items:stretch"><span style="font-size:12px;font-weight:600;align-self:center">Electrification</span>' + FN.ELEC.map(function (x) { return pick('elec', x.k, !!st.elec[x.k], x.name, '$' + FN.n(x.price) + ' · ' + x.sub, '<span style="font-size:11px;color:var(--c-gain)">replaces ' + x.repl + '</span>'); }).join('') + '</div>' +
             '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;padding-top:2px"><span style="color:' + (okRatio ? 'var(--c-gain)' : 'var(--c-loss)') + '">' + (okRatio ? '✓' : '✗') + ' DC/AC ' + ratio.toFixed(2) + '</span><span style="color:var(--c-gain)">✓ battery and inverter compatible (hybrid)</span><span style="color:var(--c-gain)">✓ CEC-listed</span><span style="color:var(--c-gain)">✓ VPP-capable: rebate eligible</span><span style="color:var(--c-muted)">export limit 5 kW · rebate tiers 14 · 28 · 50 kWh</span></div></div>';
         }
         if (st.sheet) {
@@ -2504,6 +2514,7 @@
             '<div style="' + FN.card + ';border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">' + (PO.length ? '<span style="font-size:13px;color:var(--c-muted)">The options of this proposal, on your own bill</span>' + PO.map(function (Q, k) { return '<div style="min-height:72px;border-radius:12px;border:1px solid var(--c-line);background:var(--c-paper2);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px"><span><b style="font-size:15px;font-weight:600">Option ' + 'ABC'[k] + ' · ' + FN.money(Q.total) + '</b><br><span style="font-size:12px;color:var(--c-muted)">' + FN.optLabel(Q) + '</span></span><b style="font-size:15px;font-weight:600;color:var(--c-gain);white-space:nowrap">' + FN.money(Q.save * 0.85) + '–' + FN.money(Q.save * 1.1) + '</b></div>'; }).join('') + '<span style="font-size:12px;color:var(--c-muted)">Add or change options in Proposal; the household signs one.</span></div>' : '<span style="font-size:13px;color:var(--c-muted)">Three layouts, ranked on your own bill</span>' + vs.map(function (x) { var on = curVar === x.v; return '<button type="button" data-a="pvariant" data-v="' + x.v + '" style="min-height:72px;border-radius:12px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);padding:10px 14px;text-align:left;display:flex;justify-content:space-between;align-items:center;font:inherit;cursor:pointer"><span><b style="font-size:15px;font-weight:600">' + x.label + ' · ' + x.e.n + ' modules</b><br><span style="font-size:12px;color:var(--c-muted)">' + x.e.kwp.toFixed(2) + ' kWp · ' + FN.n(x.e.kwh) + ' kWh/yr</span></span><b style="font-size:15px;font-weight:600;color:var(--c-gain)">' + FN.money(x.e.save * 0.85) + '–' + FN.money(x.e.save * 1.1) + '</b></button>'; }).join('') + '</div>') +
             '<div style="' + FN.card + ';border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:var(--c-muted)">You save, a year</span><b style="font-size:38px;font-weight:600;color:var(--c-gain)">' + (st.filled ? FN.money(E.save * 0.85) + '–' + FN.money(E.save * 1.1) : '—') + '</b><span style="font-size:13px;color:var(--c-ink2)">With ' + E.kwp.toFixed(2) + ' kWp and a ' + (st.bat ? st.bat + ' kWh' : 'no') + ' battery.</span><b style="font-size:13px;font-weight:600;margin-top:8px">What it depends on</b><span style="font-size:13px;color:var(--c-ink2)">Sunshine year to year ±8 % · evening use ±10 % · plan prices · ' + (st.chimney ? mods(st).filter(function (m) { return m.shaded; }).length + ' modules in the chimney’s winter shade' : 'no obstacle drawn') + '</span><span style="font-size:11px;color:var(--c-muted);margin-top:auto">Indicative estimate. The signed proposal freezes these numbers with the engine version.</span></div></div></div>'; }
         if (J && st.mode === -1) o += inbox();
+        if (J && st.mode === -0.5) o += needs();
         if (J && st.mode === 3) o += proposal(E);
         return o;
       }
@@ -2523,8 +2534,60 @@
           '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px">' + V.map(function (v) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:4px 0;border-bottom:1px solid var(--c-line2)"><span style="color:' + (v[2] ? 'var(--c-loss)' : 'var(--c-muted)') + '">' + v[0] + '</span><b style="font-weight:600;text-align:right;color:' + (v[2] ? 'var(--c-loss)' : 'var(--c-ink)') + '">' + v[1] + '</b></span>'; }).join('') + '</div></div>';
         return o + '<span style="font-size:13px;color:var(--c-muted);line-height:1.5">You see the place and the needs as totals, never the meter readings, and never another installer’s proposal. The household’s draft design comes with the site.</span></div>';
       }
+      // step 2 of the studio · Needs (D-106): the customer's energy, confirmed or corrected before the roof.
+      // A shared site brings the household's totals; for the installer's own customers the same screen takes a bill,
+      // a NEM12 file, a consent request or a tariff keyed in. The readings stay with open-energy (D-34).
+      function needs() {
+        var P = S.profile, A = S.answers || {}, nd = st.need;
+        var src = nd.nem12 ? ['Measured', 5] : nd.bill ? ['From the bill', 12] : [P.badge, P.unc];
+        var HW = { gas: 'gas storage', elec: 'electric tank', hp: 'heat pump', solar: 'solar' }, HV = { split: 'split AC', ducted: 'ducted AC', gas: 'gas heater', none: 'none' }, CK = { gas: 'gas', elec: 'electric', ind: 'induction' }, PL = { no: 'no pool', pump: 'pump', heated: 'heated pool' };
+        var row = function (k, v, warn) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + k + '</span><b style="font-weight:600;text-align:right;color:' + (warn ? 'var(--c-sunText)' : 'var(--c-ink)') + '">' + v + '</b></span>'; };
+        var add = function (k, t, sub) { var on = !!nd[k]; return '<button type="button" data-a="needAdd" data-v="' + k + '" aria-pressed="' + on + '" style="min-height:58px;padding:6px 12px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-gain)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-paper2)' : 'var(--c-paper)') + ';color:var(--c-ink);text-align:left;display:flex;flex-direction:column;gap:2px;font:inherit;cursor:pointer"><b style="font-size:13px;font-weight:600;color:' + (on ? 'var(--c-gain)' : 'var(--c-ink)') + '">' + (on ? '✓ ' : '+ ') + t + '</b><span style="font-size:11.5px;color:var(--c-muted)">' + sub + '</span></button>'; };
+        var kwh = 15, gas = (A.hw === 'gas' || A.hvac === 'gas' || A.cook === 'gas' || A.pool === 'heated');
+        var o = '<div style="position:absolute;inset:48px 0 0 0;background:var(--c-ground);z-index:8;padding:22px 28px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:24px;font-weight:600">Needs · 14 Wattle Lane</b><span style="font-size:13px;color:var(--c-muted)">What the customer uses today, before the roof · the source sets every range (D-65)</span></div>' +
+          '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:14px;min-height:0">' +
+          '<div style="' + FN.card + ';padding:14px 18px;display:flex;flex-direction:column;gap:2px"><b style="font-size:15px;font-weight:600;margin-bottom:4px">Electricity</b>' +
+            row('Source', src[0] + ' · ±' + src[1] + ' %') + row('Use', kwh + ' kWh a day · ' + FN.n(kwh * 365) + ' kWh a year') + row('Evening peak', '5–9 pm, from the household’s day') + row('Plan today', S.plan || 'Flat Rate') + row('Tariff', nd.tariff ? 'keyed in: 36 c/kWh, 105 c a day' : nd.bill ? 'read from the bill' : 'the plan’s, from the Consumer Data Right') +
+            '<span style="font-size:12px;color:var(--c-muted);margin-top:6px;line-height:1.45">Totals and an average day only: the meter readings stay with open-energy.</span></div>' +
+          '<div style="' + FN.card + ';padding:14px 18px;display:flex;flex-direction:column;gap:2px"><b style="font-size:15px;font-weight:600;margin-bottom:4px">Gas, fuel and appliances</b>' +
+            row('Hot water', HW[A.hw] || 'gas storage', (A.hw || 'gas') === 'gas') + row('Heating and cooling', HV[A.hvac] || 'split AC', A.hvac === 'gas') + row('Cooking', CK[A.cook] || 'gas', (A.cook || 'gas') === 'gas') + row('Pool', PL[A.pool] || 'no pool', A.pool === 'heated') +
+            row('Gas bill', gas || !A.hw ? '$520 a year, split by appliance (D-108)' : 'none') + row('Car', S.measures.ev ? 'petrol, 40 km a day · $2,044 a year' : 'not declared') +
+            '<span style="font-size:12px;color:var(--c-muted);margin-top:6px;line-height:1.45">Declared by the household; tap a line on site to correct it. Gas lines are what electrification can replace.</span></div>' +
+          '<div style="' + FN.card + ';padding:14px 18px;display:flex;flex-direction:column;gap:8px"><b style="font-size:15px;font-weight:600">Narrow it</b>' +
+            add('bill', 'A bill, photo or PDF', 'open-energy reads it; you confirm what it read') + add('nem12', 'A NEM12 file', 'twelve months of intervals: ±5 %') + add('consent', 'Ask the household for its meter data', nd.consent ? 'request sent · it consents from its screen' : 'a consent request, by email') + add('tariff', 'Key in the tariff', 'when nothing reads it') + '</div></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><span style="font-size:13px;color:var(--c-muted);line-height:1.5">For your own customers this step starts empty: the bill, the file or the consent request comes first.</span>' +
+          '<button type="button" data-a="needsOk" style="min-height:46px;padding:0 20px;border-radius:10px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:15px;font-weight:600;cursor:pointer">' + (st.needsOk ? 'Needs confirmed ✓ · Roof ›' : 'Confirm the needs · Roof ›') + '</button></div></div>';
+        return o;
+      }
+      // the array-size sweep (D-107): every size from one string to the full roof, the modules removed in the order of
+      // their yield (shaded first), each priced with its savings and payback; the installer picks one
+      function sweep(E) {
+        var all = mods(st).filter(function (m) { return st.filled && !m.blocked; });
+        var key = [all.length, st.modW, st.inv, st.bat, st.roof, st.variant, st.flatMode, JSON.stringify(st.elec), all.filter(function (m) { return m.shaded; }).length].join('|');
+        if (st.sweepKey === key) return st.sweep;
+        var order = all.slice().sort(function (a, b) { return (b.shaded - a.shaded) || (b.y - a.y); }).map(function (m) { return m.id; });
+        var mod = FN.CAT.modules.filter(function (m) { return m.w === st.modW; })[0], inv = FN.CAT.inverters.filter(function (x) { return x.kw === st.inv; })[0], pts = [];
+        for (var n = Math.min(6, all.length); n <= all.length; n++) {
+          var s2 = {}; for (var k in st) s2[k] = st[k]; s2.removed = order.slice(0, all.length - n); s2.elec = { hw: false, ev: false, ind: false, pool: false };
+          var e = energy(s2), cost = (n * mod.price + inv.price + 1800 + 60 * n) * 1.18 - FN.stcSolar(e.kwp) * FN.STC;
+          pts.push({ n: n, kwp: e.kwp, save: e.save, pay: cost / Math.max(e.save, 1), off: s2.removed });
+        }
+        st.sweepKey = key; st.sweep = { pts: pts, order: order, total: all.length };
+        return st.sweep;
+      }
+      function sweepSvg(W, cur) {
+        var P = W.pts; if (P.length < 2) return '';
+        var w = 420, h = 64, x0 = 30, mx = P[P.length - 1].save, mn = Math.min(0, P[0].save), X = function (i) { return x0 + i / (P.length - 1) * (w - x0 - 8); }, Y = function (v) { return 6 + (1 - (v - mn) / (mx - mn || 1)) * (h - 18); };
+        var lim = 5 / 0.8, li = P.reduce(function (b, p, i) { return Math.abs(p.kwp - lim) < Math.abs(P[b].kwp - lim) ? i : b; }, 0), ci = P.reduce(function (b, p, i) { return p.n === cur ? i : b; }, P.length - 1);
+        return '<svg width="100%" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Savings a year against array size" style="display:block">' +
+          '<line x1="' + X(li) + '" y1="2" x2="' + X(li) + '" y2="' + (h - 12) + '" stroke="var(--c-sunText)" stroke-dasharray="3 3"></line><text x="' + (X(li) - 4) + '" y="10" font-size="9.5" fill="var(--c-sunText)" text-anchor="end">export limit 5 kW</text>' +
+          '<path d="' + P.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.save).toFixed(1); }).join(' ') + '" fill="none" stroke="var(--c-gain)" stroke-width="2"></path>' +
+          '<circle cx="' + X(ci) + '" cy="' + Y(P[ci].save) + '" r="4.5" fill="var(--c-sel)"></circle>' +
+          '<text x="' + x0 + '" y="' + (h - 1) + '" font-size="9.5" fill="var(--c-muted)">' + P[0].n + ' modules</text><text x="' + (w - 8) + '" y="' + (h - 1) + '" font-size="9.5" fill="var(--c-muted)" text-anchor="end">' + P[P.length - 1].n + ' · full roof</text></svg>';
+      }
       function gate(E) {
-        if (S && S.signed) return { k: 'done', l: 'Signed by the household' + (S.options && S.options.length > 1 ? ', option ' + 'ABC'[S.pick] : '') + ' ✓', v: 3 };
+        if (S && S.signed) return { k: 'done', l: 'Signed by the household' + (S.options && S.options.length > 1 ? ', option ' + 'ABC'[S.pick] : '') + ' ✓' + (S.payOpt === 'loan' ? ' · loan to apply for' : S.paid ? ' · deposit paid' : ' · deposit not paid'), v: 3 };
+        if (S && S.cancelled) return { k: 'warn', l: 'Cancelled by the household within the cooling-off period', v: 3 };
         if (S && S.proposal) return { k: 'done', l: 'Proposal sent ✓', v: 3 };
         if (!st.filled) return { k: 'todo', l: 'Fill a face first ›', v: 1 };
         if (!st.eqSeen) return { k: 'todo', l: 'Check the equipment ›', v: 2 };
@@ -2541,7 +2604,7 @@
         if (st.removed.length) notes.push(['Modules', st.removed.length + ' taken off the layout by hand, to clear a vent or a shaded corner', false]);
         notes.push(['Switchboard', 'circuit breakers with room for two more; no upgrade needed', false], ['Meter', 'smart meter, import and export; the network keeps it', false]);
         st.qnotes.forEach(function (i) { notes.push([QNOTES[i][0], QNOTES[i][1], false]); });
-        return FN.offer({ site: S, n: E.n, nRoof: E.nRoof, zok: st.zok.slice(), zones: FN.zonesOk(S, st.zok).map(function (z) { return { k: z.k, n: z.n }; }), kwp: E.kwp, eff: E.eff, kwh: E.kwh, modW: st.modW, inv: st.inv, bat: st.bat, ev: S.measures.ev, hp: S.measures.hp, save: E.save, simKwp: E.kwh / FN.YIELD, rack: st.roof === 'flat' ? rackMode(st) : null, unc: S.profile.unc, badge: S.profile.badge, roof: st.roof, obstacles: obstaclesOf(st), mods: ms.map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h }; }), chimney: st.chimney ? (parseFloat(st.chimH) || 1).toFixed(2) : 0, shaded: ms.filter(function (m) { return m.shaded && st.shade; }).length, notes: notes });
+        return FN.offer({ site: S, n: E.n, nRoof: E.nRoof, zok: st.zok.slice(), zones: FN.zonesOk(S, st.zok).map(function (z) { return { k: z.k, n: z.n }; }), kwp: E.kwp, eff: E.eff, kwh: E.kwh, modW: st.modW, inv: st.inv, bat: st.bat, ev: st.elec.ev, hp: st.elec.hw, ind: st.elec.ind, pool: st.elec.pool, save: E.save, simKwp: E.kwh / FN.YIELD, rack: st.roof === 'flat' ? rackMode(st) : null, unc: S.profile.unc, badge: S.profile.badge, roof: st.roof, obstacles: obstaclesOf(st), mods: ms.map(function (m) { return { x: m.x, y: m.y, w: m.w, h: m.h }; }), chimney: st.chimney ? (parseFloat(st.chimH) || 1).toFixed(2) : 0, shaded: ms.filter(function (m) { return m.shaded && st.shade; }).length, notes: notes });
       }
       function proposal(E) {
         var P = quoteData(E), u = S.profile.unc, sent = !!S.proposal, i = FN.SECTIONS.map(function (x) { return x[0]; }).indexOf(st.qs), seen = Object.keys(st.qseen).length, N = FN.SECTIONS.length;
@@ -2936,6 +2999,10 @@
         else if (a === 'pad') { touch(); st.pad = true; st.fresh = true; }
         else if (a === 'key') { if (v === '✓') { var hv = (parseFloat(st.chimH) || 1).toFixed(2); commit({ pad: false, chimH: hv }, 'Chimney height ' + hv + ' m', { t: 'Chimney ' + hv + ' m', b: 'Winter shade recomputed', c: 'var(--c-loss)', x: 560, y: 250 }); return; } touch(); st.chimH = ((st.fresh ? '' : st.chimH) + v).slice(0, 4); st.fresh = false; }
         else if (a === 'sheet') { touch(); st.sheet = !st.sheet; st.mode = 2; st.eqSeen = true; }
+        else if (a === 'needAdd') { st.need[v] = !st.need[v]; }
+        else if (a === 'needsOk') { st.needsOk = true; st.mode = 1; S.opened = true; if (opts.onChange) opts.onChange(); }
+        else if (a === 'elec') { var el2 = {}; for (var ek in st.elec) el2[ek] = st.elec[ek]; el2[v] = !el2[v]; commit({ elec: el2 }, (el2[v] ? 'Added: ' : 'Removed: ') + FN.ELEC.filter(function (x) { return x.k === v; })[0].name); return; }
+        else if (a === 'size') { var W2 = sweep(energy(st)), pz = W2.pts.filter(function (x) { return x.n === +v; })[0]; if (pz) commit({ removed: pz.off }, 'Array size · ' + v + ' modules'); return; }
         else if (a === 'qs') st.qs = v;
         else if (a === 'qnext' || a === 'qprev') { var ks = FN.SECTIONS.map(function (x) { return x[0]; }), qi = ks.indexOf(st.qs); if (a === 'qnext') { var nx = ks.filter(function (k) { return !st.qseen[k]; })[0]; st.qs = qi < ks.length - 1 ? ks[qi + 1] : nx || st.qs; } else if (qi > 0) st.qs = ks[qi - 1]; }
         else if (a === 'qnote') { var ni = st.qnotes.indexOf(+v); if (ni >= 0) st.qnotes.splice(ni, 1); else st.qnotes.push(+v); }
@@ -2944,7 +3011,7 @@
         else if (a === 'modw') { commit({ modW: +v }, 'Modules ' + v + ' W'); return; }
         else if (a === 'inv') { commit({ inv: +v }, 'Inverter ' + v + ' kW'); return; }
         else if (a === 'mode') { if (J && !S.shared && +v !== -1) return; st.mode = +v; st.present = false; if (+v === 2) st.eqSeen = true; st.sheet = +v === 2; if (J && +v === 1) S.opened = true; }
-        else if (a === 'open') { if (!S.opened) { st.roof = S.roof || 'hip'; if (S.roof === 'flat') { st.flatMode = S.flatMode || null; st.flatRule = S.flatRule || FN.PACK.rule; } st.inv = FN.invFor(S.kwp || 7.04); } if (S.proposal) { st.mode = 3; } else { st.mode = 1; if (!S.opened) st.bat = S.measures.bat ? 13.5 : 0; S.opened = true; } if (opts.onChange) opts.onChange(); }
+        else if (a === 'open') { if (!S.opened) { st.roof = S.roof || 'hip'; if (S.roof === 'flat') { st.flatMode = S.flatMode || null; st.flatRule = S.flatRule || FN.PACK.rule; } st.inv = FN.invFor(S.kwp || 7.04); st.elec.hw = !!S.measures.hp; st.elec.ev = !!S.measures.ev; } if (S.proposal) { st.mode = 3; } else { st.mode = st.needsOk ? 1 : -0.5; if (!S.opened) st.bat = S.measures.bat ? 13.5 : 0; S.opened = true; } if (opts.onChange) opts.onChange(); }
         else if (a === 'send') { if (!S.proposal && st.lastOffer) { S.options = st.qopts.length ? st.qopts.map(function (x) { return x.P; }) : [st.lastOffer]; S.pick = 0; S.proposal = S.options[0]; if (opts.onChange) opts.onChange(); } }
         else if (a === 'qadd') { if (st.lastOffer && st.qopts.length < 3) { var P1 = st.lastOffer; st.qopts.push({ P: P1, key: FN.optLabel(P1) + '|' + Math.round(P1.total) }); } }
         else if (a === 'qdel') { st.qopts.splice(+v, 1); }
@@ -3136,7 +3203,7 @@
     function handed() { return !!S.site && S.site !== 'house'; }
     function reach(i) { for (var k = 0; k < i; k++) if (!done(k)) return false; return i < 4 || !!S.proposal; }
     function P0() { var P = S.proposal; return P ? P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : '') + ' · ' + FN.money(P.total) : ''; }
-    function sync() { S.profile = { badge: badge(), unc: unc() }; S.plan = st.chosen; }
+    function sync() { S.profile = { badge: badge(), unc: unc() }; S.plan = st.chosen; S.answers = st.prof.ans; }
     // step 1 · plan: the horizon of the whole journey, the household's day on each plan, its bill read back, its roof already seen
     var OFFERS = {
       'Flat Rate': { who: 'Retailer A · your retailer', chips: ['36 c/kWh all day', '110 c/day supply'], line: 'Your plan today: every kWh at the same price.', terms: 'no exit fee' },
@@ -3511,12 +3578,34 @@
       var P = S.proposal, u = unc(), ours = FN.TODAY() - FN.sim(opt(S.measures)).total;
       if (!P) return '<div style="position:absolute;inset:12px;' + FN.card + ';border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--c-muted);font-size:15px">Waiting for Installer 1’s proposal: it designs on the installer’s screen.</div>';
       var gap = P.save - ours;
+      function rightCard() { return '<div style="' + FN.card + ';padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto"><span style="font-size:13px;color:var(--c-gain);font-weight:600">Our independent estimate</span><b style="font-size:22px;font-weight:600">' + FN.money(ours * (1 - u / 100)) + '–' + FN.money(ours * (1 + u / 100)) + ' a year</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">Same engine, same bill, same roof as the proposal. ' + (Math.abs(gap) < 60 ? 'The proposal matches it.' : gap > 0 ? 'The proposal saves ' + FN.money(gap) + ' more a year: it changed the system (' + (P.bat ? P.bat + ' kWh battery' : 'no battery') + ', ' + P.n + ' modules).' : 'The proposal saves ' + FN.money(gap) + ' less a year: ' + (P.n < 16 ? 'fewer modules (' + P.n + '), shade from the chimney' : 'a smaller battery or none') + '.') + '</span>' + checks(P) + FN.exportsCard('household') + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">If another installer had sent a proposal, it would sit here too; installers never see each other’s.</span></div></div>'; }
       var o = '<div style="position:absolute;inset:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">';
       // first the three numbers and the right to cancel; the quote itself one short section at a time; signing at the end
       var N = FN.SECTIONS.length, ks = FN.SECTIONS.map(function (x) { return x[0]; }), qi = ks.indexOf(st.qs);
       if (st.qopen) st.qseen[st.qs] = true;
       var seenN = Object.keys(st.qseen).length, allRead = seenN === N;
       var signBtn = '<button type="button" data-a="' + (allRead || S.signed ? 'sign' : 'qopen') + '" style="min-height:46px;border-radius:10px;border:' + (allRead || S.signed ? 'none' : '1px solid var(--c-line)') + ';background:' + (S.signed ? 'var(--c-selSoft)' : allRead ? 'var(--c-live)' : 'var(--c-paper2)') + ';color:' + (S.signed ? 'var(--c-sel)' : allRead ? 'var(--c-onLive)' : 'var(--c-ink)') + ';font:inherit;font-size:15px;font-weight:600;cursor:pointer">' + (S.signed ? 'Signed ✓ · frozen with its engine version' : allRead ? 'Sign' : seenN ? 'Read on to sign · ' + seenN + ' of ' + N : 'Read the quote: ' + N + ' short sections ›') + '</button>';
+      // signing (D-110): the email proven by a one-time code, the terms and the assumptions accepted one by one, the
+      // way to pay chosen (D-112), the name typed; drawing is optional so a keyboard and a screen reader can sign
+      if (!S.signed && st.signing) {
+        var g = st.sg, ok = g.code && g.terms && g.assump && g.name.trim().length > 1, dep = P.total * 0.1;
+        var tick = function (k, on, t) { return '<button type="button" role="checkbox" aria-checked="' + on + '" data-a="sgTick" data-v="' + k + '" style="display:flex;gap:10px;align-items:flex-start;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;font-size:12.5px;line-height:1.4;cursor:pointer"><b style="width:18px;height:18px;flex:none;border-radius:5px;border:1.5px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';display:flex;align-items:center;justify-content:center;color:var(--c-sel);font-size:12px">' + (on ? '✓' : '') + '</b><span>' + t + '</span></button>'; };
+        var payB = function (k, t, sub) { var on = g.pay === k; return '<button type="button" role="radio" aria-checked="' + on + '" data-a="sgPay" data-v="' + k + '" style="text-align:left;padding:8px 10px;border-radius:10px;border:1px solid ' + (on ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (on ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);font:inherit;cursor:pointer"><b style="display:block;font-size:13px;font-weight:600">' + t + '</b><span style="font-size:11.5px;color:var(--c-muted)">' + sub + '</span></button>'; };
+        var lab = function (n, t) { return '<span style="' + FN.kick + ';margin-top:4px">' + n + ' · ' + t + '</span>'; };
+        return o + '<div style="' + FN.card + ';border-color:var(--c-sel);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:auto">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--c-sel);font-weight:600">Sign · Q-2026-0148' + (S.options && S.options.length > 1 ? ' · option ' + 'ABC'[S.pick || 0] : '') + ' · ' + FN.money(P.total) + '</span><button type="button" data-a="sgBack" style="border:none;background:transparent;color:var(--c-muted);font:inherit;font-size:12px;cursor:pointer">‹ Back to the quote</button></div>' +
+          lab(1, 'Your email') + (g.code ? '<span style="font-size:13px;color:var(--c-gain);font-weight:600">✓ Email verified · the proposal is now attached to your account</span>' : '<span style="display:flex;gap:8px;align-items:center;font-size:12.5px"><span style="flex:1;color:var(--c-ink2)">We sent a 6-digit code to h•••@example.com; the link you used works once and expires with the proposal.</span><span style="font-family:var(--mono,monospace);font-size:15px;letter-spacing:.12em;padding:6px 10px;border:1px solid var(--c-line);border-radius:8px">482 913</span><button type="button" data-a="sgCode" style="min-height:36px;padding:0 12px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-size:13px;font-weight:600;cursor:pointer">Verify</button></span>') +
+          lab(2, 'What you accept') + tick('terms', g.terms, 'The terms and warranties of section 9, and that you can cancel within 10 business days.') + tick('assump', g.assump, 'The assumptions behind the savings (section 7): your ' + (P.badge || 'estimated').toLowerCase() + ' profile ±' + (P.unc || 12) + ' %, your new plan, sunshine ±8 % a year.') +
+          lab(3, 'How you pay') + '<div role="radiogroup" aria-label="How you pay" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">' + payB('cash', 'Cash', FN.money(dep) + ' deposit after the cooling-off period, the rest on commissioning') + payB('loan', 'Installer’s green loan', FN.money(FN.monthly(P.total)) + ' a month, 7 years at 7.99 % (illustrative)') + '</div>' +
+          lab(4, 'Your name') + '<input type="text" data-in="sgName" value="' + FN.esc(g.name) + '" placeholder="Type your full name, then press Enter" aria-label="Your full name" style="min-height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-ink);font:inherit;font-size:14px">' +
+          '<span style="font-size:11.5px;color:var(--c-muted)">Typing your name and pressing Sign is your signature; drawing one is optional.</span>' +
+          '<button type="button" data-a="doSign"' + (ok ? '' : ' disabled') + ' style="margin-top:auto;min-height:46px;border-radius:10px;border:none;background:' + (ok ? 'var(--c-live)' : 'var(--c-line2)') + ';color:' + (ok ? 'var(--c-onLive)' : 'var(--c-muted)') + ';font:inherit;font-size:15px;font-weight:600;cursor:' + (ok ? 'pointer' : 'default') + '">' + (ok ? 'Sign' : 'Sign · ' + [g.code, g.terms && g.assump, g.name.trim().length > 1].filter(Boolean).length + ' of 3 done') + '</button></div>' + rightCard();
+      }
+      // once signed: the copy, the payment as its own status, and the right to cancel with its last day (D-110, D-112)
+      if (S.signed) signBtn = '<div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px"><span style="padding:8px 10px;border-radius:10px;background:var(--c-selSoft);color:var(--c-sel);font-weight:600">Signed by ' + FN.esc(S.signedBy || 'you') + ' ✓ · email verified · PDF copy sent · frozen with its engine version</span>' +
+        '<span style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span><span style="color:var(--c-muted)">' + (S.payOpt === 'loan' ? 'Green loan · ' + FN.money(FN.monthly(P.total)) + ' a month · the installer sends the application' : 'Deposit · ' + FN.money(P.total * 0.1)) + '</span></span>' + (S.payOpt === 'loan' ? '<b style="color:var(--c-muted)">application pending</b>' : S.paid ? '<b style="color:var(--c-gain)">Paid ✓ · payment link</b>' : '<button type="button" data-a="payDep" style="min-height:34px;padding:0 12px;border-radius:8px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Pay the deposit ›</button>') + '</span>' +
+        '<button type="button" data-a="sgCancel" style="min-height:38px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:13px;cursor:pointer">Cancel · free until 19 Nov 2026, the last day of the cooling-off period</button></div>';
+      else if (S.cancelled) signBtn = '<span style="font-size:12.5px;color:var(--c-muted);padding:6px 0">You cancelled within the cooling-off period: nothing to pay. You can sign again while the proposal is valid.</span>' + signBtn;
       o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-height:0">';
       if (!st.qopen) {
         // several options: side by side first, money first; the household reads and signs the one it picks (D-71)
@@ -3538,8 +3627,7 @@
           '<div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--c-line2)"><button type="button" data-a="qprev" style="min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;cursor:pointer">‹</button>' +
           (qi < N - 1 ? '<button type="button" data-a="qnext" style="flex:1;min-height:42px;border-radius:10px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-weight:600;cursor:pointer">Next: ' + FN.SECTIONS[qi + 1][1] + ' ›</button>' : '<div style="flex:1;display:flex;flex-direction:column">' + signBtn + '</div>') + '</div>';
       }
-      o += '</div>';
-      o += '<div style="' + FN.card + ';padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto"><span style="font-size:13px;color:var(--c-gain);font-weight:600">Our independent estimate</span><b style="font-size:22px;font-weight:600">' + FN.money(ours * (1 - u / 100)) + '–' + FN.money(ours * (1 + u / 100)) + ' a year</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">Same engine, same bill, same roof as the proposal. ' + (Math.abs(gap) < 60 ? 'The proposal matches it.' : gap > 0 ? 'The proposal saves ' + FN.money(gap) + ' more a year: it changed the system (' + (P.bat ? P.bat + ' kWh battery' : 'no battery') + ', ' + P.n + ' modules).' : 'The proposal saves ' + FN.money(gap) + ' less a year: ' + (P.n < 16 ? 'fewer modules (' + P.n + '), shade from the chimney' : 'a smaller battery or none') + '.') + '</span>' + checks(P) + FN.exportsCard('household') + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">If another installer had sent a proposal, it would sit here too; installers never see each other’s.</span></div></div>';
+      o += '</div>' + rightCard();
       return o;
     }
     function render() {
@@ -3602,7 +3690,15 @@
       else if (a === 'play') { if (timer) { clearInterval(timer); timer = null; } else timer = setInterval(function () { st.hour = (st.hour + 1) % 24; render(); }, 650); }
       else if (a === 'who') st.next = +v;
       else if (a === 'share') { if (!S.shared) { S.shared = true; S.sharedAt = 'today'; } }
-      else if (a === 'sign') { if (S.proposal) { S.signed = true; S.pick = S.pick || 0; } }
+      else if (a === 'sign') { if (S.proposal && !S.signed) { st.signing = true; st.qopen = false; st.sg = st.sg || { code: false, terms: false, assump: false, pay: 'cash', name: '' }; } }
+      else if (a === 'sgBack') st.signing = false;
+      else if (a === 'sgCode') st.sg.code = true;
+      else if (a === 'sgTick') st.sg[v] = !st.sg[v];
+      else if (a === 'sgPay') st.sg.pay = v;
+      else if (a === 'sgName') st.sg.name = v;
+      else if (a === 'doSign') { var g2 = st.sg; if (S.proposal && g2.code && g2.terms && g2.assump && g2.name.trim().length > 1) { S.signed = true; S.cancelled = false; S.paid = false; S.pick = S.pick || 0; S.signedBy = g2.name.trim(); S.payOpt = g2.pay; st.signing = false; } }
+      else if (a === 'payDep') S.paid = true;
+      else if (a === 'sgCancel') { S.signed = false; S.cancelled = true; S.paid = false; st.sg = { code: true, terms: false, assump: false, pay: 'cash', name: '' }; }
       else if (a === 'qopt') { if (S.options && !S.signed) { S.pick = +v; S.proposal = S.options[S.pick]; } }
       else if (a === 'qopen') { st.qopen = true; var ks = FN.SECTIONS.map(function (x) { return x[0]; }); st.qs = ks.filter(function (k) { return !st.qseen[k]; })[0] || st.qs; }
       else if (a === 'qclose') st.qopen = false;
@@ -3618,7 +3714,7 @@
     var EQD = FN.EQD;
     function eqOn(k) { return FN.eqOn(S, k); }
     function wires() { return FN.wires(S); }
-    function checks() { return FN.checks(S); }
+    function siteChecks() { return FN.checks(S); }
     var lay = null, card = null, chips = {}, leads = {}, drag = null, v3 = null;
     function equipLayer() {
       var bx = q('.hh-3d');
@@ -3658,7 +3754,7 @@
     function placeChips() {
       if (!lay) return;
       var T = H.T, cam = H.camNow(), cv = q('.hh-canvas'), look = new T.Vector3(), placed = [], todo = []; cam.getWorldDirection(look); v3 = v3 || new T.Vector3();
-      var bad = {}; checks().forEach(function (c) { if (c.bad) bad[c.k] = true; });
+      var bad = {}; siteChecks().forEach(function (c) { if (c.bad) bad[c.k] = true; });
       var px = function (p) { v3.set(p[0], p[1], p[2]).project(cam); return [(v3.x + 1) / 2 * cv.clientWidth, (1 - v3.y) / 2 * cv.clientHeight]; };
       Object.keys(chips).forEach(function (k) {
         var c = chips[k], L = leads[k], P = S.eqPos[k], d = EQD[k], wl = H.wallsL[P.w], show = st.step === 2 && st.view4 !== 'eq' && !st.top && eqOn(k) && (wl.nx * look.x + wl.nz * look.z < 0.05 || drag === k);
@@ -3676,7 +3772,7 @@
     }
     function equipUpdate() {
       if (!H || !lay) return;
-      var W = wires(), C = checks(), on = st.step === 2 && st.view4 !== 'eq' && W.length > 0;
+      var W = wires(), C = siteChecks(), on = st.step === 2 && st.view4 !== 'eq' && W.length > 0;
       H.setCables(st.step === 2 ? W : []);
       card.style.display = on ? '' : 'none';
       if (on) card.innerHTML = '<b style="font-weight:600;font-size:12px">Cables, estimated along the walls</b>' +
@@ -3737,6 +3833,8 @@
     lines.push([inv.name + ' inverter', 'price list', c.inverter]);
     if (d.bat) lines.push([d.bat + ' kWh battery, LFP, VPP-ready', 'price list', c.battery]);
     if (d.ev) lines.push(['Car charger, 7 kW', 'price list', c.charger]);
+    // the installer's other electrification measures (D-108), from the prototype's catalogue
+    (FN.ELEC || []).forEach(function (x) { if (x.k !== 'ev' && d[x.k === 'hw' ? 'hp' : x.k]) { c[x.k] = x.price * 1.18; lines.push([x.name, 'price list', c[x.k]]); } });
     lines.push(['Installation and design', 'price list', c.install], [stc + ' solar certificates (STC)', 'open-energy', -stc * FN.STC]);
     if (d.bat) lines.push([bc + ' battery certificates', 'open-energy', -FN.rebate(d.bat)]);
     // on racks, FN.sim gets the kWp that gives the variant's own yield (chapter 6)
@@ -3752,6 +3850,8 @@
   };
 
   // an option of a proposal in a few words: the rack layout on a flat roof, the modules, the battery (D-71)
+  // a loan's monthly repayment, standard amortisation (the prototype's illustrative finance product)
+  FN.monthly = function (pv, rate, years) { var r = (rate || 0.0799) / 12, n = (years || 7) * 12; return pv * r / (1 - Math.pow(1 + r, -n)); };
   FN.optLabel = function (P) {
     return (P.rack && FN.RACKS[P.rack] ? FN.RACKS[P.rack].en + ' · ' : '') + P.n + ' × ' + P.modW + ' W · ' + P.kwp.toFixed(2) + ' kWp' + (P.bat ? ' + ' + P.bat + ' kWh' : ', no battery');
   };
@@ -3868,6 +3968,9 @@
         ['Inverter', P.invP.name + ' · HYB-' + P.inv + 'K', '2 MPPT inputs, 80–550 V, max 600 V DC; AS/NZS 4777.2, CSIP-AUS ready', '10-year product'],
         P.bat ? ['Battery', 'LFP ' + P.bat + ' kWh · BAT-' + P.bat, 'usable ' + P.bat + ' kWh, 5 kW, AS/NZS 5139, VPP-capable', '10 years or 70 % capacity'] : null,
         P.ev ? ['Car charger', 'EVC-7 · single phase', '7 kW, solar-follow mode, own RCBO', '3-year product'] : null,
+        P.hp ? ['Hot water', 'HPWH-270 · heat pump', '270 L, runs on the solar surplus; replaces the gas storage heater', '6-year product'] : null,
+        P.ind ? ['Cooktop', 'IND-4 · induction', '7.2 kW, own 32 A circuit; replaces the gas cooktop', '2-year product'] : null,
+        P.pool ? ['Pool', 'PHP-9 · pool heat pump', '9 kW heat, runs on the solar surplus; replaces the gas pool heater', '3-year product'] : null,
         ['Mounting', 'RAIL-A tile kit', 'certified for wind region A, AS/NZS 1170.2' + ((P.zones || []).some(function (z) { return z.k === 'custom'; }) ? '; the custom zone\'s mounting chosen once its surface is checked' : ''), '15-year product'],
         (P.zones || []).some(function (z) { return z.k === 'carport'; }) ? ['Carport', 'CARPORT-1 · steel frame, one bay', 'four posts, 5° pitch, rails for 8 modules; engineered for wind region A, AS/NZS 1170.2', 'builder\'s structural warranty', 'building approval and engineering to come'] : null,
         ['Protection', 'DC isolator, AC isolator, solar main switch', 'per AS/NZS 5033 and AS/NZS 3000', 'covered by workmanship']].filter(Boolean);
@@ -3891,7 +3994,7 @@
       o += '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;padding:8px 0">You pay, GST included<span>' + FN.money(P.total) + '</span></div>';
       if ((P.zones || []).length) o += row('Your zones', P.zones.map(function (z) { return z.n + ' modules on the ' + FN.ZONENAME[z.k]; }).join(', ') + ', confirmed on site and priced at the roof\'s module price, installation counted per module');
       if (P.cost.carport) o += row('Carport structure', 'from our price list, like every line here: a steel single-bay frame with its engineering, from a builder at our usual margin; an illustrative figure in this prototype, confirmed once the council approves the structure');
-      o += row('Solar certificates', 'floor(' + P.kwp.toFixed(2) + ' kWp × 1.382 zone rating × 5 deeming years) = ' + P.stc + ' STCs × $39.90') + (P.bat ? row('Battery certificates', P.bat + ' kWh by tier (full to 14 kWh, 60 % to 28) × factor 6.8 = ' + P.bc + ' × $39.90; factor 5.7 from 1 Jan 2027, so install before then') : '') + row('Who claims', 'we claim the certificates as your agent and take them off the price; you assign them when you sign') + row('Payment', '10 % deposit after the cooling-off period, the rest on commissioning; no payment before the network pre-approval') + row('Extra costs', 'none expected: the switchboard was checked on site and needs no upgrade; any change is quoted and agreed in writing before work');
+      o += row('Solar certificates', 'floor(' + P.kwp.toFixed(2) + ' kWp × 1.382 zone rating × 5 deeming years) = ' + P.stc + ' STCs × $39.90') + (P.bat ? row('Battery certificates', P.bat + ' kWh by tier (full to 14 kWh, 60 % to 28) × factor 6.8 = ' + P.bc + ' × $39.90; factor 5.7 from 1 Jan 2027, so install before then') : '') + row('Who claims', 'we claim the certificates as your agent and take them off the price; you assign them when you sign') + row('Ways to pay', 'cash: a 10 % deposit (' + FN.money(P.total * 0.1) + ') after the cooling-off period, by payment link or bank transfer, the rest on commissioning; or the installer’s green loan: ' + FN.money(FN.monthly(P.total)) + ' a month over 7 years at 7.99 % a year (illustrative; who supplies finance is still open, D-111). No payment before the network pre-approval') + row('Extra costs', 'none expected: the switchboard was checked on site and needs no upgrade; any change is quoted and agreed in writing before work');
     } else if (key === 'terms') {
       o += h('Warranties') + row('Modules', spec.warranty) + row('Inverter', '10-year product') + (P.bat ? row('Battery', '10 years or 70 % of its capacity') : '') + row('Workmanship', '10 years, from us, on top of the product warranties') + row('Claims', 'call us first; we handle the manufacturer, who has an Australian contact');
       o += h('How it happens') + row('Network', 'we apply for pre-approval (about 5–10 business days) and arrange the meter') + row('Installation', 'one day on site, by an SAA-accredited installer') + row('Paperwork', 'electrical safety certificate, design and installer statements to the CER, handover manual') + row('Your data', 'your site and this quote stay in your account; you choose who sees them') + row('Disputes', 'NETCC complaint process, then the energy ombudsman of your state');
