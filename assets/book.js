@@ -6860,6 +6860,166 @@
   new MutationObserver(function () { all('likec4-view').forEach(c4Scheme); })
     .observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   doc.addEventListener('langchange', function () { setTimeout(drawC4, 0); });
+  /* ---------- vocabulary: the current tool's terms beside the product's (design/vocabulary) ---------- */
+  // The build writes one table per context (vocabulary.py); without the script it reads as is.
+  // Here each table row becomes a term of a browser: a search, three views (by context, false
+  // friends, to decide), a short list, and the chosen term's card. The block's Enlarge button
+  // (50-blocks.js) gives it the window. A link to #v-xxx-nn opens that term.
+  var VT = {
+    en: { ctx: 'By context', ff: 'False friends', todo: 'To decide', search: 'A term of the current tool, or a reference: budget, retailer, V-SIT-17',
+      none: 'No term matches.', copy: 'Copy link', copied: 'Link copied', where: 'In the current tool', book: 'Defined in the book',
+      code: "In the product's repositories", action: 'To decide', list: 'Terms', ffw: 'False friend', of: 'of',
+      st: { same: 'same', renamed: 'renamed', split: 'split', merged: 'merged', 'changed meaning': 'changed meaning', dropped: 'dropped', missing: 'missing' } },
+    fr: { ctx: 'Par contexte', ff: 'Faux amis', todo: 'À décider', search: "Un terme de l'outil actuel, ou une référence : budget, retailer, V-SIT-17",
+      none: 'Aucun terme ne correspond.', copy: 'Copier le lien', copied: 'Lien copié', where: "Dans l'outil actuel", book: 'Défini dans le livre',
+      code: 'Dans les dépôts du produit', action: 'À décider', list: 'Termes', ffw: 'Faux ami', of: 'sur',
+      st: { same: 'identique', renamed: 'renommé', split: 'scindé', merged: 'fusionné', 'changed meaning': 'sens changé', dropped: 'abandonné', missing: 'manquant' } }
+  };
+  function vEsc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  all('figure.bk-vocab').forEach(function (fig) {
+    var ui = fig.querySelector('.bk-vocab-ui');
+    if (!ui) return;
+    var lang = fig.getAttribute('data-lang') === 'fr' ? 'fr' : 'en', t = VT[lang];
+    var ctxs = [], terms = [];
+    all('section.v-ctx', fig).forEach(function (sec) {
+      var c = { id: sec.getAttribute('data-ctx'), name: sec.getAttribute('data-name'), n: 0 };
+      ctxs.push(c);
+      all('tr[data-id]', sec).forEach(function (tr) {
+        var cell = function (k) { return tr.querySelector('.v-' + k); };
+        var cur = cell('cur').cloneNode(true), where = cur.querySelector('.v-where');
+        if (where) where.remove();
+        var nw = cell('new').cloneNode(true), note = nw.querySelector('.v-note');
+        if (note) note.remove();
+        var act = tr.querySelector('.v-act-id');
+        terms.push({
+          id: tr.getAttribute('data-id'), ctx: c, status: tr.getAttribute('data-status'), ff: tr.hasAttribute('data-ff'),
+          action: tr.getAttribute('data-action') || '', curHtml: cur.innerHTML, curText: cur.textContent,
+          where: where ? where.textContent : '', newHtml: nw.innerHTML, newText: nw.textContent,
+          noteHtml: note ? note.innerHTML : '', book: cell('book').innerHTML, code: cell('code').innerHTML,
+          actTitle: act ? act.getAttribute('data-title') || '' : '',
+          who: tr.querySelector('.v-act-who') ? tr.querySelector('.v-act-who').textContent : ''
+        });
+        c.n += 1;
+      });
+    });
+    if (!terms.length) return;
+    var nff = terms.filter(function (x) { return x.ff; }).length, ntodo = terms.filter(function (x) { return x.action; }).length;
+    var state = { view: 'ctx', ctx: ctxs[0].id, q: '', sel: null };
+    ui.innerHTML =
+      '<div class="v-tabs" role="tablist">' +
+        '<button type="button" role="tab" data-v="ctx">' + t.ctx + '</button>' +
+        '<button type="button" role="tab" data-v="ff">' + t.ff + ' <small>' + nff + '</small></button>' +
+        '<button type="button" role="tab" data-v="todo">' + t.todo + ' <small>' + ntodo + '</small></button></div>' +
+      '<label class="v-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="' + vEsc(t.search) + '" aria-label="' + vEsc(t.search) + '"></label>' +
+      '<div class="v-chips" role="group"></div>' +
+      '<div class="v-body"><div class="v-list" role="listbox" aria-label="' + t.list + '"></div><div class="v-card" aria-live="polite"></div></div>';
+    fig.classList.add('bk-vocab-on');
+    var tabs = all('.v-tabs button', ui), input = ui.querySelector('input'), chips = ui.querySelector('.v-chips');
+    var list = ui.querySelector('.v-list'), card = ui.querySelector('.v-card');
+    chips.innerHTML = ctxs.map(function (c) {
+      return '<button type="button" data-c="' + vEsc(c.id) + '">' + vEsc(c.name) + ' <small>' + c.n + '</small></button>';
+    }).join('');
+    var chipBtns = all('button', chips);
+
+    function shown() {
+      var q = state.q.toLowerCase();
+      return terms.filter(function (x) {
+        if (q) return (x.id + ' ' + x.curText + ' ' + x.newText + ' ' + x.where).toLowerCase().indexOf(q) >= 0;
+        if (state.view === 'ff') return x.ff;
+        if (state.view === 'todo') return !!x.action;
+        return x.ctx.id === state.ctx;
+      });
+    }
+    function badge(x) { return '<span class="v-badge v-s-' + x.status.replace(/ /g, '-') + '">' + (t.st[x.status] || x.status) + '</span>'; }
+    function paintCard(x) {
+      if (!x) { card.innerHTML = ''; return; }
+      var url = location.href.split('#')[0] + '#' + x.id.toLowerCase();
+      card.innerHTML =
+        '<div class="v-card-h"><span class="v-ref">' + x.id + '</span>' +
+          '<button type="button" class="v-copy" data-url="' + vEsc(url) + '">' + t.copy + '</button>' + badge(x) + '</div>' +
+        '<p class="v-card-ctx">' + vEsc(x.ctx.name) + '</p>' +
+        '<p class="v-card-cur">' + x.curHtml + '</p>' +
+        '<p class="v-card-new">→ ' + x.newHtml + '</p>' +
+        (x.noteHtml ? '<p class="v-card-note' + (x.ff ? ' v-ff' : '') + '">' + (x.ff ? '<b>' + t.ffw + '.</b> ' : '') + x.noteHtml.replace(/^⚠\s*/, '') + '</p>' : '') +
+        '<dl><dt>' + t.book + '</dt><dd>' + x.book + '</dd>' +
+        '<dt>' + t.where + '</dt><dd><code>' + vEsc(x.where) + '</code></dd>' +
+        '<dt>' + t.code + '</dt><dd>' + x.code + '</dd>' +
+        (x.action ? '<dt>' + t.action + '</dt><dd class="v-card-act"><span class="v-ref">' + x.action + '</span> ' + vEsc(x.actTitle) +
+          ' <span class="v-who">' + vEsc(x.who) + '</span></dd>' : '') + '</dl>';
+      all('.cx', card).forEach(function (m) { m.setAttribute('role', 'button'); m.setAttribute('tabindex', '0'); });
+    }
+    function paint() {
+      tabs.forEach(function (b) {
+        var on = !state.q && b.getAttribute('data-v') === state.view;
+        b.setAttribute('aria-selected', String(on)); b.classList.toggle('on', on);
+      });
+      chips.hidden = !!state.q || state.view !== 'ctx';
+      chipBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-c') === state.ctx)); });
+      var rows = shown();
+      if (!state.q && state.view === 'todo' && !state.sel) state.sel = rows.slice().sort(function (a, b) { return a.action < b.action ? -1 : a.action > b.action ? 1 : terms.indexOf(a) - terms.indexOf(b); })[0] || null;
+      if (!rows.some(function (x) { return x === state.sel; })) state.sel = rows[0] || null;
+      var grouped = !state.q && state.view === 'todo', last = null;
+      if (grouped) rows = rows.slice().sort(function (a, b) { return a.action < b.action ? -1 : a.action > b.action ? 1 : terms.indexOf(a) - terms.indexOf(b); });
+      list.innerHTML = rows.length ? rows.map(function (x, i) {
+        var head = '';
+        if (grouped && x.action !== last) {
+          last = x.action;
+          head = '<p class="v-group"><span class="v-ref">' + x.action + '</span>' + vEsc(x.actTitle) + ' <small>' + vEsc(x.who) + '</small></p>';
+        }
+        return head + '<button type="button" role="option" data-i="' + terms.indexOf(x) + '" aria-selected="' + (x === state.sel) + '">' +
+          '<span class="v-dot v-s-' + x.status.replace(/ /g, '-') + '" title="' + vEsc(t.st[x.status] || x.status) + '"></span>' +
+          '<span class="v-li"><span class="v-ref">' + x.id + '</span> <span class="v-li-cur">' + vEsc(x.curText) + '</span>' +
+          '<span class="v-li-new">→ ' + vEsc(x.newText) + '</span></span>' +
+          (x.ff ? '<span class="v-ffi" title="' + t.ffw + '">⚠</span>' : '') + '</button>';
+      }).join('') : '<p class="v-empty">' + t.none + '</p>';
+      paintCard(state.sel);
+    }
+    function select(x, scroll) {
+      state.sel = x; paint();
+      var b = list.querySelector('[aria-selected="true"]');
+      if (b && scroll) b.scrollIntoView({ block: 'nearest' });
+    }
+    tabs.forEach(function (b) {
+      b.addEventListener('click', function () { state.view = b.getAttribute('data-v'); state.q = ''; input.value = ''; state.sel = null; paint(); });
+    });
+    chipBtns.forEach(function (b) {
+      b.addEventListener('click', function () { state.ctx = b.getAttribute('data-c'); state.sel = null; paint(); });
+    });
+    input.addEventListener('input', function () { state.q = input.value.trim(); state.sel = null; paint(); });
+    list.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-i]');
+      if (b) select(terms[+b.getAttribute('data-i')]);
+    });
+    list.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      var rows = all('button[data-i]', list).map(function (b) { return terms[+b.getAttribute('data-i')]; }), i = rows.indexOf(state.sel);
+      var j = Math.max(0, Math.min(rows.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
+      e.preventDefault(); select(rows[j], true);
+      var b = list.querySelector('[aria-selected="true"]'); if (b) b.focus();
+    });
+    card.addEventListener('click', function (e) {
+      var b = e.target.closest('.v-copy');
+      if (!b) return;
+      var url = b.getAttribute('data-url');
+      var done = function () { b.textContent = t.copied; setTimeout(function () { b.textContent = t.copy; }, 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, done); else done();
+      try { history.replaceState(null, '', '#' + url.split('#')[1]); } catch (err) {}
+    });
+    function fromHash() {
+      var h = decodeURIComponent(location.hash.slice(1)).replace(/-fr$/, '').toUpperCase();
+      var x = terms.filter(function (y) { return y.id === h; })[0];
+      if (!x) return false;
+      state.view = 'ctx'; state.ctx = x.ctx.id; state.q = ''; input.value = '';
+      select(x, true);
+      return true;
+    }
+    paint();
+    if (fromHash() && fig.closest('[lang]') && fig.closest('[lang]').getAttribute('lang') === (window.courseLang || 'en')) {
+      setTimeout(function () { fig.scrollIntoView({ block: 'start' }); }, 0);
+    }
+    window.addEventListener('hashchange', fromHash);
+  });
+
   /* ---------- actions: late due dates, owner filter on the board ---------- */
   var today = new Date().toISOString().slice(0, 10);
   all('.bk-tk-due[data-due]').forEach(function (d) { if (d.getAttribute('data-due') < today) d.classList.add('bk-late'); });
