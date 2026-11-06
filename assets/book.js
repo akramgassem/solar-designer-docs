@@ -6572,6 +6572,264 @@
     w.on(['pvw', 'bat', 'esc', 'fit', 'r', 'rate', 'yrs'], draw);
     draw();
   });
+  /* ---------- widget of chapter 15: from bills to load profile ----------
+     Replays engines/load_profile.py on the whole year from figures/15-load-profile/widgetdata.json
+     (temperature and PV per UTC hour, priors, the household's bills, the truth): the A5 shape,
+     the degree-hour raw profile, kappa, the one-scalar fit, the range of section 7 and the
+     curtailment iteration of Part E are the engine's formulas, line for line. It lets the reader
+     move the priors and the solar defaults of the calibration annex. This is the book's teaching
+     replay: the product computes in backend crates. */
+  // LPW-BEGIN (engines/widgets15.py checks this block against the engine with node)
+  var LPW = (function () {
+    var PARAMS = ['rho_h', 'rho_c', 't_h', 't_c', 'omega'];
+    var SEASON = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 0];     // Jan..Dec: summer, autumn, winter, spring
+    function sum(a, i0, i1) { var s = 0; for (var i = i0 || 0, n = i1 === undefined ? a.length : i1; i < n; i++) s += a[i]; return s; }
+    function shape(blocks, shares, normalise) {            // A5: piecewise constant, 3-slot moving average
+      var flat = [], j, sm = [];
+      for (j = 0; j < 48; j++) flat.push(0);
+      blocks.forEach(function (b, i) { for (var k = b[0]; k < b[1]; k++) flat[k] = normalise ? shares[i] / (b[1] - b[0]) : shares[i]; });
+      for (j = 0; j < 48; j++) sm.push((flat[(j + 47) % 48] + flat[j] + flat[(j + 1) % 48]) / 3);
+      if (normalise) { var s = sum(sm); sm = sm.map(function (v) { return v / s; }); }
+      return sm;
+    }
+    function evening(shares, m) {                          // the 16-21 h base block times m, the others rescaled
+      var s3 = shares[3], r = (1 - m * s3) / (1 - s3);
+      return shares.map(function (v, i) { return i === 3 ? v * m : v * r; });
+    }
+    function grid(D) {                                     // the local slots of the year, daylight saving included
+      var day = [], j = [], tau = [], start = [];
+      D.days.forEach(function (d, n) {
+        start.push(day.length);
+        var js = D.special[String(n)];
+        if (!js) { js = []; for (var k = 0; k < 48; k++) js.push(k); }
+        js.forEach(function (x) { day.push(n); j.push(x); tau.push(d[1]); });
+      });
+      start.push(day.length);
+      return { day: day, j: j, tau: tau, start: start, n: day.length };
+    }
+    function shapes(D, m) {
+      var tb = function (t) { return shape(D.blocks, evening(D.base[t], m), true); };
+      return { base: [tb('weekday'), tb('weekend')], heat: [shape(D.blocks, D.heat.weekday, false), shape(D.blocks, D.heat.weekend, false)],
+        cool: [shape(D.blocks, D.cool.weekday, false), shape(D.blocks, D.cool.weekend, false)] };
+    }
+    function components(D, G, S, p) {                      // base(k), HD(k) a_h(j), CD(k) a_c(j)
+      var base = [], hd = [], cd = [], n, k;
+      var norm = [];
+      for (n = 0; n < D.days.length; n++) {
+        var cnt = {}, sd = 0, t = D.days[n][1];
+        for (k = G.start[n]; k < G.start[n + 1]; k++) cnt[G.j[k]] = (cnt[G.j[k]] || 0) + 1;
+        Object.keys(cnt).forEach(function (x) { sd += S.base[t][+x]; });
+        norm.push({ cnt: cnt, sd: sd });
+      }
+      for (k = 0; k < G.n; k++) {
+        var tt = G.tau[k], jj = G.j[k], T = D.temp[(k + 1) >> 1], nm = norm[G.day[k]];
+        base.push((tt ? p.omega : 1) * S.base[tt][jj] / nm.cnt[jj] / nm.sd);
+        hd.push(Math.max(0, p.t_h - T) * S.heat[tt][jj]);
+        cd.push(Math.max(0, T - p.t_c) * S.cool[tt][jj]);
+      }
+      return { base: base, hd: hd, cd: cd };
+    }
+    function model(D, G, S, p) {                           // section 5.3: the scales, then the raw parts
+      var C = components(D, G, S, p), rb = sum(C.base), rh = sum(C.hd), rc = sum(C.cd), rhob = 1 - p.rho_h - p.rho_c;
+      var kh = p.rho_h && rh ? p.rho_h / rhob * rb / rh : 0, kc = p.rho_c && rc ? p.rho_c / rhob * rb / rc : 0;
+      var h = C.hd.map(function (v) { return kh * v; }), c = C.cd.map(function (v) { return kc * v; });
+      return { b: C.base, h: h, c: c, kh: kh, kc: kc, r: sum(C.base) + sum(h) + sum(c) };
+    }
+    function rawSum(M, G, bl) { var a = G.start[bl[0]], z = G.start[bl[1]]; return sum(M.b, a, z) + sum(M.h, a, z) + sum(M.c, a, z); }
+    function fit(M, G, bills) {                            // section 5.4: one scalar
+      var num = 0, den = 0;
+      bills.forEach(function (bl) { num += bl[2]; });
+      bills.forEach(function (bl) { den += rawSum(M, G, bl); });
+      return num / den;
+    }
+    function covers(bills, ndays) {
+      var seen = {}, c = 0;
+      bills.forEach(function (bl) { for (var n = bl[0]; n < bl[1]; n++) if (!seen[n]) { seen[n] = 1; c++; } });
+      return c === ndays;
+    }
+    function annual(D, G, S, p, bills) { var M = model(D, G, S, p); return fit(M, G, bills) * M.r; }
+    function generate(D, G, S, p, bands, bills) {          // Part A with its range and level
+      var M = model(D, G, S, p), e = fit(M, G, bills), A = e * M.r, terms = {};
+      PARAMS.forEach(function (name) {
+        var vals = bands.map(function (b) { var q = Object.assign({}, p); q[name] = b[name]; return annual(D, G, S, q, bills); });
+        terms[name] = [Math.min(A, vals[0], vals[1]), Math.max(A, vals[0], vals[1])];
+      });
+      var wb = 0, tb = 0;
+      bills.forEach(function (bl) { var a = G.start[bl[0]], z = G.start[bl[1]]; wb += sum(M.h, a, z) + sum(M.c, a, z); });
+      bills.forEach(function (bl) { tb += rawSum(M, G, bl); });
+      var full = covers(bills, D.days.length), dw = full ? 0 : D.eps.weather * wb / tb;
+      var lo = A - Math.sqrt(PARAMS.reduce(function (s, n) { return s + Math.pow(A - terms[n][0], 2); }, 0) + Math.pow(A * dw, 2));
+      var hi = A + Math.sqrt(PARAMS.reduce(function (s, n) { return s + Math.pow(terms[n][1] - A, 2); }, 0) + Math.pow(A * dw, 2));
+      if (full) lo = hi = A;
+      var seasons = {};
+      bills.forEach(function (bl) { for (var n = bl[0]; n < bl[1]; n++) seasons[SEASON[D.days[n][0] - 1]] = 1; });
+      var level = full ? 3 : bills.length >= 2 && Object.keys(seasons).length >= 2 ? 2 : 1;
+      var months = [], k;
+      for (k = 0; k < 12; k++) months.push({ base: 0, heat: 0, cool: 0 });
+      for (k = 0; k < G.n; k++) { var m = months[D.days[G.day[k]][0] - 1]; m.base += e * M.b[k]; m.heat += e * M.h[k]; m.cool += e * M.c[k]; }
+      return { M: M, e: e, annual: A, lo: lo, hi: hi, terms: terms, dw: dw, level: level, full: full, months: months };
+    }
+    function pvSlots(D, G, o) {                            // pv-sim on the slot grid: losses, shading, the inverter cap
+      var s = D.pv[String(o.tilt)], f = (1 - o.loss) * (1 - o.shade) / D.pvwatts, cap = o.ratio ? D.kwp / o.ratio * D.dt : Infinity, out = [];
+      if (o.pvwatts) f = 1;
+      for (var k = 0; k < G.n; k++) out.push(Math.min(s[(k + 1) >> 1] * D.kwp * f, cap));
+      return out;
+    }
+    function net(e, pv, lim) { var n = e - pv, imp = Math.max(0, n), x0 = Math.max(0, -n), x = lim === null ? x0 : Math.min(x0, lim * 0.5); return [imp, x, x0 - x]; }
+    function site(D, G, S, p, bands, bills, sb, lim, pv, o) {   // Part E: bills of a solar home to gross load
+      var Sb = bills.map(function (bl) { return sum(pv, G.start[bl[0]], G.start[bl[1]]); });
+      var C = bills.map(function () { return 0; }), hist = [], prof = null, L = null, sim = null;
+      for (var pass = 0; pass < o.passes; pass++) {
+        L = bills.map(function (bl, i) { return sb[i][0] - sb[i][1] + Sb[i] - C[i]; });
+        var gb = [];
+        bills.forEach(function (bl, i) { if (L[i] > 0) gb.push([bl[0], bl[1], L[i]]); });
+        if (!gb.length) return { error: 'NoValidBills' };
+        prof = generate(D, G, S, p, bands, gb);
+        sim = bills.map(function () { return [0, 0, 0]; });
+        bills.forEach(function (bl, i) {
+          for (var k = G.start[bl[0]]; k < G.start[bl[1]]; k++) {
+            var r = net(prof.e * (prof.M.b[k] + prof.M.h[k] + prof.M.c[k]), pv[k], lim);
+            sim[i][0] += r[0]; sim[i][1] += r[1]; sim[i][2] += r[2];
+          }
+        });
+        var Cn = sim.map(function (x) { return x[2]; });
+        var Ln = bills.map(function (bl, i) { return sb[i][0] - sb[i][1] + Sb[i] - Cn[i]; });
+        var change = 0; L.forEach(function (x, i) { change = Math.max(change, Math.abs(Ln[i] - x) / x); });
+        hist.push(change);
+        C = Cn;
+        if (change < 0.005) break;
+      }
+      var epsS = Math.sqrt(D.eps.pv * D.eps.pv + (o.declared ? 0 : D.eps.cfg * D.eps.cfg));
+      var dpv = epsS * (sum(Sb) - sum(C)) / sum(L), A = prof.annual;
+      return { prof: prof, A: A, lo: A - Math.sqrt(Math.pow(A - prof.lo, 2) + Math.pow(A * dpv, 2)),
+        hi: A + Math.sqrt(Math.pow(prof.hi - A, 2) + Math.pow(A * dpv, 2)), curt: sum(C), pv: sum(pv),
+        passes: hist.length, converged: hist[hist.length - 1] < 0.005, dpv: dpv };
+    }
+    return { PARAMS: PARAMS, grid: grid, shapes: shapes, generate: generate, pvSlots: pvSlots, site: site, sum: sum };
+  })();
+  // LPW-END
+
+  /* 15.13 your turn: move the priors and the solar defaults, see the estimate against the truth */
+  cwWidget('load-profile', function (w) {
+    var D = w.data; if (!D) return;
+    var F = w.F, G = LPW.grid(D), T0 = D.priors.typ;
+    var PRE = {
+      chapter: { rho_h: T0.rho_h, rho_c: T0.rho_c, t_h: T0.t_h, t_c: T0.t_c, omega: T0.omega, eve: 1, ratio: 1, passes: 5, tilt: '22', loss: 'pvwatts' },
+      owner: { rho_h: T0.rho_h, rho_c: T0.rho_c, t_h: 18, t_c: 24, omega: T0.omega, eve: 1, ratio: 1.33, passes: 5, tilt: '30', loss: '11' }
+    };
+    var st = { preset: 'chapter', bills: 'winter', solar: 'none', tilt: '22', loss: 'pvwatts' };
+    var names = { rho_h: ['heating share ρ_h', 'part du chauffage ρ_h'], rho_c: ['cooling share ρ_c', 'part de la climatisation ρ_c'],
+      t_h: ['threshold T_h', 'seuil T_h'], t_c: ['threshold T_c', 'seuil T_c'], omega: ['weekend ratio ω', 'ratio week-end ω'] };
+    w.mount(cwSeg(w, 'preset', [['chapter', 'Chapter priors', 'Hypothèses du chapitre'], ['owner', 'Candidate values (A-42)', 'Valeurs candidates (A-42)']], 'chapter') +
+      cwSeg(w, 'bills', [['winter', 'Winter bill', 'Facture d’hiver'], ['summer', 'Summer bill', 'Facture d’été'], ['two', 'Summer and winter', 'Été et hiver'], ['four', 'Four quarters', 'Quatre trimestres']], 'winter') +
+      w.controls([
+        w.slider('rho_h', 'Heating share ρ_h', 'Part du chauffage ρ_h', 0, 0.3, 0.01, T0.rho_h),
+        w.slider('rho_c', 'Cooling share ρ_c', 'Part de la climatisation ρ_c', 0, 0.2, 0.01, T0.rho_c),
+        w.slider('t_h', 'Heating below T_h', 'Chauffage sous T_h', 12, 21, 0.5, T0.t_h),
+        w.slider('t_c', 'Cooling above T_c', 'Climatisation au-dessus de T_c', 20, 30, 0.5, T0.t_c),
+        w.slider('omega', 'Weekend ratio ω', 'Ratio week-end ω', 0.9, 1.4, 0.01, T0.omega),
+        w.slider('eve', 'Evening base block (16–21 h) ×', 'Bloc de base du soir (16–21 h) ×', 0.6, 1.4, 0.05, 1)
+      ]) +
+      cwSeg(w, 'solar', [['none', 'No PV', 'Sans PV'], ['1.5', '6.6 kWp, 1.5 kW limit', '6,6 kWc, limite 1,5 kW'], ['none-lim', '6.6 kWp, no limit', '6,6 kWc, sans limite'], ['0', '6.6 kWp, zero export', '6,6 kWc, injection nulle']], 'none') +
+      cwSeg(w, 'tilt', [['22', 'Tilt 22°, declared', 'Pente 22°, déclarée'], ['30', 'Tilt 30°, default', 'Pente 30°, par défaut']], '22') +
+      cwSeg(w, 'loss', [['pvwatts', 'Losses 14 % (PVWatts, 3 % shading inside)', 'Pertes 14 % (PVWatts, dont 3 % d’ombrage)'], ['11', '11 % + 3 % shading', '11 % + 3 % d’ombrage'], ['14', '14 % + 3 % shading', '14 % + 3 % d’ombrage']], 'pvwatts') +
+      w.controls([
+        w.slider('ratio', 'DC-to-AC ratio', 'Ratio DC/AC', 1, 1.5, 0.01, 1),
+        w.slider('passes', 'Curtailment passes, at most', 'Passes d’écrêtage, au plus', 5, 12, 1, 5)
+      ]) +
+      cwSvg('0 0 700 330', w.t('Monthly gross load fitted to the bills against the household’s truth, and the annual estimate with its range', 'Consommation brute mensuelle calée sur les factures face à la vérité du foyer, et l’estimation annuelle avec sa fourchette'), '<g data-k="g"></g>') +
+      '<div class="bk-cw-cols">' + w.readout([
+        ['a', 'Annual estimate', 'Estimation annuelle'], ['r', '80 % range, level', 'Fourchette à 80 %, niveau'],
+        ['err', 'Error against the truth', 'Erreur face à la vérité'], ['top', 'Largest terms of the range', 'Plus grands termes de la fourchette']
+      ]) + w.readout([
+        ['k', 'κ_h / κ_c, per degree-hour', 'κ_h / κ_c, par degré-heure'], ['cm', 'Seasonal index, July / January', 'Indice saisonnier, juillet / janvier'],
+        ['pv', 'PV assumed over the year', 'PV supposé sur l’année'], ['cu', 'Curtailed: estimated / true, passes', 'Écrêté : estimé / vrai, passes']
+      ]) + '</div><p class="bk-cw-flag" data-k="flag" style="display:none"></p>');
+    var g = w.$('g'), keys = ['rho_h', 'rho_c', 't_h', 't_c', 'omega', 'eve', 'ratio', 'passes'];
+    var BILLS = { winter: [2], summer: [0], two: [0, 2], four: [0, 1, 2, 3] };
+    function setSeg(key, v) {
+      st[key] = v;
+      var el = w.out.querySelector('[data-group="' + key + '"]');
+      all('button', el).forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-v') === v ? 'true' : 'false'); });
+    }
+    var last = 'chapter';
+    function draw() {
+      if (st.preset !== last) {
+        last = st.preset;
+        var P = PRE[st.preset];
+        keys.forEach(function (k) { w.$(k).value = P[k]; });
+        setSeg('tilt', P.tilt); setSeg('loss', P.loss);
+      }
+      var p = {}; LPW.PARAMS.forEach(function (n) { p[n] = w.val(n); });
+      var off = function (b) { var q = {}; LPW.PARAMS.forEach(function (n) { q[n] = p[n] + D.priors[b][n] - T0[n]; if (n.slice(0, 3) === 'rho') q[n] = Math.max(0, q[n]); }); return q; };
+      var bands = [off('lo'), off('hi')], eve = w.val('eve'), ratio = w.val('ratio'), passes = w.val('passes');
+      w.set('rho_hv', F(p.rho_h * 100, 0) + w.t('%', ' %')); w.set('rho_cv', F(p.rho_c * 100, 0) + w.t('%', ' %'));
+      w.set('t_hv', F(p.t_h, 1) + ' °C'); w.set('t_cv', F(p.t_c, 1) + ' °C'); w.set('omegav', F(p.omega, 2));
+      w.set('evev', F(eve, 2)); w.set('ratiov', F(ratio, 2)); w.set('passesv', String(passes));
+      var flag = w.$('flag');
+      if (p.t_h >= p.t_c) { flag.style.display = ''; flag.className = 'bk-cw-flag bad'; flag.textContent = w.t('T_h must stay below T_c: heating and cooling would both run between them.', 'T_h doit rester sous T_c : chauffage et climatisation tourneraient tous deux entre les deux.'); g.innerHTML = ''; return; }
+      var S = LPW.shapes(D, eve), idx = BILLS[st.bills], R, sol = st.solar !== 'none';
+      var bills = idx.map(function (i) { return D.bills[i]; });
+      if (sol) {
+        var lk = st.solar === 'none-lim' ? 'none' : st.solar, lim = lk === 'none' ? null : +lk;
+        var pv = LPW.pvSlots(D, G, { tilt: st.tilt, pvwatts: st.loss === 'pvwatts', loss: st.loss === '11' ? 0.11 : 0.14, shade: 0.03, ratio: ratio });
+        var sb = idx.map(function (i) { return D.solar[lk][i]; });
+        R = LPW.site(D, G, S, p, bands, bills, sb, lim, pv, { passes: passes, declared: st.tilt === '22' });
+        if (R.error) { flag.style.display = ''; flag.className = 'bk-cw-flag bad'; flag.textContent = w.t('Every bill drops to zero or below: NoValidBills. The declared system contradicts the bills.', 'Chaque facture tombe à zéro ou moins : NoValidBills. L’installation déclarée contredit les factures.'); g.innerHTML = ''; return; }
+        R.trueCurt = D.truth.curtail[lk];
+      } else {
+        var Q = LPW.generate(D, G, S, p, bands, bills);
+        R = { prof: Q, A: Q.annual, lo: Q.lo, hi: Q.hi };
+      }
+      var Q2 = R.prof;
+      if (sol && !R.converged) { flag.style.display = ''; flag.className = 'bk-cw-flag bad'; flag.textContent = w.t('The curtailment has not converged in ' + passes + ' passes: curtail_nonconverged, level −1.', 'L’écrêtage n’a pas convergé en ' + passes + ' passes : curtail_nonconverged, niveau −1.'); }
+      else flag.style.display = 'none';
+      // the months, then the annual line
+      var ox = 60, oy = 200, cw = 600, ch = 170, ymax = 900, bw = cw / 12, out = '', MON = w.t('JFMAMJJASOND', 'JFMAMJJASOND');
+      var Y = function (v) { return oy - Math.min(v, ymax) / ymax * ch; };
+      for (var v = 0; v <= ymax; v += 300) out += '<line class="grid" x1="' + ox + '" y1="' + Y(v) + '" x2="' + (ox + cw) + '" y2="' + Y(v) + '"/><text class="s" x="' + (ox - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + cwInt(w, v) + '</text>';
+      out += '<text class="s" x="' + (ox - 50) + '" y="20">' + w.t('kWh per month', 'kWh par mois') + '</text>';
+      Q2.months.forEach(function (m, i) {
+        var x = ox + i * bw + bw * 0.18, y0 = oy;
+        [[m.base, 'f-gr'], [m.heat, 'f-bt'], [m.cool, 'f-ex']].forEach(function (q) { if (q[0] > 0) { var y = Y(q[0]) - (oy - y0); out += '<rect class="' + q[1] + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (bw * 0.64).toFixed(1) + '" height="' + (y0 - y).toFixed(1) + '"/>'; y0 = y; } });
+        var ty = Y(D.truth.monthly[i]);
+        out += '<line class="k-load" x1="' + (x - 3).toFixed(1) + '" y1="' + ty.toFixed(1) + '" x2="' + (x + bw * 0.64 + 3).toFixed(1) + '" y2="' + ty.toFixed(1) + '"/>';
+        out += '<text class="s" x="' + (ox + (i + 0.5) * bw).toFixed(1) + '" y="' + (oy + 16) + '" text-anchor="middle">' + MON[i] + '</text>';
+      });
+      idx.forEach(function (i) { var bl = D.bills[i], m0 = D.days[bl[0]][0] - 1, m1 = D.days[bl[1] - 1][0]; out += '<line class="k-pv" x1="' + (ox + m0 * bw + 2) + '" y1="' + (oy + 24) + '" x2="' + (ox + m1 * bw - 2) + '" y2="' + (oy + 24) + '"/>'; });
+      var ax0 = 2000, ax1 = 9000, X = function (v) { return ox + (Math.max(ax0, Math.min(ax1, v)) - ax0) / (ax1 - ax0) * cw; }, ly = 268;
+      for (v = ax0; v <= ax1; v += 1000) out += '<text class="s" x="' + X(v).toFixed(1) + '" y="' + (ly + 26) + '" text-anchor="middle">' + cwInt(w, v) + '</text>';
+      out += '<rect class="f-ex" x="' + X(R.lo).toFixed(1) + '" y="' + (ly - 6) + '" width="' + Math.max(2, X(R.hi) - X(R.lo)).toFixed(1) + '" height="12"/>';
+      out += '<circle class="ahb" cx="' + X(R.A).toFixed(1) + '" cy="' + ly + '" r="6"/>';
+      out += '<line class="k-load" x1="' + X(D.truth.annual).toFixed(1) + '" y1="' + (ly - 14) + '" x2="' + X(D.truth.annual).toFixed(1) + '" y2="' + (ly + 14) + '"/>';
+      out += '<text class="s" x="' + (ox - 50) + '" y="' + (ly + 4) + '">' + w.t('year', 'année') + '</text>';
+      var kx = 60;
+      [['rect', 'f-gr', w.t('base', 'base')], ['rect', 'f-bt', w.t('heating', 'chauffage')], ['rect', 'f-ex', w.t('cooling; range', 'climatisation ; fourchette')],
+        ['line', 'k-load', w.t('the truth', 'la vérité')], ['line', 'k-pv', w.t('billed', 'facturé')]].forEach(function (it) {
+        out += it[0] === 'line' ? '<line class="' + it[1] + '" x1="' + kx + '" y1="318" x2="' + (kx + 18) + '" y2="318"/>'
+          : '<rect class="' + it[1] + '" x="' + kx + '" y="312" width="14" height="12"/>';
+        out += '<text class="s" x="' + (kx + 22) + '" y="322">' + it[2] + '</text>';
+        kx += 30 + it[2].length * 6.2;
+      });
+      g.innerHTML = out;
+      w.set('a', cwInt(w, R.A) + ' kWh');
+      w.set('r', cwInt(w, R.lo) + ' – ' + cwInt(w, R.hi) + ' kWh, L' + Math.max(0, Q2.level - (sol && !R.converged ? 1 : 0)));
+      var err = R.A / D.truth.annual - 1;
+      w.set('err', (err >= 0 ? '+' : '−') + F(Math.abs(err) * 100, 1) + w.t('%', ' %'));
+      var tops = LPW.PARAMS.map(function (n) { return [n, Q2.terms[n][1] - Q2.terms[n][0]]; }).sort(function (a, b) { return b[1] - a[1]; });
+      w.set('top', Q2.full ? w.t('none: the year is billed', 'aucun : l’année est facturée') : tops.slice(0, 2).map(function (t) { return w.t(names[t[0]][0], names[t[0]][1]) + ' ±' + cwInt(w, t[1] / 2); }).join(', '));
+      w.set('k', F(Q2.M.kh * 1000, 2) + ' / ' + F(Q2.M.kc * 1000, 2) + ' × 10⁻³');
+      var am = Q2.annual / 365, cm = function (i, n) { var m = Q2.months[i]; return (m.base + m.heat + m.cool) / n / am; };
+      w.set('cm', F(cm(6, 31), 2) + ' / ' + F(cm(0, 31), 2));
+      w.set('pv', sol ? cwInt(w, R.pv) + ' kWh' : '—');
+      w.set('cu', sol ? cwInt(w, R.curt) + ' / ' + cwInt(w, R.trueCurt) + ' kWh, ' + R.passes : '—');
+    }
+    var queued = 0;
+    function later() { if (!queued) queued = requestAnimationFrame(function () { queued = 0; draw(); }); }
+    cwGroups(w, st, draw);
+    w.on(keys, later);
+    draw();
+  });
 
   /* ---------- architecture views: LikeC4's web component (```likec4, blocks.py) ---------- */
   // The bundle (assets/c4/likec4.js, from `mise run c4`) holds the model and defines
