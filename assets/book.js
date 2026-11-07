@@ -6719,14 +6719,14 @@
     };
     var st = { preset: 'chapter', bills: 'winter', solar: 'none', tilt: '22', loss: 'pvwatts' };
     var names = { rho_h: ['heating share ρ_h', 'part du chauffage ρ_h'], rho_c: ['cooling share ρ_c', 'part de la climatisation ρ_c'],
-      t_h: ['threshold T_h', 'seuil T_h'], t_c: ['threshold T_c', 'seuil T_c'], omega: ['weekend ratio ω', 'ratio week-end ω'] };
+      t_h: ['threshold T_heat', 'seuil T_heat'], t_c: ['threshold T_cool', 'seuil T_cool'], omega: ['weekend ratio ω', 'ratio week-end ω'] };
     w.mount(cwSeg(w, 'preset', [['chapter', 'Chapter priors', 'Hypothèses du chapitre'], ['owner', 'Candidate values (A-42)', 'Valeurs candidates (A-42)']], 'chapter') +
       cwSeg(w, 'bills', [['winter', 'Winter bill', 'Facture d’hiver'], ['summer', 'Summer bill', 'Facture d’été'], ['two', 'Summer and winter', 'Été et hiver'], ['four', 'Four quarters', 'Quatre trimestres']], 'winter') +
       w.controls([
         w.slider('rho_h', 'Heating share ρ_h', 'Part du chauffage ρ_h', 0, 0.3, 0.01, T0.rho_h),
         w.slider('rho_c', 'Cooling share ρ_c', 'Part de la climatisation ρ_c', 0, 0.2, 0.01, T0.rho_c),
-        w.slider('t_h', 'Heating below T_h', 'Chauffage sous T_h', 12, 21, 0.5, T0.t_h),
-        w.slider('t_c', 'Cooling above T_c', 'Climatisation au-dessus de T_c', 20, 30, 0.5, T0.t_c),
+        w.slider('t_h', 'Heating below T_heat', 'Chauffage sous T_heat', 12, 21, 0.5, T0.t_h),
+        w.slider('t_c', 'Cooling above T_cool', 'Climatisation au-dessus de T_cool', 20, 30, 0.5, T0.t_c),
         w.slider('omega', 'Weekend ratio ω', 'Ratio week-end ω', 0.9, 1.4, 0.01, T0.omega),
         w.slider('eve', 'Evening base block (16–21 h) ×', 'Bloc de base du soir (16–21 h) ×', 0.6, 1.4, 0.05, 1)
       ]) +
@@ -6742,7 +6742,7 @@
         ['a', 'Annual estimate', 'Estimation annuelle'], ['r', '80 % range, level', 'Fourchette à 80 %, niveau'],
         ['err', 'Error against the truth', 'Erreur face à la vérité'], ['top', 'Largest terms of the range', 'Plus grands termes de la fourchette']
       ]) + w.readout([
-        ['k', 'κ_h / κ_c, per degree-hour', 'κ_h / κ_c, par degré-heure'], ['cm', 'Seasonal index, July / January', 'Indice saisonnier, juillet / janvier'],
+        ['k', 'κ_h / κ_c, per °C per slot', 'κ_h / κ_c, par °C et par créneau'], ['cm', 'Seasonal index, July / January', 'Indice saisonnier, juillet / janvier'],
         ['pv', 'PV assumed over the year', 'PV supposé sur l’année'], ['cu', 'Curtailed: estimated / true, passes', 'Écrêté : estimé / vrai, passes']
       ]) + '</div><p class="bk-cw-flag" data-k="flag" style="display:none"></p>');
     var g = w.$('g'), keys = ['rho_h', 'rho_c', 't_h', 't_c', 'omega', 'eve', 'ratio', 'passes'];
@@ -6767,7 +6767,7 @@
       w.set('t_hv', F(p.t_h, 1) + ' °C'); w.set('t_cv', F(p.t_c, 1) + ' °C'); w.set('omegav', F(p.omega, 2));
       w.set('evev', F(eve, 2)); w.set('ratiov', F(ratio, 2)); w.set('passesv', String(passes));
       var flag = w.$('flag');
-      if (p.t_h >= p.t_c) { flag.style.display = ''; flag.className = 'bk-cw-flag bad'; flag.textContent = w.t('T_h must stay below T_c: heating and cooling would both run between them.', 'T_h doit rester sous T_c : chauffage et climatisation tourneraient tous deux entre les deux.'); g.innerHTML = ''; return; }
+      if (p.t_h >= p.t_c) { flag.style.display = ''; flag.className = 'bk-cw-flag bad'; flag.textContent = w.t('T_heat must stay below T_cool: heating and cooling would both run between them.', 'T_heat doit rester sous T_cool : chauffage et climatisation tourneraient tous deux entre les deux.'); g.innerHTML = ''; return; }
       var S = LPW.shapes(D, eve), idx = BILLS[st.bills], R, sol = st.solar !== 'none';
       var bills = idx.map(function (i) { return D.bills[i]; });
       if (sol) {
