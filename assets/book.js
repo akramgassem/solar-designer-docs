@@ -2647,7 +2647,7 @@
         if (S.measures.bat) w.push('battery'); if (S.measures.ev) w.push('car'); if (S.measures.hp) w.push('heat pump');
         o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:16px 18px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 190px;gap:16px;align-items:center">' +
           '<span style="display:flex;flex-direction:column;gap:4px"><b style="font-size:17px;font-weight:600">14 Wattle Lane, Marrickville</b><span style="font-size:13px;color:var(--c-muted)">Shared with you by name · consent given ' + S.sharedAt + '</span></span>' +
-          '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">' + (S.site && S.site !== 'house' ? 'Site' : 'Roof') + '</span><b style="font-weight:600">' + (S.site && S.site !== 'house' ? { units: 'Apartment building', business: 'Business site', carpark: 'Car park', other: 'Another site' }[S.site] + ' · to design' : '3 faces drawn · default pitch') + '</b></span>' +
+          '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">' + (S.site && S.site !== 'house' ? 'Site' : 'Roof') + '</span><b style="font-weight:600">' + (S.site && S.site !== 'house' ? { units: 'Apartment building', business: 'Commercial or industrial building', carpark: 'Car park', other: 'Farm or land' }[S.site] + ' · to design' : '3 faces drawn · default pitch') + '</b></span>' +
           '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">Needs</span><b style="font-weight:600">15 kWh a day · ' + P.badge + ' (±' + P.unc + ' %)</b></span>' +
           '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">Wants</span><b style="font-weight:600">solar' + (w.length ? ' + ' + w.join(' + ') : '') + ' · plan ' + (S.plan || 'Flat Rate') + '</b></span>' +
           '<button type="button" data-a="open" style="min-height:44px;padding:0 16px;border-radius:10px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:14px;font-weight:600;cursor:pointer">' + (S.signed ? 'Signed ✓' : S.proposal ? 'Proposal sent' : 'Open in studio') + '</button></div>';
@@ -3526,9 +3526,9 @@
     var SITES = [
       ['house', 'House', 'A home on its own lot', 'M6 22 V13 L20 5 L34 13 V22 Z M16 22 V16 H24 V22'],
       ['units', 'Apartment or units', 'A building with several homes', 'M8 22 V6 H32 V22 Z M13 10 H17 M23 10 H27 M13 15 H17 M23 15 H27 M18 22 V19 H22 V22'],
-      ['business', 'Shop, office or farm', 'A business site', 'M4 22 V12 L12 8 V12 L20 8 V12 L28 8 V12 L36 8 V22 Z'],
+      ['business', 'Commercial or industrial building', 'A shop, an office, a factory, a warehouse', 'M4 22 V12 L12 8 V12 L20 8 V12 L28 8 V12 L36 8 V22 Z'],
       ['carpark', 'Car park', 'Canopies over the bays', 'M4 10 L36 7 M6 9.8 V22 M34 7.2 V22 M10 17 H18 V21 H10 Z M22 17 H30 V21 H22 Z'],
-      ['other', 'Something else', 'A shed, a pool house, land', 'M8 22 V12 L20 6 L32 12 V22 Z M20 14 V16 M20 18.5 V19']
+      ['other', 'Farm or land', 'A farm, land, a shed or a pool house', 'M8 22 V12 L20 6 L32 12 V22 Z M20 14 V16 M20 18.5 V19']
     ];
     var HAND = {
       units: 'A building with several homes: the roof is shared and the body corporate approves. An installer surveys it and designs it with you.',
