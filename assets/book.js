@@ -2647,7 +2647,7 @@
         if (S.measures.bat) w.push('battery'); if (S.measures.ev) w.push('car'); if (S.measures.hp) w.push('heat pump');
         o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:16px 18px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 190px;gap:16px;align-items:center">' +
           '<span style="display:flex;flex-direction:column;gap:4px"><b style="font-size:17px;font-weight:600">14 Wattle Lane, Marrickville</b><span style="font-size:13px;color:var(--c-muted)">Shared with you by name · consent given ' + S.sharedAt + '</span></span>' +
-          '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">' + (S.site && S.site !== 'house' ? 'Site' : 'Roof') + '</span><b style="font-weight:600">' + (S.site && S.site !== 'house' ? { units: 'Apartment building', business: 'Business site', carpark: 'Car park', other: 'Another site' }[S.site] + ' · to design' : '3 faces confirmed · LiDAR 0.91') + '</b></span>' +
+          '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">' + (S.site && S.site !== 'house' ? 'Site' : 'Roof') + '</span><b style="font-weight:600">' + (S.site && S.site !== 'house' ? { units: 'Apartment building', business: 'Business site', carpark: 'Car park', other: 'Another site' }[S.site] + ' · to design' : '3 faces drawn · default pitch') + '</b></span>' +
           '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">Needs</span><b style="font-weight:600">15 kWh a day · ' + P.badge + ' (±' + P.unc + ' %)</b></span>' +
           '<span style="display:flex;flex-direction:column;gap:3px;font-size:13px"><span style="color:var(--c-muted)">Wants</span><b style="font-weight:600">solar' + (w.length ? ' + ' + w.join(' + ') : '') + ' · plan ' + (S.plan || 'Flat Rate') + '</b></span>' +
           '<button type="button" data-a="open" style="min-height:44px;padding:0 16px;border-radius:10px;border:none;background:var(--c-live);color:var(--c-onLive);font:inherit;font-size:14px;font-weight:600;cursor:pointer">' + (S.signed ? 'Signed ✓' : S.proposal ? 'Proposal sent' : 'Open in studio') + '</button></div>';
@@ -3296,7 +3296,7 @@
   /* the household's screen: one app, six steps that carry their data forward */
   FN.household = function (el, S, changed) {
     var STEPS = ['Your energy', 'Your roof', 'Next move', 'Share', 'Proposal'];
-    var st = { qs: 'cover', qseen: {}, qopen: false, step: 0, chosen: '', prof: { meter: false, bill: false, ans: {}, q: false, consent: false, busy: '' }, conf: { N: false, W: false, E: false }, tool: 'confirm', preview: false, siteSel: 'house', hour: 15, top: false, next: 1, max: 0, seen: false, bell: false }, H = null, timer = null, tBusy = null;
+    var st = { qs: 'cover', qseen: {}, qopen: false, step: 0, chosen: '', prof: { meter: false, bill: false, ans: {}, q: false, consent: false, busy: '' }, conf: { N: false, W: false, E: false }, pts: [], msg: '', pitch: {}, tool: 'confirm', preview: false, siteSel: 'house', hour: 15, top: false, next: 1, max: 0, seen: false, bell: false }, H = null, timer = null, tBusy = null;
     el.innerHTML = '<div style="width:1180px;height:820px;box-sizing:border-box;background:var(--c-ground);color:var(--c-ink);position:relative;overflow:hidden"><div class="hh-top"></div><div class="hh-prog" style="position:absolute;left:12px;right:12px;top:60px;height:84px"></div><div class="hh-body" style="position:absolute;left:0;right:0;top:144px;bottom:64px"></div>' +
       '<div class="hh-3d" style="position:absolute;left:384px;top:190px;width:784px;height:486px;display:none;overflow:hidden;border-radius:14px 14px 0 0;background:var(--c-canvas)"><canvas class="hh-canvas" width="784" height="486" aria-label="Your home in 3D: drag to turn around it" style="width:784px;height:486px;display:block;touch-action:none;cursor:grab"></canvas></div>' +
       '<div class="hh-note"></div><div class="hh-foot" style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c-paper);border-top:1px solid var(--c-line);display:flex;align-items:center;gap:12px;padding:0 16px"></div></div>';
@@ -3349,7 +3349,7 @@
       var bestPlan = ['Simple Saver', 'Time of Use Saver'].sort(function (a, b) { return cost(a) - cost(b); })[0];
       if (!st.chosen) return { t: 'Switch to ' + bestPlan, g: '−' + FN.money(cost('Flat Rate') - cost(bestPlan)) + ' a year', e: '2 minutes, nothing to install', why: 'every kWh costs 5 c less, and nothing changes at home', act: 'plan', v: bestPlan, lab: 'Choose it' };
       if (!known() && s === 0) return { t: 'Add your bill', g: 'your own ranking, ±12 % instead of ±30 %', e: 'one photo', why: 'plans are priced on when you use energy, and only your bill or meter knows', act: 'src', v: 'bill', lab: 'Add a photo' };
-      if (!S.measures.solar) return { t: 'Your roof', g: 'about −' + FN.money(seg('solar').d) + ' a year', e: '3 touches', why: Math.round(share(7, 17) / 15 * 100) + ' % of your use falls when the sun shines, and your ' + (S.roof === 'flat' ? 'roof' : 'north face') + ' takes ' + fillOf().n + ' modules', act: s === 1 ? '' : 'go', v: 1, lab: 'Go there ›', here: 'confirm the faces, then fill the north face' };
+      if (!S.measures.solar) return { t: 'Your roof', g: 'about −' + FN.money(seg('solar').d) + ' a year', e: '3 touches', why: Math.round(share(7, 17) / 15 * 100) + ' % of your use falls when the sun shines, and your ' + (S.roof === 'flat' ? 'roof' : 'north face') + ' takes ' + fillOf().n + ' modules', act: s === 1 ? '' : 'go', v: 1, lab: 'Go there ›', here: 'draw the faces on the imagery, then fill the north face' };
       var left = ['bat', 'ev', 'hp'].filter(function (k) { return !S.measures[k]; }).map(function (k) { var d = seg(k).d; return { k: k, d: d, pay: d > 0 ? INFO[k][2] / d : 99 }; }).filter(function (m) { return m.pay < 15; }).sort(function (a, b) { return a.pay - b.pay; });
       if (left.length && !S.shared) {
         var m = left[0], why = { bat: share(17, 23).toFixed(1) + ' kWh of your day falls between 5 and 11 pm, after the sun', ev: 'your petrol costs about $2,044 a year, and the car would charge at noon on your own solar', hp: 'your gas hot water costs $520 a year; a heat pump heats it at noon on solar' }[m.k];
@@ -3538,7 +3538,7 @@
     };
     function siteOf(k) { return SITES.filter(function (x) { return x[0] === k; })[0]; }
     function lotSvg(hi) {
-      // our drawing of the lot, not a photo: the boundary from the cadastre, the roof from LiDAR, the street
+      // our drawing of the lot, not a photo: the boundary from the cadastre, the roof faces as the household draws them (D-119), the street
       return '<svg width="100%" height="100%" viewBox="150 60 740 560" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your site from our drawing">' + FN.draw.defs() +
         '<rect x="150" y="60" width="740" height="560" fill="url(#sd-grid-dots)"></rect><rect x="150" y="560" width="740" height="60" fill="var(--c-line)" opacity=".7"></rect>' +
         '<rect x="200" y="96" width="650" height="456" fill="' + (hi ? 'var(--c-selSoft)' : 'var(--c-paper)') + '" stroke="var(--c-sel)" stroke-width="2" stroke-dasharray="10 6"></rect>' +
@@ -3577,11 +3577,70 @@
       };
       var btn = function (a, v, t) { return '<button type="button" data-a="' + a + '" data-v="' + v + '" style="min-width:28px;min-height:28px;border-radius:8px;border:1px solid var(--c-line);background:var(--c-paper2);color:var(--c-ink);font:inherit;font-size:13px;cursor:pointer">' + t + '</button>'; };
       var o = '<span style="font-size:12px;color:var(--c-muted);margin-top:4px">Zones on your site</span>' +
-        row(S.roof === 'flat' ? 'Flat roof' : 'North face', fillOf().n, 'measured from LiDAR, confirmed by you', 'var(--c-gain)', '') +
+        row(S.roof === 'flat' ? 'Flat roof' : 'North face', fillOf().n, 'drawn by you, default pitch', 'var(--c-gain)', '') +
         (S.zones || []).map(function (z, i) { var Z = ZONES[z.k]; return row(Z.name, z.n, Z.why, 'var(--c-sunText)', (z.k === 'custom' ? btn('zoneN', i + '|-1', '−') + btn('zoneN', i + '|1', '+') : '') + btn('zoneDel', i, '×')); }).join('') +
         '<span style="display:flex;gap:6px">' + Object.keys(ZONES).filter(function (k) { return k === 'custom' || !hasZone(k); }).map(function (k) { return '<button type="button" data-a="zoneAdd" data-v="' + k + '" style="flex:1;min-height:36px;border-radius:8px;border:1px dashed var(--c-sel);background:transparent;color:var(--c-sel);font:inherit;font-size:12px;cursor:pointer">+ ' + (k === 'custom' ? 'Custom zone' : 'Carport') + '</button>'; }).join('') + '</span>' +
         '<span style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:8px 10px;border-radius:8px;background:var(--c-selSoft);font-size:13px"><span>Site total, every zone<br><span style="font-size:11.5px;color:var(--c-sel)">' + cat[1] + '</span></span><b style="font-weight:600;white-space:nowrap">' + modsOf() + ' · ' + kw.toFixed(2) + ' kWp</b></span>';
       return o;
+    }
+    // tracing on the imagery (D-119): the household clicks the corners of each face and closes the
+    // outline on its first corner. The imagery is a stand-in drawn by the prototype, not a photo; a click
+    // near a corner the roof shows snaps to it, as an editor snaps to the edges it sees [I]. A closed
+    // outline that follows one face draws that face, with the roof type's default pitch.
+    var SNAP = 24;
+    function cornersOf(R) {
+      var seen = {}, out = [];
+      Object.keys(R.faces).forEach(function (k) { (R.faces[k].match(/-?\d+(\.\d+)?/g) || []).map(Number).forEach(function (n, i, a) { if (i % 2) return; var key = a[i] + ',' + a[i + 1]; if (!seen[key]) { seen[key] = 1; out.push([a[i], a[i + 1], key]); } }); });
+      return out;
+    }
+    function faceKeys(R, k) { var n = (R.faces[k].match(/-?\d+(\.\d+)?/g) || []).map(Number), s = []; for (var i = 0; i < n.length; i += 2) s.push(n[i] + ',' + n[i + 1]); return s.sort().join('|'); }
+    function traceAt(e) {
+      var svg = e.target.closest('svg'), R = FN.ROOFS[S.roof || 'hip'];
+      if (!svg || !svg.getScreenCTM()) return;
+      var pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      var m = pt.matrixTransform(svg.getScreenCTM().inverse()), x = m.x, y = m.y, P = st.pts;
+      st.msg = '';
+      if (P.length >= 3 && Math.hypot(x - P[0][0], y - P[0][1]) <= SNAP) { closeTrace(R); return; }
+      var best = null, bd = SNAP;
+      cornersOf(R).forEach(function (c) { var d = Math.hypot(x - c[0], y - c[1]); if (d <= bd) { bd = d; best = c; } });
+      var q2 = best ? [best[0], best[1], best[2]] : [Math.round(x), Math.round(y), ''];
+      if (P.some(function (o) { return o[2] && o[2] === q2[2]; })) return;
+      P.push(q2);
+    }
+    function closeTrace(R) {
+      var keys = st.pts.map(function (o) { return o[2]; }), sig = keys.slice().sort().join('|');
+      var hit = keys.every(Boolean) ? Object.keys(R.faces).filter(function (k) { return faceKeys(R, k) === sig; })[0] : '';
+      if (hit && !st.conf[hit]) st.conf[hit] = true;
+      else st.msg = hit ? 'That face is already drawn.' : 'That outline does not follow one face: click its corners, one after the other, and close it on the first.';
+      st.pts = [];
+    }
+    function roofLayer(R, all3) {
+      var faces = Object.keys(R.faces), tracing = !all3 && st.tool === 'confirm';
+      if (!tracing) return faces.map(function (k) { var pv = R.pv.indexOf(k) >= 0, c = st.conf[k]; return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : k === 'S' ? 'var(--c-roofS)' : 'var(--c-roof)') : 'var(--c-line)') + '" stroke="var(--c-roofLine)" stroke-width="1.1" style="cursor:pointer"' + (pv ? '' : ' opacity=".8"') + '></path><path d="' + R.faces[k] + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" pointer-events="none"></path>'; }).join('');
+      // the imagery: the roof as seen from above, each face lit by its orientation, a tree's shade, no outline
+      var tone = { N: '#9A8F86', S: '#6F6862', W: '#857B73', E: '#8C827A' };
+      var o = '<g pointer-events="none"><circle cx="196" cy="560" r="58" fill="#5F7A57" opacity=".55"></circle><circle cx="214" cy="574" r="44" fill="#1D2026" opacity=".12"></circle>' +
+        faces.map(function (k) { return '<path d="' + R.faces[k] + '" fill="' + tone[k] + '"></path><path d="' + R.faces[k] + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" opacity=".6"></path>'; }).join('') + '</g>';
+      // what is already drawn, over the imagery
+      o += faces.filter(function (k) { return st.conf[k]; }).map(function (k) { return '<path d="' + R.faces[k] + '" fill="' + (k === 'N' ? 'var(--c-roofN)' : k === 'S' ? 'var(--c-roofS)' : 'var(--c-roof)') + '" fill-opacity=".85" stroke="var(--c-sel)" stroke-width="2" pointer-events="none"></path>'; }).join('');
+      // the surface that takes the clicks, then the outline being traced
+      o += '<rect data-a="trace" x="150" y="110" width="740" height="2000" fill="transparent" style="cursor:crosshair"></rect>';
+      var P = st.pts;
+      if (P.length) {
+        o += '<polyline points="' + P.map(function (q2) { return q2[0] + ',' + q2[1]; }).join(' ') + '" fill="none" stroke="var(--c-sel)" stroke-width="2.5" stroke-dasharray="7 5" pointer-events="none"></polyline>' +
+          P.map(function (q2, i) { return '<circle cx="' + q2[0] + '" cy="' + q2[1] + '" r="' + (i ? 6 : 10) + '" fill="' + (i ? 'var(--c-sel)' : 'var(--c-paper)') + '" stroke="var(--c-sel)" stroke-width="2.5" pointer-events="none"></circle>'; }).join('');
+      }
+      return o;
+    }
+    // the pitch each face carries: the roof type's default until the household changes it (D-119); the
+    // prototype's yield reads the default only [I]
+    function pitchOf(k, R) { return st.pitch[k] === undefined ? R.pitch : st.pitch[k]; }
+    function traceControls(R, all3) {
+      if (all3 || st.tool !== 'confirm') return '';
+      var b = function (a, label, on) { return '<button type="button" data-a="' + a + '"' + (on ? '' : ' disabled') + ' style="flex:1;min-height:40px;border-radius:9px;border:1px solid var(--c-line);background:var(--c-paper2);color:' + (on ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;font-size:13px;cursor:pointer">' + label + '</button>'; };
+      return (st.msg ? '<span style="font-size:12.5px;color:var(--c-warn, var(--c-ink2));line-height:1.45">' + st.msg + '</span>' : '') +
+        '<span style="font-size:12.5px;color:var(--c-ink2)">' + (st.pts.length ? st.pts.length + (st.pts.length > 1 ? ' corners' : ' corner') + (st.pts.length >= 3 ? ' · click the first to close' : '') : 'No outline in progress') + '</span>' +
+        '<div style="display:flex;gap:8px">' + b('traceUndo', 'Undo corner', st.pts.length > 0) + b('traceClear', 'Start the face again', st.pts.length > 0) + '</div>';
     }
     function stepRoof() {
       if (!S.site) return sitePick();
@@ -3591,14 +3650,14 @@
       // the blocks beside the roof's (a garage) in plan, 40 px a metre; the drawing grows to show them
       var HB = FN.home(S).D.bodies, vbH = Math.max(480, 356 + 40 * Math.max.apply(null, HB.map(function (b) { return b[3]; })) + 34 - 110);
       var garages = HB.filter(function (b) { return b[5] !== 'main'; }).map(function (b) { var x = 518 + b[0] * 40, y = 356 + b[1] * 40, w = (b[2] - b[0]) * 40, h = (b[3] - b[1]) * 40; return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="var(--c-roof)" stroke="var(--c-roofLine)" stroke-width="1.1" stroke-dasharray="8 5"></rect><text x="' + (x + w / 2) + '" y="' + (y + h / 2 + 5) + '" text-anchor="middle" font-size="15" fill="var(--c-muted)">Garage · flat roof</text>'; }).join('');
-      var o = '<div style="position:absolute;left:12px;top:12px;bottom:12px;width:80px;' + FN.card + ';display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px" role="toolbar">' + [['confirm', 'Confirm', false], ['fill', 'Fill zone', !all3]].map(function (t) { var on = st.tool === t[0]; return '<button type="button" data-a="tool" data-v="' + t[0] + '"' + (t[2] ? ' disabled' : '') + ' style="width:64px;min-height:64px;border:none;border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (t[2] ? 'var(--c-faint)' : on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;font:inherit;cursor:pointer">' + FN.icon(t[0]) + '<span style="font-size:11px">' + t[1] + '</span></button>'; }).join('') + '</div>';
-      o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 ' + vbH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + FN.draw.defs() + '<rect x="150" y="110" width="740" height="' + vbH + '" fill="url(#sd-grid-dots)"></rect><rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".13"></rect>' + garages + Object.keys(R.faces).map(function (k) { var pv = R.pv.indexOf(k) >= 0, c = pv && st.conf[k], hi = pv && !c; return '<path data-a="face" data-v="' + k + '" d="' + R.faces[k] + '" fill="' + (c ? (k === 'N' ? 'var(--c-roofN)' : 'var(--c-roof)') : k === 'S' ? 'var(--c-roofS)' : 'var(--c-selSoft)') + '" stroke="' + (hi ? 'var(--c-sel)' : 'var(--c-roofLine)') + '" stroke-width="' + (hi ? 2.5 : 1.1) + '" style="cursor:pointer"></path><path d="' + R.faces[k] + '" fill="url(#sd-hatch-' + (k === 'W' || k === 'E' ? 'v' : 'h') + ')" pointer-events="none"></path>'; }).join('') +
+      var o = '<div style="position:absolute;left:12px;top:12px;bottom:12px;width:80px;' + FN.card + ';display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px" role="toolbar">' + [['confirm', 'Trace', false], ['fill', 'Fill zone', !all3]].map(function (t) { var on = st.tool === t[0]; return '<button type="button" data-a="tool" data-v="' + t[0] + '"' + (t[2] ? ' disabled' : '') + ' style="width:64px;min-height:64px;border:none;border-radius:10px;background:' + (on ? 'var(--c-selSoft)' : 'transparent') + ';color:' + (t[2] ? 'var(--c-faint)' : on ? 'var(--c-sel)' : 'var(--c-ink)') + ';display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;font:inherit;cursor:pointer">' + FN.icon(t[0]) + '<span style="font-size:11px">' + t[1] + '</span></button>'; }).join('') + '</div>';
+      o += '<div style="position:absolute;left:104px;top:12px;bottom:12px;right:352px;' + FN.card + ';overflow:hidden;background:var(--c-canvas)"><svg width="100%" height="100%" viewBox="150 110 740 ' + vbH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your roof from our drawing">' + FN.draw.defs() + '<rect x="150" y="110" width="740" height="' + vbH + '" fill="url(#sd-grid-dots)"></rect><rect x="223" y="162" width="602" height="402" rx="3" fill="#1D2026" opacity=".13"></rect>' + garages + roofLayer(R, all3) +
         ((f || st.preview) ? mods.map(function (m) { return FN.draw.modSvg(m, !f, false, true); }).join('') : '') + FN.draw.ridges(S.roof || 'hip') + '</svg>' +
-        '<span style="position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">LiDAR-measured · 0.91 · our drawing, not a photo</span>' +
+        '<span style="position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--c-paper);color:var(--c-gain);border:1px solid var(--c-line)">' + (all3 ? 'Drawn on the imagery · default pitch' : 'Imagery · a stand-in drawn by the prototype, not a photo') + '</span>' +
         (st.preview && !f ? '<div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);' + FN.card + ';padding:6px;display:flex;gap:6px;align-items:center"><span style="font-size:13px;color:var(--c-muted);padding:0 8px">' + F0.n + ' modules · ' + (F0.n * 0.44).toFixed(2) + ' kWp · ' + FN.n(F0.n * 0.44 * 1460) + ' kWh/yr</span><button type="button" data-a="keep" style="min-height:42px;padding:0 14px;border-radius:8px;border:none;background:var(--c-ink);color:var(--c-paper);font:inherit;font-size:13px;font-weight:600;cursor:pointer">✓ Keep</button></div>' : '') + '</div>';
 
-      var sideHeader = !all3 ? 'Is this your roof?' : !f ? (isFlat ? 'Choose rack variant' : 'Fill your roof') : 'Your roof is ready';
-      var sideText = !all3 ? (R.pv.length > 1 ? 'Tap each face to confirm it: north, west and east. The south face gets no panels.' : 'Tap the roof to confirm it: modules stand on tilted racks.') : !f ? (isFlat ? 'Your roof takes modules on tilted racks, no angle to choose: the layout with the most energy is selected. Compare, then Fill zone and ✓ Keep.' : 'Fill zone, the north face, then ✓ Keep: three touches.') : (F0.n + (isFlat ? ' modules on tilted racks, ' + FN.PACK.flatZone.toFixed(2) + ' m inside the roof\'s edges' : ' modules on the north face after 0.40 m setbacks from the edges') + '. Next: what solar, a battery, a car or a heat pump would change.');
+      var sideHeader = !all3 ? 'Draw your roof' : !f ? (isFlat ? 'Choose rack variant' : 'Fill your roof') : 'Your roof is ready';
+      var sideText = !all3 ? (R.pv.length > 1 ? 'Click the corners of each face on the imagery, one after the other, and close the outline on its first corner: north, west and east. Each gets the default pitch, which you can change. The south face gets no panels.' : 'Click the four corners of the roof on the imagery and close the outline on the first: modules stand on tilted racks.') : !f ? (isFlat ? 'Your roof takes modules on tilted racks, no angle to choose: the layout with the most energy is selected. Compare, then Fill zone and ✓ Keep.' : 'Fill zone, the north face, then ✓ Keep: three touches.') : (F0.n + (isFlat ? ' modules on tilted racks, ' + FN.PACK.flatZone.toFixed(2) + ' m inside the roof\'s edges' : ' modules on the north face after 0.40 m setbacks from the edges') + '. Next: what solar, a battery, a car or a heat pump would change.');
 
       // the variants as cards, money first: each laid out by studio-draw, the one with the most energy preselected (D-70)
       var rackCards = '';
@@ -3624,7 +3683,7 @@
       }
 
       o += '<div style="position:absolute;right:12px;top:12px;bottom:12px;width:328px;' + FN.card + ';padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto"><b style="font-size:16px;font-weight:600">' + sideHeader + '</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5">' + sideText + '</span>' +
-        (f ? zonesBlock() : '') + roofPick() + rackCards + (!isFlat ? R.pv.map(function (k) { return '<span style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span>' + { N: 'North', W: 'West', E: 'East' }[k] + ' · ' + R.pitch + '°</span><b style="color:' + (st.conf[k] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st.conf[k] ? 'confirmed' : 'to confirm') + '</b></span>'; }).join('') : '') + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">Faces fitted from open LiDAR by our API when the site was created; your confirmation goes into the place layer of your site.</span></div>';
+        (f ? zonesBlock() : '') + roofPick() + rackCards + (!isFlat ? R.pv.map(function (k) { return '<span style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span>' + { N: 'North', W: 'West', E: 'East' }[k] + ' · ' + pitchOf(k, R) + '°' + (st.conf[k] ? ' <button type="button" data-a="pitch" data-v="' + k + '|-1" aria-label="Lower the pitch" style="min-width:28px;min-height:28px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);font:inherit;cursor:pointer">−</button> <button type="button" data-a="pitch" data-v="' + k + '|1" aria-label="Raise the pitch" style="min-width:28px;min-height:28px;border-radius:6px;border:1px solid var(--c-line);background:var(--c-paper2);font:inherit;cursor:pointer">+</button>' + (st.pitch[k] === undefined ? ' <span style="color:var(--c-muted);font-size:12px">default</span>' : '') : '') + '</span><b style="color:' + (st.conf[k] ? 'var(--c-gain)' : 'var(--c-muted)') + '">' + (st.conf[k] ? 'drawn' : 'to draw') + '</b></span>'; }).join('') : '') + traceControls(R, all3) + '<span style="font-size:12px;color:var(--c-muted);margin-top:auto">Faces you draw on the imagery, each with a default pitch you can change (D-119); they go into the place layer of your site.</span></div>';
       return o;
     }
     // what the household gets, and the incentives that come with it (design/markets/incentives)
@@ -3680,7 +3739,7 @@
       var o = '<div style="position:absolute;inset:12px;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px"><div style="' + FN.card + ';padding:20px;display:flex;flex-direction:column;gap:12px"><b style="font-size:22px;font-weight:600">Who installs it?</b>' +
         [['An installer I choose', 'You pick; they receive your home after you consent.'], ['Let Solar Designer propose', 'Matched on area and skills. You see who before they see you.'], ['Keep it for now', 'Saved in My home.']].map(function (n, i) { return '<button type="button" data-a="who" data-v="' + i + '" style="min-height:68px;border-radius:12px;border:1px solid ' + (st.next === i ? 'var(--c-sel)' : 'var(--c-line)') + ';background:' + (st.next === i ? 'var(--c-selSoft)' : 'var(--c-paper2)') + ';color:var(--c-ink);text-align:left;padding:10px 14px;display:flex;flex-direction:column;gap:3px;font:inherit;cursor:pointer"><b style="font-size:15px;font-weight:600">' + n[0] + '</b><span style="font-size:13px;color:var(--c-muted)">' + n[1] + '</span></button>'; }).join('') + '</div>';
       o += '<div style="' + FN.card + ';border-color:var(--c-sel);padding:18px;display:flex;flex-direction:column;gap:10px;overflow-y:auto"><b style="font-size:16px;font-weight:600">Before anyone sees your home</b><span style="font-size:14px;color:var(--c-ink2);line-height:1.5"><b>Installer 1</b> (9 km, batteries) would receive:</span>' +
-        [handed() ? ['Your site', siteOf(S.site)[1].toLowerCase() + ', confirmed by you, for the installer to design'] : ['Your roof', (S.roof === 'flat' ? 'flat roof confirmed, ' + FN.RACKS[rackOf()].en + ' racks' : FN.ROOFS[S.roof || 'hip'].pv.length + (FN.ROOFS[S.roof || 'hip'].pv.length > 1 ? ' faces' : ' face') + ' confirmed') + ', our drawing'], ['Your needs', '15 kWh a day, as totals · ' + badge()], ['Your draft', w.join(' · ')], ['Never', 'your meter readings, another installer’s proposal, a phone call you did not ask for']].map(function (r) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;text-align:right">' + r[1] + '</b></span>'; }).join('') +
+        [handed() ? ['Your site', siteOf(S.site)[1].toLowerCase() + ', confirmed by you, for the installer to design'] : ['Your roof', (S.roof === 'flat' ? 'flat roof drawn, ' + FN.RACKS[rackOf()].en + ' racks' : FN.ROOFS[S.roof || 'hip'].pv.length + (FN.ROOFS[S.roof || 'hip'].pv.length > 1 ? ' faces' : ' face') + ' drawn') + ', our drawing'], ['Your needs', '15 kWh a day, as totals · ' + badge()], ['Your draft', w.join(' · ')], ['Never', 'your meter readings, another installer’s proposal, a phone call you did not ask for']].map(function (r) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--c-line2)"><span style="color:var(--c-muted)">' + r[0] + '</span><b style="font-weight:600;text-align:right">' + r[1] + '</b></span>'; }).join('') +
         (function () { var V = FN.toVerify(S); return V.length ? '<span style="font-size:12px;color:var(--c-muted);margin-top:4px">Declared by you, confirmed by the installer on site</span>' + V.map(function (v) { return '<span style="display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0;border-bottom:1px solid var(--c-line2)"><span style="color:' + (v[2] ? 'var(--c-loss)' : 'var(--c-muted)') + '">' + v[0] + '</span><span style="text-align:right;color:' + (v[2] ? 'var(--c-loss)' : 'var(--c-ink)') + '">' + v[1] + '</span></span>'; }).join('') : ''; })() +
         '<button type="button" data-a="share" style="margin-top:auto;min-height:48px;border-radius:10px;border:none;background:' + (S.shared ? 'var(--c-selSoft)' : 'var(--c-live)') + ';color:' + (S.shared ? 'var(--c-sel)' : 'var(--c-onLive)') + ';font:inherit;font-size:15px;font-weight:600;cursor:pointer">' + (S.shared ? 'Shared with Installer 1 ✓ · see the installer’s screen' : 'Share my home with Installer 1') + '</button></div></div>';
       return o;
@@ -3769,13 +3828,13 @@
       q('.hh-note').innerHTML = note;
       q('.hh-body').innerHTML = [stepEnergy, stepRoof, stepNext, stepShare, stepProposal][s]();
       var canNext = (s === 2 ? filled() : s === 1 ? filled() : done(s)) && s < 4 && (s === 2 || reach(s + 1));
-      var need = ['Pick a plan to go on', !S.site ? 'Confirm the site first' : handed() ? 'Share it below' : 'Confirm the faces, then fill', 'Next', 'Share to go on', ''][s];
-      q('.hh-foot').innerHTML = '<button type="button" data-a="back"' + (s ? '' : ' disabled') + ' style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:' + (s ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;cursor:pointer">Back</button><span style="flex:1;font-size:13px;color:var(--c-ink2)">' + ['Pick the plan you take; your bill makes the ranking yours.', !S.site ? 'Confirm what this site is; a house goes on to its roof.' : handed() ? 'An installer designs this site: share it with one.' : (FN.ROOFS[S.roof || 'hip'].pv.length > 1 ? 'Confirm the three faces, then fill the north face.' : S.roof === 'flat' ? 'Confirm the roof, compare the rack layouts, then fill it.' : 'Confirm the north face, then fill it.'), 'Add what you want; each move shows its effect on top of the others.', 'Name who receives your home, then share.', S.proposal ? 'Read the proposal, then sign.' : 'The installer works on its own screen.'][s] + '</span>' +
+      var need = ['Pick a plan to go on', !S.site ? 'Confirm the site first' : handed() ? 'Share it below' : 'Draw the faces, then fill', 'Next', 'Share to go on', ''][s];
+      q('.hh-foot').innerHTML = '<button type="button" data-a="back"' + (s ? '' : ' disabled') + ' style="min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--c-line);background:var(--c-paper2);color:' + (s ? 'var(--c-ink)' : 'var(--c-faint)') + ';font:inherit;cursor:pointer">Back</button><span style="flex:1;font-size:13px;color:var(--c-ink2)">' + ['Pick the plan you take; your bill makes the ranking yours.', !S.site ? 'Confirm what this site is; a house goes on to its roof.' : handed() ? 'An installer designs this site: share it with one.' : (FN.ROOFS[S.roof || 'hip'].pv.length > 1 ? 'Draw the three faces on the imagery, then fill the north face.' : S.roof === 'flat' ? 'Confirm the roof, compare the rack layouts, then fill it.' : 'Confirm the north face, then fill it.'), 'Add what you want; each move shows its effect on top of the others.', 'Name who receives your home, then share.', S.proposal ? 'Read the proposal, then sign.' : 'The installer works on its own screen.'][s] + '</span>' +
         (s < 4 ? '<button type="button" data-a="next"' + (canNext ? '' : ' disabled') + ' style="min-width:170px;min-height:44px;padding:0 18px;border-radius:10px;border:none;background:' + (canNext ? 'var(--c-live)' : 'var(--c-line)') + ';color:' + (canNext ? 'var(--c-onLive)' : 'var(--c-ink2)') + ';font:inherit;font-size:14px;font-weight:600;cursor:' + (canNext ? 'pointer' : 'default') + '">' + (canNext ? 'Next · ' + STEPS[s + 1] : need) + '</button>' : '');
       var box = q('.hh-3d'); box.style.display = s === 2 && st.view4 !== 'eq' ? 'block' : 'none'; box.style.top = '157px'; box.style.left = '385px'; box.style.width = '782px'; box.style.height = '526px';
       if (H) { H.size(782, 526); if (H.setHome(S.home)) Object.keys(S.eqPos).forEach(function (k) { H.placeEq(k, S.eqPos[k]); }); H.setRoof(S.roof || 'hip'); H.setPanels(S.measures.solar ? (S.layout || []) : []); H.bat.visible = S.measures.bat; H.car.visible = S.measures.ev; H.hp.visible = S.measures.hp; H.carport.visible = S.measures.solar && hasZone('carport'); H.setHour(st.hour); equipUpdate(); H.useTop = st.top; }
     }
-    FN.wire(el, function (a, v) {
+    FN.wire(el, function (a, v, e) {
       var P = st.prof;
       if (a === 'bell') { st.bell = !st.bell; render(); return; }
       if (a === 'spend') { st.spendOpen = !st.spendOpen; render(); return; }
@@ -3792,9 +3851,13 @@
       else if (a === 'noconsent') P.consent = false;
       else if (a === 'ans') { var p = v.split('|'); P.ans[p[0]] = isNaN(+p[1]) ? p[1] : +p[1]; st.lens = 'use'; var nx = GROUPS.filter(function (g) { return P.ans[g[0]] === undefined; })[0]; st.openG = nx ? nx[0] : ''; }
       else if (a === 'season') st.season = v;
-      else if (a === 'face') { if (FN.ROOFS[S.roof].pv.indexOf(v) >= 0 && !st.conf[v]) st.conf[v] = true; else if (st.tool === 'fill' && v === 'N' && !filled()) st.preview = true; }
+      else if (a === 'face') { if (st.tool === 'fill' && v === 'N' && !filled()) st.preview = true; }
+      else if (a === 'trace') traceAt(e);
+      else if (a === 'traceUndo') { st.pts.pop(); st.msg = ''; }
+      else if (a === 'traceClear') { st.pts = []; st.msg = ''; }
+      else if (a === 'pitch') { var pp = v.split('|'), R0 = FN.ROOFS[S.roof || 'hip']; st.pitch[pp[0]] = Math.max(1, Math.min(60, pitchOf(pp[0], R0) + (+pp[1]))); }
       else if (a === 'rackMode') { S.flatMode = v; if (filled()) { var F = fillOf(); S.layout = F.mods; S.kwp = F.n * 0.44; } }
-      else if (a === 'roof') { if (v !== S.roof) { S.roof = v; st.conf = {}; st.preview = false; S.measures.solar = false; S.layout = null; S.kwp = 0; st.tool = 'confirm'; S.flatMode = null; S.zones = []; } }
+      else if (a === 'roof') { if (v !== S.roof) { S.roof = v; st.conf = {}; st.pts = []; st.msg = ''; st.pitch = {}; st.preview = false; S.measures.solar = false; S.layout = null; S.kwp = 0; st.tool = 'confirm'; S.flatMode = null; S.zones = []; } }
       else if (a === 'home') { if (v !== (S.home || 'rect')) { S.home = v; S.eqPos = FN.EQPOS(S); S.ok = {}; } }
       else if (a === 'tool') { st.tool = v; st.preview = false; }
       else if (a === 'siteSel') st.siteSel = v;
